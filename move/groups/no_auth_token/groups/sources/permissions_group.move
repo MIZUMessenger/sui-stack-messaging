@@ -57,7 +57,7 @@ public struct PermissionsGroup<phantom T> has key, store {
 ///
 /// # Returns
 /// - A new `PermissionsGroup` object with the sender having all managing permissions.
-public fun new<T>(_witness: T, ctx: &mut TxContext): PermissionsGroup<T> {
+public fun new<T>(ctx: &mut TxContext): PermissionsGroup<T> {
     let mut creator_permissions_set = vec_set::empty<TypeName>();
     creator_permissions_set.insert(type_name::with_defining_ids<PermissionsManager>());
     creator_permissions_set.insert(type_name::with_defining_ids<MemberAdder>());
@@ -98,12 +98,14 @@ public fun add_member<T>(self: &mut PermissionsGroup<T>, new_member: address, ct
 /// E.g. a custom join_with_sui(). In this case, the third-party contract will need to expose
 /// an "actor object" that has MemberAdder permission, and therefore can perform administrative
 /// actions
-/// enable a user to "self service" join the group. The join_with_sui() would have to perform the
+/// This will enable a user to "self service" join the group. The join_with_sui() would have to
+/// perform the
 /// necessary checks itself (e.g. payment, etc).
-/// We are safe here, since UID is protected.
+/// We are safe here, since UID is protected. Only the contrac/module defining the actor object
+/// has access to its UID.
 public fun object_add_member<T>(
     self: &mut PermissionsGroup<T>,
-    actor_object: UID,
+    actor_object: &UID,
     ctx: &mut TxContext,
 ) {
     // assert actor_object has MemberAdder permission
@@ -146,7 +148,7 @@ public fun remove_member<T>(self: &mut PermissionsGroup<T>, member: address, ctx
 
 public fun object_remove_member<T>(
     self: &mut PermissionsGroup<T>,
-    actor_object: UID,
+    actor_object: &UID,
     ctx: &mut TxContext,
 ) {
     // assert actor_object has MemberRemover permission
