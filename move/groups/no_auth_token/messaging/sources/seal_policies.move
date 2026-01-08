@@ -24,13 +24,13 @@
 ///
 module messaging::seal_policies;
 
-use messaging::messaging::{MessagingGroup, MessagingReader};
+use groups::permissions_group::{Self, PermissionsGroup};
+use messaging::messaging::{MessagingReader, MessagingApp};
 
 // === Error Codes ===
 
 const EInvalidNamespace: u64 = 0;
-const ENotMember: u64 = 1;
-const ENotPermitted: u64 = 2;
+const ENotPermitted: u64 = 1;
 
 // === Helper Functions ===
 
@@ -64,27 +64,6 @@ fun check_namespace(group: &MessagingGroup, id: &vector<u8>): bool {
 
 // === Seal Approve Functions ===
 
-/// Default seal_approve that checks membership.
-///
-/// Use this for simple "all members can decrypt" access control.
-///
-/// # Parameters
-/// - `id`: The Seal identity bytes (should be `[creator_address][nonce]`)
-/// - `group`: Reference to the MessagingGroup
-/// - `ctx`: Transaction context
-///
-/// # Aborts
-/// - If `id` doesn't have correct namespace prefix (creator address).
-/// - If caller is not a member.
-entry fun seal_approve_member(
-    id: vector<u8>,
-    group: &MessagingGroup,
-    ctx: &TxContext,
-) {
-    assert!(check_namespace(group, &id), EInvalidNamespace);
-    assert!(group.is_member(ctx.sender()), ENotMember);
-}
-
 /// Default seal_approve that checks `MessagingReader` permission.
 ///
 /// Use this for granular "only readers can decrypt" access control.
@@ -100,9 +79,9 @@ entry fun seal_approve_member(
 /// - If caller doesn't have `MessagingReader` permission.
 entry fun seal_approve_reader(
     id: vector<u8>,
-    group: &MessagingGroup,
+    group: &PermissionsGroup<MessagingApp>,
     ctx: &TxContext,
 ) {
     assert!(check_namespace(group, &id), EInvalidNamespace);
-    assert!(group.has_permission<MessagingReader>(ctx.sender()), ENotPermitted);
+    assert!(group.has_permission<MessagingApp, MessagingReader>(ctx.sender()), ENotPermitted);
 }
