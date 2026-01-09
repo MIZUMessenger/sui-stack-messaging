@@ -1,26 +1,18 @@
 /// Module: seal_policies
 ///
-/// This module provides default `seal_approve` functions for Seal encryption access control.
-/// These functions are called by Seal key servers (via dry-run) to determine if a user
-/// should be able to decrypt encrypted content.
+/// Default `seal_approve` functions for Seal encryption access control.
+/// Called by Seal key servers (via dry-run) to authorize decryption.
 ///
-/// ## Namespace
+/// ## Namespace Format
 ///
-/// The default implementation uses the `creator` address as the namespace prefix.
-/// This enables single-PTB group creation since the creator address is known before
-/// the transaction executes.
+/// Identity bytes: `[PermissionsGroup<Messaging> ID][nonce]`
+/// Uses the group's derived ID as namespace prefix for per-group encryption.
 ///
-/// Identity bytes format: [creator_address (32 bytes)][nonce (variable)]
+/// ## Custom Policies
 ///
-/// ## Custom Implementations
-///
-/// Third-party apps can implement their own `seal_approve` functions with custom logic:
-/// - Subscription-based access
-/// - Time-limited access
-/// - NFT-gated access
-/// - etc.
-///
-/// The custom `seal_approve` must be in the same package that was used during `seal.encrypt`.
+/// Apps can implement custom `seal_approve` with different logic:
+/// - Subscription-based, time-limited, NFT-gated access, etc.
+/// - Must be in the same package used during `seal.encrypt`.
 ///
 module messaging::seal_policies;
 
@@ -33,14 +25,17 @@ use messaging::messaging::{MessagingReader, Messaging};
 const EInvalidNamespace: u64 = 0;
 const ENotPermitted: u64 = 1;
 
-// === Helper Functions ===
+// === Private Functions ===
 
-/// Validates that the id has the correct seal-namespace prefix:
-/// EncryptionHistory's derived id (from MessagingNamespace + EncryptionHistoryTag(u64) ).
-/// id: [derived_id bytes][random nonce]
+/// Validates that `id` has the correct Seal namespace prefix.
+///
+/// The namespace is the `PermissionsGroup<Messaging>` ID bytes, which is a derived
+/// address from `MessagingNamespace + PermissionsGroupTag(groups_created)`.
+///
+/// Expected format: `[group_id bytes (32)][nonce (12)]`
 ///
 /// # Parameters
-/// - `group`: Reference to the MessagingGroup
+/// - `encryption_history`: Reference to the EncryptionHistory (contains group_id)
 /// - `id`: The Seal identity bytes to validate
 ///
 /// # Returns
@@ -63,21 +58,19 @@ fun check_namespace(encryption_history: &EncryptionHistory, id: &vector<u8>): bo
     true
 }
 
-// === Seal Approve Functions ===
+// === Entry Functions ===
 
 /// Default seal_approve that checks `MessagingReader` permission.
 ///
-/// Use this for granular "only readers can decrypt" access control.
-/// This allows for temporary read bans while keeping membership.
-///
 /// # Parameters
-/// - `id`: The Seal identity bytes (should be `[creator_address][nonce]`)
-/// - `group`: Reference to the MessagingGroup
+/// - `id`: Seal identity bytes `[group_id (32)][nonce (12)]`
+/// - `encryption_history`: Reference to the group's EncryptionHistory
+/// - `group`: Reference to the PermissionsGroup<Messaging>
 /// - `ctx`: Transaction context
 ///
 /// # Aborts
-/// - If `id` doesn't have correct namespace prefix (creator address).
-/// - If caller doesn't have `MessagingReader` permission.
+/// - `EInvalidNamespace`: if `id` doesn't have correct group_id prefix
+/// - `ENotPermitted`: if caller doesn't have `MessagingReader` permission
 entry fun seal_approve_reader(
     id: vector<u8>,
     encryption_history: &EncryptionHistory,

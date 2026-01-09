@@ -1,33 +1,35 @@
 /// Module: messaging
 ///
-/// This module wraps the `permissions_group` library to provide messaging-specific
-/// permission management. It defines messaging-specific permission types and delegates
-/// to the underlying `PermissionsGroup` for core permission operations.
+/// Public-facing module for the messaging package. All external interactions
+/// should go through this module.
 ///
-/// ## Permission Model
+/// Wraps `permissions_group` to provide messaging-specific permission management
+/// and `encryption_history` for key rotation.
 ///
-/// Base permissions (from groups library, granted to creator automatically):
-/// - `PermissionsManager`: Can grant/revoke any permissions
-/// - `MemberAdder`: Can add new members (with no permissions)
-/// - `MemberRemover`: Can remove members
+/// ## Permissions
 ///
-/// Messaging-specific permissions (defined in this module):
-/// - `MessagingSender`: Can send messages
-/// - `MessagingReader`: Can read/decrypt messages
-/// - `MessagingDeleter`: Can delete messages
-/// - `MessagingEditor`: Can edit messages
+/// Base (from groups, auto-granted to creator):
+/// - `PermissionsManager`: Grant/revoke permissions
+/// - `MemberAdder`: Add members (no permissions)
+/// - `MemberRemover`: Remove members
 ///
-/// ## Security Model
+/// Messaging-specific:
+/// - `MessagingSender`: Send messages
+/// - `MessagingReader`: Read/decrypt messages
+/// - `MessagingEditor`: Edit messages
+/// - `MessagingDeleter`: Delete messages
+/// - `EncryptionKeyRotator`: Rotate encryption keys
 ///
-/// - Adding a member (via `add_member`) only adds them to the roster with no permissions
-/// - Granting permissions requires `PermissionsManager` permission
-/// - This prevents privilege escalation where a `MemberAdder` could grant admin permissions
+/// ## Security
+///
+/// - `add_member` adds to roster only, no permissions granted
+/// - `PermissionsManager` required to grant permissions
+/// - Prevents privilege escalation from `MemberAdder`
 ///
 module messaging::messaging;
 
 use groups::permissions_group::{Self, PermissionsGroup};
 use messaging::encryption_history::{Self, EncryptionHistory, EncryptionKeyRotator};
-use sui::derived_object;
 
 // === Error Codes ===
 
@@ -35,9 +37,7 @@ const ENotPermitted: u64 = 0;
 
 // === Witnesses ===
 
-/// Package witness
-/// Meant to be used with permission groups:
-/// `permissions_group::PermissionsGroup<MessagingApp>`
+/// Package witness for `PermissionsGroup<Messaging>`.
 public struct Messaging() has drop;
 
 // === Permission Witnesses ===
@@ -58,9 +58,11 @@ public struct MessagingEditor() has drop;
 
 // === Structs ===
 
-/// The MessagingNamespace used for address derivation
+/// Shared object used as namespace for deriving group and encryption history addresses.
+/// One per package deployment.
 public struct MessagingNamespace has key {
     id: UID,
+    /// Counter for deterministic address derivation.
     groups_created: u64,
 }
 
@@ -73,43 +75,21 @@ fun init(ctx: &mut TxContext) {
 
 // === Public Functions ===
 
-// === Getters ===
-public fun groups_created(namespace: &MessagingNamespace): u64 {
-    namespace.groups_created
-}
-
-// === Package Functions ===
-
-/// Expose `uid_mut` for claiming derived objects from other modules in this package.
-public(package) fun uid_mut(namespace: &mut MessagingNamespace): &mut UID {
-    &mut namespace.id
-}
-
-/// Check if a derived object already exists in the MessagingNamespace
-public(package) fun exists<TKey: copy + drop + store>(
-    namespace: &MessagingNamespace,
-    key: TKey,
-): bool {
-    derived_object::exists(&namespace.id, key)
-}
-
-/// Increment the groups_created counter and return the updated value
-public(package) fun increment_groups_created(self: &mut MessagingNamespace): u64 {
-    let current = self.groups_created;
-    self.groups_created = current + 1;
-    self.groups_created
-}
-
-// === Public Functions ===
-
-/// Creates a new messaging group with encryption enabled.
-/// Returns both the PermissionsGroup and its associated EncryptionHistory.
-public fun new_group(
+/// Creates a new messaging group with encryption.
+/// Grants all messaging permissions to the creator.
+///
+/// # Parameters
+/// - `namespace`: Mutable reference to the MessagingNamespace
+/// - `initial_encrypted_dek`: Initial Seal-encrypted DEK bytes
+/// - `ctx`: Transaction context
+///
+/// # Returns
+/// Tuple of `(PermissionsGroup<Messaging>, EncryptionHistory)`.
+public fun create_group(
     namespace: &mut MessagingNamespace,
     initial_encrypted_dek: vector<u8>,
     ctx: &mut TxContext,
 ): (PermissionsGroup<Messaging>, EncryptionHistory) {
-    // 1. Increment counter and create PermissionsGroup<Messaging>
     let groups_created = namespace.increment_groups_created();
     let mut group: PermissionsGroup<Messaging> = permissions_group::new_derived<
         Messaging,
@@ -120,15 +100,9 @@ public fun new_group(
         ctx,
     );
 
-    // 2. Grant Messaging & Encryption permissions to the creator
     let creator = ctx.sender();
-    group.grant_permission<Messaging, MessagingSender>(creator, ctx);
-    group.grant_permission<Messaging, MessagingReader>(creator, ctx);
-    group.grant_permission<Messaging, MessagingEditor>(creator, ctx);
-    group.grant_permission<Messaging, MessagingDeleter>(creator, ctx);
-    group.grant_permission<Messaging, EncryptionKeyRotator>(creator, ctx);
+    grant_all_messaging_permissions(&mut group, creator, ctx);
 
-    // 3. Create EncryptionHistory for the group
     let encryption_history = encryption_history::new(
         &mut namespace.id,
         groups_created,
@@ -140,17 +114,100 @@ public fun new_group(
     (group, encryption_history)
 }
 
+/// Creates a new messaging group and shares both objects.
+///
+/// # Parameters
+/// - `namespace`: Mutable reference to the MessagingNamespace
+/// - `initial_encrypted_dek`: Initial Seal-encrypted DEK bytes
+/// - `ctx`: Transaction context
+#[allow(lint(share_owned))]
+public fun create_and_share_group(
+    namespace: &mut MessagingNamespace,
+    initial_encrypted_dek: vector<u8>,
+    ctx: &mut TxContext,
+) {
+    let (group, encryption_history) = create_group(
+        namespace,
+        initial_encrypted_dek,
+        ctx,
+    );
+    transfer::public_share_object(group);
+    transfer::public_share_object(encryption_history);
+}
+
 /// Rotates the encryption key for a group.
-/// Requires EncryptionKeyRotator permission.
+///
+/// # Parameters
+/// - `encryption_history`: Mutable reference to the group's EncryptionHistory
+/// - `group`: Reference to the PermissionsGroup<Messaging>
+/// - `new_encrypted_dek`: New Seal-encrypted DEK bytes
+/// - `ctx`: Transaction context
+///
+/// # Aborts
+/// - `ENotPermitted`: if caller doesn't have `EncryptionKeyRotator` permission
 public fun rotate_encryption_key(
     encryption_history: &mut EncryptionHistory,
     group: &PermissionsGroup<Messaging>,
     new_encrypted_dek: vector<u8>,
     ctx: &mut TxContext,
 ) {
-    assert!(
-        group.has_permission<Messaging, EncryptionKeyRotator>(ctx.sender()),
-        ENotPermitted,
-    );
+    assert!(group.has_permission<Messaging, EncryptionKeyRotator>(ctx.sender()), ENotPermitted);
     encryption_history.rotate_key(new_encrypted_dek);
+}
+
+/// Grants all messaging permissions to a member.
+/// Includes: `MessagingSender`, `MessagingReader`, `MessagingEditor`,
+/// `MessagingDeleter`, `EncryptionKeyRotator`.
+///
+/// # Parameters
+/// - `group`: Mutable reference to the PermissionsGroup<Messaging>
+/// - `member`: Address to grant permissions to
+/// - `ctx`: Transaction context
+public fun grant_all_messaging_permissions(
+    group: &mut PermissionsGroup<Messaging>,
+    member: address,
+    ctx: &mut TxContext,
+) {
+    group.grant_permission<Messaging, MessagingSender>(member, ctx);
+    group.grant_permission<Messaging, MessagingReader>(member, ctx);
+    group.grant_permission<Messaging, MessagingEditor>(member, ctx);
+    group.grant_permission<Messaging, MessagingDeleter>(member, ctx);
+    group.grant_permission<Messaging, EncryptionKeyRotator>(member, ctx);
+}
+
+/// Grants all permissions (base + messaging) to a member, making them an admin.
+///
+/// # Parameters
+/// - `group`: Mutable reference to the PermissionsGroup<Messaging>
+/// - `member`: Address to grant permissions to
+/// - `ctx`: Transaction context
+public fun grant_all_permissions(
+    group: &mut PermissionsGroup<Messaging>,
+    member: address,
+    ctx: &mut TxContext,
+) {
+    permissions_group::grant_all_permissions<Messaging>(group, member, ctx);
+    grant_all_messaging_permissions(group, member, ctx);
+}
+
+// === Getters ===
+
+/// Returns the number of groups created via this namespace.
+///
+/// # Parameters
+/// - `namespace`: Reference to the MessagingNamespace
+///
+/// # Returns
+/// The total count of groups created.
+public fun groups_created(namespace: &MessagingNamespace): u64 {
+    namespace.groups_created
+}
+
+// === Private Functions ===
+
+/// Increments and returns the groups_created counter.
+fun increment_groups_created(self: &mut MessagingNamespace): u64 {
+    let current = self.groups_created;
+    self.groups_created = current + 1;
+    self.groups_created
 }

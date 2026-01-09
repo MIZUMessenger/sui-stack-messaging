@@ -1,19 +1,14 @@
 /// Module: encryption_history
 ///
-/// This module provides envelope encryption key management for MessagingGroup.
-/// It stores encrypted DEKs (Data Encryption Keys) that have been encrypted with Seal,
-/// supporting key rotation for security purposes.
+/// Internal module for envelope encryption key management.
+/// Stores encrypted DEKs (Data Encryption Keys) with version tracking for key rotation.
 ///
-/// ## Design
+/// `EncryptionHistory` is a derived object from `MessagingNamespace`, enabling
+/// deterministic address derivation for Seal encryption namespacing.
 ///
-/// - EncryptionHistory is attached to MessagingGroup via dynamic field
-/// - Stores full EncryptedObject bytes from Seal (which contain the id/namespace)
-/// - Supports key rotation with version tracking
-///
-/// ## Usage
-///
-/// Use `messaging::new_group` to create a MessagingGroup with encryption enabled.
-/// Use `messaging::rotate_encryption_key` to rotate keys.
+/// All public entry points are in the `messaging` module:
+/// - `messaging::create_group` - creates group with encryption
+/// - `messaging::rotate_encryption_key` - rotates keys
 ///
 module messaging::encryption_history;
 
@@ -27,37 +22,49 @@ const EKeyVersionNotFound: u64 = 1;
 
 // === Derivation Keys ===
 
-/// derived from MessagingNamespace + EncryptionHistoryTag(u64)
+/// Key for deriving `EncryptionHistory` address from `MessagingNamespace`.
 public struct EncryptionHistoryTag(u64) has copy, drop, store;
-/// derived from MessagingNamespace + PermissionsGroupTag(u64)
+
+/// Key for deriving `PermissionsGroup<Messaging>` address from `MessagingNamespace`.
 public struct PermissionsGroupTag(u64) has copy, drop, store;
 
 // === Permission Witnesses ===
 
-/// Permission to rotate encryption keys.
-/// Should be granted to PermissionsGroup<Messaging> creator during creation.
+/// Permission to rotate encryption keys. Auto-granted to group creator.
 public struct EncryptionKeyRotator() has drop;
 
 // === Structs ===
 
-/// Stores encryption key history for a PermissionsGroup<Messaging>.
-/// Derived from the MessagingNamespace + PermissionsGroup<Messaging> ID.
-/// There should be 1 PermissionsGroup<Messaging> <-> 1 EncryptionHistory pair.
+/// Encrypted key history for a messaging group.
+/// Derived object from `MessagingNamespace` with 1:1 relationship to `PermissionsGroup<Messaging>`.
 public struct EncryptionHistory has key, store {
     id: UID,
-    /// The ID of the associated PermissionsGroup<Messaging>
+    /// Associated `PermissionsGroup<Messaging>` ID.
     group_id: ID,
+    /// 0-based index of this group within the namespace.
     group_index: u64,
-    /// Sequential storage of encrypted DEKs. Index = key version.
-    /// Each entry is full EncryptedObject bytes from Seal
-    /// (contains: version, packageId, id, services, threshold, encryptedShares, ciphertext)
+    /// Versioned encrypted DEKs. Index = version number.
+    /// Each entry is Seal `EncryptedObject` bytes.
     encrypted_keys: TableVec<vector<u8>>,
 }
 
 // === Package Functions ===
 
-/// Creates a new EncryptionHistory for a group.
-/// Called by the messaging module when creating a new group.
+/// Creates a new `EncryptionHistory` derived from the namespace.
+/// Uses `EncryptionHistoryTag(groups_created)` as the derivation key.
+///
+/// # Parameters
+/// - `namespace_uid`: Mutable reference to the MessagingNamespace UID
+/// - `groups_created`: Current groups_created counter value (used as derivation key)
+/// - `group_id`: ID of the associated PermissionsGroup<Messaging>
+/// - `initial_encrypted_dek`: Initial Seal-encrypted DEK bytes
+/// - `ctx`: Transaction context
+///
+/// # Returns
+/// A new `EncryptionHistory` object.
+///
+/// # Aborts
+/// - `EEncryptionHistoryAlreadyExists`: if derived address is already claimed
 public(package) fun new(
     namespace_uid: &mut UID,
     groups_created: u64,
@@ -83,9 +90,11 @@ public(package) fun new(
     }
 }
 
-/// Rotates to a new encryption key.
-/// Appends the new encrypted DEK (version = length - 1 after push).
-/// Security check must be performed by the caller (messaging module).
+/// Appends a new encrypted DEK. Caller must verify permissions.
+///
+/// # Parameters
+/// - `self`: Mutable reference to the EncryptionHistory
+/// - `new_encrypted_dek`: New Seal-encrypted DEK bytes
 public(package) fun rotate_key(
     self: &mut EncryptionHistory,
     new_encrypted_dek: vector<u8>,
@@ -93,34 +102,64 @@ public(package) fun rotate_key(
     self.encrypted_keys.push_back(new_encrypted_dek);
 }
 
+/// Returns the `PermissionsGroupTag` for address derivation.
+///
+/// # Parameters
+/// - `index`: The group index (groups_created counter value)
+///
+/// # Returns
+/// A `PermissionsGroupTag` wrapping the index.
+public(package) fun permissions_group_tag(index: u64): PermissionsGroupTag {
+    PermissionsGroupTag(index)
+}
+
 // === Getters ===
 
-/// Returns the associated PermissionsGroup ID.
+/// Returns the associated `PermissionsGroup<Messaging>` ID.
+///
+/// # Parameters
+/// - `self`: Reference to the EncryptionHistory
+///
+/// # Returns
+/// The group ID.
 public fun group_id(self: &EncryptionHistory): ID {
     self.group_id
 }
 
 /// Returns the current key version (0-indexed).
+///
+/// # Parameters
+/// - `self`: Reference to the EncryptionHistory
+///
+/// # Returns
+/// The current (latest) key version.
 public fun current_key_version(self: &EncryptionHistory): u64 {
     self.encrypted_keys.length() - 1
 }
 
 /// Returns the encrypted DEK for a specific version.
 ///
+/// # Parameters
+/// - `self`: Reference to the EncryptionHistory
+/// - `version`: The key version to retrieve (0-indexed)
+///
+/// # Returns
+/// Reference to the encrypted DEK bytes.
+///
 /// # Aborts
-/// - If the key version doesn't exist.
+/// - `EKeyVersionNotFound`: if the version doesn't exist
 public fun encrypted_key(self: &EncryptionHistory, version: u64): &vector<u8> {
     assert!(version < self.encrypted_keys.length(), EKeyVersionNotFound);
     self.encrypted_keys.borrow(version)
 }
 
 /// Returns the encrypted DEK for the current (latest) version.
+///
+/// # Parameters
+/// - `self`: Reference to the EncryptionHistory
+///
+/// # Returns
+/// Reference to the current encrypted DEK bytes.
 public fun current_encrypted_key(self: &EncryptionHistory): &vector<u8> {
     self.encrypted_key(self.current_key_version())
-}
-
-/// Returns the PermissionsGroupTag for deriving group addresses.
-/// Used by the messaging module.
-public(package) fun permissions_group_tag(index: u64): PermissionsGroupTag {
-    PermissionsGroupTag(index)
 }
