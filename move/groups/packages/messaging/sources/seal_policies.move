@@ -24,7 +24,7 @@
 ///
 module messaging::seal_policies;
 
-use groups::permissions_group::{Self, PermissionsGroup};
+use groups::permissions_group::PermissionsGroup;
 use messaging::encryption_history::EncryptionHistory;
 use messaging::messaging::{MessagingReader, Messaging};
 
@@ -36,7 +36,7 @@ const ENotPermitted: u64 = 1;
 // === Helper Functions ===
 
 /// Validates that the id has the correct seal-namespace prefix:
-/// EncryptionHistory's derived id (from MessagingNamespace + PermissionsGroup ID).
+/// EncryptionHistory's derived id (from MessagingNamespace + EncryptionHistoryTag(u64) ).
 /// id: [derived_id bytes][random nonce]
 ///
 /// # Parameters
@@ -80,9 +80,10 @@ fun check_namespace(encryption_history: &EncryptionHistory, id: &vector<u8>): bo
 /// - If caller doesn't have `MessagingReader` permission.
 entry fun seal_approve_reader(
     id: vector<u8>,
+    encryption_history: &EncryptionHistory,
     group: &PermissionsGroup<Messaging>,
     ctx: &TxContext,
 ) {
-    assert!(check_namespace(group, &id), EInvalidNamespace);
+    assert!(check_namespace(encryption_history, &id), EInvalidNamespace);
     assert!(group.has_permission<Messaging, MessagingReader>(ctx.sender()), ENotPermitted);
 }
