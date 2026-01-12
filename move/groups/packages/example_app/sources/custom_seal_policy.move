@@ -30,12 +30,12 @@
 /// 4. Encrypt content using this package's ID and service.id as namespace
 /// 5. seal_approve validates subscription before decryption
 ///
-module app::custom_seal_policy;
+module example_app::custom_seal_policy;
 
-use messaging::messaging::MessagingGroup;
+use groups::permissions_group::PermissionsGroup;
+use messaging::messaging::Messaging;
 use sui::clock::Clock;
 use sui::coin::Coin;
-use sui::sui::SUI;
 
 // === Error Codes ===
 
@@ -46,11 +46,11 @@ const ENoAccess: u64 = 1;
 
 /// A subscription service that gates access to a MessagingGroup's encrypted content.
 /// The service can be shared so anyone can subscribe.
-public struct Service has key {
+public struct Service<phantom Token> has key {
     id: UID,
     /// The MessagingGroup this service is associated with (for reference only)
     group_id: ID,
-    /// Subscription fee in MIST
+    /// Subscription fee in the Token's smallest unit
     fee: u64,
     /// Time-to-live for subscriptions in milliseconds
     ttl: u64,
@@ -60,7 +60,7 @@ public struct Service has key {
 
 /// A time-limited subscription to a Service.
 /// Only has `key` (no `store`) so it can only be transferred, not wrapped.
-public struct Subscription has key {
+public struct Subscription<phantom Token> has key {
     id: UID,
     /// The service this subscription belongs to
     service_id: ID,
@@ -80,13 +80,13 @@ public struct Subscription has key {
 ///
 /// # Returns
 /// - A new Service object (should be shared for public access)
-public fun create_service(
+public fun create_service<Token: drop>(
     group_id: ID,
     fee: u64,
     ttl: u64,
     ctx: &mut TxContext,
-): Service {
-    Service {
+): Service<Token> {
+    Service<Token> {
         id: object::new(ctx),
         group_id,
         fee,
@@ -97,13 +97,13 @@ public fun create_service(
 
 /// Creates and shares a new subscription service.
 /// Convenience entry function for simpler CLI usage.
-entry fun create_service_and_share(
+entry fun create_service_and_share<Token: drop>(
     group_id: ID,
     fee: u64,
     ttl: u64,
     ctx: &mut TxContext,
 ) {
-    transfer::share_object(create_service(group_id, fee, ttl, ctx));
+    transfer::share_object(create_service<Token>(group_id, fee, ttl, ctx));
 }
 
 // === Subscription Management ===
@@ -122,18 +122,18 @@ entry fun create_service_and_share(
 ///
 /// # Aborts
 /// - If payment amount doesn't match service fee
-public fun subscribe(
-    service: &Service,
-    payment: Coin<SUI>,
+public fun subscribe<Token: drop>(
+    service: &Service<Token>,
+    payment: Coin<Token>,
     clock: &Clock,
     ctx: &mut TxContext,
-): Subscription {
+): Subscription<Token> {
     assert!(payment.value() == service.fee, EInvalidFee);
 
     // Transfer payment to service owner
     transfer::public_transfer(payment, service.owner);
 
-    Subscription {
+    Subscription<Token> {
         id: object::new(ctx),
         service_id: object::id(service),
         created_at: clock.timestamp_ms(),
@@ -142,51 +142,55 @@ public fun subscribe(
 
 /// Purchases a subscription and transfers it to the sender.
 /// Convenience entry function for simpler CLI usage.
-entry fun subscribe_entry(
-    service: &Service,
-    payment: Coin<SUI>,
+entry fun subscribe_entry<Token: drop>(
+    service: &Service<Token>,
+    payment: Coin<Token>,
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
-    let sub = subscribe(service, payment, clock, ctx);
+    let sub = subscribe<Token>(service, payment, clock, ctx);
     transfer::transfer(sub, ctx.sender());
 }
 
 /// Transfers a subscription to another address.
 /// This allows gifting or selling subscriptions.
-public fun transfer_subscription(sub: Subscription, to: address) {
+public fun transfer_subscription<Token: drop>(sub: Subscription<Token>, to: address) {
     transfer::transfer(sub, to);
 }
 
 // === Getters ===
 
 /// Returns the fee for this service.
-public fun fee(service: &Service): u64 {
+public fun fee<Token: drop>(service: &Service<Token>): u64 {
     service.fee
 }
 
 /// Returns the TTL for this service.
-public fun ttl(service: &Service): u64 {
+public fun ttl<Token: drop>(service: &Service<Token>): u64 {
     service.ttl
 }
 
 /// Returns the MessagingGroup ID this service is associated with.
-public fun group_id(service: &Service): ID {
+public fun group_id<Token: drop>(service: &Service<Token>): ID {
     service.group_id
 }
 
 /// Returns the service ID this subscription belongs to.
-public fun subscription_service_id(sub: &Subscription): ID {
+public fun subscription_service_id<Token: drop>(sub: &Subscription<Token>): ID {
     sub.service_id
 }
 
 /// Returns when this subscription was created.
-public fun created_at(sub: &Subscription): u64 {
+public fun created_at<Token: drop>(sub: &Subscription<Token>): u64 {
     sub.created_at
 }
 
 /// Checks if a subscription is still valid (not expired).
-public fun is_subscription_valid(sub: &Subscription, service: &Service, clock: &Clock): bool {
+public fun is_subscription_valid<Token: drop>(
+    sub: &Subscription<Token>,
+    service: &Service<Token>,
+    clock: &Clock,
+): bool {
     if (object::id(service) != sub.service_id) {
         return false
     };
@@ -200,7 +204,7 @@ public fun is_subscription_valid(sub: &Subscription, service: &Service, clock: &
 /// is being accessed.
 ///
 /// Namespace format: [service_id (32 bytes)][nonce (variable)]
-fun check_namespace(service: &Service, id: &vector<u8>): bool {
+fun check_namespace<Token: drop>(service: &Service<Token>, id: &vector<u8>): bool {
     let namespace = object::id(service).to_bytes();
     let namespace_len = namespace.length();
 
@@ -220,11 +224,11 @@ fun check_namespace(service: &Service, id: &vector<u8>): bool {
 
 /// Checks all conditions for seal approval.
 /// Returns true if the subscription is valid, namespace matches, and caller is a member.
-fun check_policy(
+fun check_policy<Token: drop>(
     id: &vector<u8>,
-    sub: &Subscription,
-    service: &Service,
-    group: &MessagingGroup,
+    sub: &Subscription<Token>,
+    service: &Service<Token>,
+    group: &PermissionsGroup<Messaging>,
     clock: &Clock,
     ctx: &TxContext,
 ): bool {
@@ -269,11 +273,11 @@ fun check_policy(
 /// - If subscription doesn't belong to this service
 /// - If subscription has expired
 /// - If namespace prefix doesn't match service ID
-entry fun seal_approve(
+entry fun seal_approve<Token: drop>(
     id: vector<u8>,
-    sub: &Subscription,
-    service: &Service,
-    group: &MessagingGroup,
+    sub: &Subscription<Token>,
+    service: &Service<Token>,
+    group: &PermissionsGroup<Messaging>,
     clock: &Clock,
     ctx: &TxContext,
 ) {
@@ -283,135 +287,16 @@ entry fun seal_approve(
 // === Test Helpers ===
 
 #[test_only]
-public fun create_service_for_testing(
-    group_id: ID,
-    fee: u64,
-    ttl: u64,
-    ctx: &mut TxContext,
-): Service {
-    create_service(group_id, fee, ttl, ctx)
-}
-
-#[test_only]
-public fun destroy_service_for_testing(service: Service) {
+public fun destroy_service_for_testing<Token: drop>(service: Service<Token>) {
     let Service { id, .. } = service;
     object::delete(id);
 }
 
 #[test_only]
-public fun destroy_subscription_for_testing(sub: Subscription) {
+public fun destroy_subscription_for_testing<Token: drop>(sub: Subscription<Token>) {
     let Subscription { id, .. } = sub;
     object::delete(id);
 }
 
 // === Tests ===
-
-#[test]
-fun test_subscription_flow() {
-    use messaging::messaging;
-    use sui::clock;
-    use sui::coin;
-
-    let ctx = &mut tx_context::dummy();
-    let mut clock = clock::create_for_testing(ctx);
-
-    // Create a MessagingGroup - sender becomes creator and member
-    let group = messaging::new(ctx);
-    let group_id = object::id(&group);
-
-    // Create a service linked to this group
-    let service = create_service(group_id, 10, 1000, ctx);
-
-    // Subscribe with correct fee
-    let payment = coin::mint_for_testing<SUI>(10, ctx);
-    let sub = subscribe(&service, payment, &clock, ctx);
-
-    // Build test ID with service namespace
-    let mut test_id = object::id(&service).to_bytes();
-    test_id.push_back(42); // nonce
-
-    // Should pass at time 0
-    assert!(check_policy(&test_id, &sub, &service, &group, &clock, ctx));
-
-    // Should pass at time 500 (within TTL)
-    clock.increment_for_testing(500);
-    assert!(check_policy(&test_id, &sub, &service, &group, &clock, ctx));
-
-    // Should pass at time 1000 (exactly at TTL boundary)
-    clock.increment_for_testing(500);
-    assert!(check_policy(&test_id, &sub, &service, &group, &clock, ctx));
-
-    // Should fail at time 1001 (expired)
-    clock.increment_for_testing(1);
-    assert!(!check_policy(&test_id, &sub, &service, &group, &clock, ctx));
-
-    // Cleanup
-    destroy_service_for_testing(service);
-    destroy_subscription_for_testing(sub);
-    clock.destroy_for_testing();
-    std::unit_test::destroy(group);
-}
-
-#[test]
-fun test_wrong_namespace() {
-    use messaging::messaging;
-    use sui::clock;
-    use sui::coin;
-
-    let ctx = &mut tx_context::dummy();
-    let clock = clock::create_for_testing(ctx);
-
-    // Create a MessagingGroup
-    let group = messaging::new(ctx);
-    let group_id = object::id(&group);
-
-    let service = create_service(group_id, 10, 1000, ctx);
-
-    let payment = coin::mint_for_testing<SUI>(10, ctx);
-    let sub = subscribe(&service, payment, &clock, ctx);
-
-    // Test with wrong namespace prefix
-    let wrong_id = vector[1, 2, 3, 4];
-    assert!(!check_policy(&wrong_id, &sub, &service, &group, &clock, ctx));
-
-    // Cleanup
-    destroy_service_for_testing(service);
-    destroy_subscription_for_testing(sub);
-    clock.destroy_for_testing();
-    std::unit_test::destroy(group);
-}
-
-#[test]
-fun test_wrong_group() {
-    use messaging::messaging;
-    use sui::clock;
-    use sui::coin;
-
-    let ctx = &mut tx_context::dummy();
-    let clock = clock::create_for_testing(ctx);
-
-    // Create two different MessagingGroups
-    let group1 = messaging::new(ctx);
-    let group2 = messaging::new(ctx);
-    let group1_id = object::id(&group1);
-
-    // Service is linked to group1
-    let service = create_service(group1_id, 10, 1000, ctx);
-
-    let payment = coin::mint_for_testing<SUI>(10, ctx);
-    let sub = subscribe(&service, payment, &clock, ctx);
-
-    // Build test ID with service namespace
-    let mut test_id = object::id(&service).to_bytes();
-    test_id.push_back(42);
-
-    // Should fail when passing group2 instead of group1
-    assert!(!check_policy(&test_id, &sub, &service, &group2, &clock, ctx));
-
-    // Cleanup
-    destroy_service_for_testing(service);
-    destroy_subscription_for_testing(sub);
-    clock.destroy_for_testing();
-    std::unit_test::destroy(group1);
-    std::unit_test::destroy(group2);
-}
+// Tests moved to tests/custom_seal_policy_tests.move

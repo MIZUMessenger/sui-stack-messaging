@@ -1,295 +1,280 @@
 /// Module: paid_join_rule
 ///
-/// Example custom JoinPolicy rule demonstrating payment-gated group membership.
-/// This module showcases how third-party contracts can implement custom rules
-/// for the `groups::join_policy` hot potato pattern, integrated with MessagingGroup.
+/// Example third-party contract demonstrating payment-gated group membership
+/// using the `object_*` actor pattern with accumulated funds management.
 ///
-/// ## Overview
+/// ## Pattern Overview
 ///
-/// This rule requires users to pay a fee to join a MessagingGroup. The fee and recipient
-/// are configured when the rule is added to a JoinPolicy.
+/// This pattern enables self-service group joining with payment:
+/// 1. Group admin creates a `PaidJoinRule` actor with fee configuration
+/// 2. Admin adds the actor's address as a member with `MemberAdder` permission
+/// 3. Users call `join()` to self-serve join by paying the fee
+/// 4. Fees accumulate in the rule's `Balance<Token>`
+/// 5. Members with `FundsManager` permission can withdraw accumulated funds
 ///
-/// ## Pattern
+/// The actor object's UID is passed to `object_add_member`, which checks that
+/// the actor has `MemberAdder` permission before adding the transaction sender.
 ///
-/// Rules follow a standard pattern:
-/// 1. Define a Rule witness type (has `drop` only)
-/// 2. Define a Config type (has `store + drop`)
-/// 3. Implement a `satisfy` function that validates and adds a receipt
+/// ## Permissions
 ///
-/// ## Usage
+/// - `FundsManager`: Permission to withdraw accumulated fees from the rule
+///
+/// ## Usage Flow
 ///
 /// ```move
-/// // 1. Create MessagingGroup and JoinPolicy for your app
-/// let group = messaging::new(ctx);
-/// let (mut policy, cap) = join_policy::new<MyApp>(&publisher, ctx);
+/// // 1. Admin creates the group
+/// let mut group = messaging::create_group(...);
 ///
-/// // 2. Add the payment rule
-/// paid_join_rule::add_rule(&mut policy, &cap, 1_000_000_000, recipient_address); // 1 SUI fee
+/// // 2. Admin creates the paid join rule (generic over token type)
+/// let rule = paid_join_rule::new<SUI>(group_id, 1_000_000_000, ctx); // 1 SUI fee
+/// let rule_address = object::id(&rule).to_address();
 ///
-/// // 3. User joins by satisfying the rule
-/// let mut request = join_policy::new_join_request(&policy, ctx);
-/// paid_join_rule::satisfy(&mut request, &policy, payment_coin);
-/// let approval = join_policy::confirm_request(&policy, request);
-/// group.add_member_with_approval(approval);
+/// // 3. Admin adds the rule as a member with MemberAdder permission
+/// group.add_member(rule_address, ctx);
+/// group.grant_permission<Messaging, MemberAdder>(rule_address, ctx);
+///
+/// // 4. Admin grants FundsManager permission to themselves or a treasurer
+/// group.grant_permission<Messaging, FundsManager>(treasurer, ctx);
+///
+/// // 5. Share the rule so users can access it
+/// transfer::share_object(rule);
+///
+/// // 6. User self-serves to join
+/// paid_join_rule::join<SUI>(&mut rule, &mut group, &mut payment, ctx);
+///
+/// // 7. Treasurer withdraws accumulated funds
+/// let funds = paid_join_rule::withdraw<SUI>(&mut rule, &group, amount, ctx);
 /// ```
 ///
-module app::paid_join_rule;
+module example_app::paid_join_rule;
 
-use groups::join_policy::{Self, JoinPolicy, JoinPolicyCap, JoinRequest};
-use sui::coin::Coin;
-use sui::sui::SUI;
+use groups::permissions_group::PermissionsGroup;
+use messaging::messaging::Messaging;
+use sui::balance::{Self, Balance};
+use sui::coin::{Self, Coin};
 
 // === Error Codes ===
 
 const EInsufficientPayment: u64 = 0;
+const EInsufficientBalance: u64 = 1;
+const EGroupMismatch: u64 = 2;
+const ENotPermitted: u64 = 3;
+
+// === Permission Witnesses ===
+
+/// Permission to withdraw accumulated funds from the rule.
+/// Must be granted via `group.grant_permission<Messaging, FundsManager>(member, ctx)`.
+public struct FundsManager() has drop;
 
 // === Structs ===
 
-/// Rule witness type. Only has `drop` ability.
-/// The existence of this type in a receipt proves the payment was made.
-public struct PaymentRule has drop {}
-
-/// Configuration for the payment rule.
-/// Stored in the JoinPolicy's rule_configs Bag.
-public struct PaymentConfig has store, drop {
-    /// The fee required to join (in MIST)
+/// Actor object that enables paid self-service group joining.
+/// Must be added as a group member with `MemberAdder` permission.
+/// Accumulates fees in a `Balance<Token>` that can be withdrawn by `FundsManager`.
+public struct PaidJoinRule<phantom Token> has key {
+    id: UID,
+    /// The group this rule is associated with
+    group_id: ID,
+    /// Fee in Token's smallest unit required to join
     fee: u64,
-    /// The address that receives the payment
-    recipient: address,
+    /// Accumulated fees from join payments
+    balance: Balance<Token>,
 }
 
-// === Rule Management ===
+// === Public Functions ===
 
-/// Adds the payment rule to a JoinPolicy.
-/// This is a convenience function that wraps `join_policy::add_rule`.
+/// Creates a new PaidJoinRule actor.
+/// The returned object should be shared after the admin grants it `MemberAdder` permission.
 ///
 /// # Type Parameters
-/// - `T`: The policy's witness type
+/// - `Token`: The coin type accepted for payment (e.g., `SUI`)
 ///
 /// # Parameters
-/// - `policy`: The JoinPolicy to add the rule to
-/// - `cap`: The capability proving ownership of the policy
-/// - `fee`: The fee required to join (in MIST)
-/// - `recipient`: The address that receives the payment
-public fun add_rule<T>(
-    policy: &mut JoinPolicy<T>,
-    cap: &JoinPolicyCap<T>,
-    fee: u64,
-    recipient: address,
-) {
-    join_policy::add_rule<T, PaymentRule, PaymentConfig>(
-        policy,
-        cap,
-        PaymentConfig { fee, recipient },
-    );
-}
-
-/// Removes the payment rule from a JoinPolicy.
+/// - `group_id`: The ID of the group this rule controls access to
+/// - `fee`: Join fee in Token's smallest unit
+/// - `ctx`: Transaction context
 ///
 /// # Returns
-/// - The PaymentConfig that was stored
-public fun remove_rule<T>(
-    policy: &mut JoinPolicy<T>,
-    cap: &JoinPolicyCap<T>,
-): PaymentConfig {
-    join_policy::remove_rule<T, PaymentRule, PaymentConfig>(policy, cap)
+/// A new `PaidJoinRule<Token>` object.
+public fun new<Token: drop>(
+    group_id: ID,
+    fee: u64,
+    ctx: &mut TxContext,
+): PaidJoinRule<Token> {
+    PaidJoinRule {
+        id: object::new(ctx),
+        group_id,
+        fee,
+        balance: balance::zero(),
+    }
 }
 
-// === Rule Satisfaction ===
-
-/// Satisfies the payment rule by paying the required fee.
-/// This function validates the payment and adds a receipt to the request.
-///
-/// # Type Parameters
-/// - `T`: The policy's witness type
+/// Shares the PaidJoinRule object.
+/// Call this after creating the rule and obtaining its address for permission setup.
 ///
 /// # Parameters
-/// - `request`: The join request to add the receipt to
-/// - `policy`: The JoinPolicy containing the rule configuration
-/// - `payment`: SUI coin for payment (must be >= fee)
+/// - `rule`: The PaidJoinRule to share
+public fun share<Token: drop>(rule: PaidJoinRule<Token>) {
+    transfer::share_object(rule);
+}
+
+/// Creates a new PaidJoinRule and shares it immediately.
+/// Note: Use `new` + `share` separately if you need the rule's address before sharing
+/// (e.g., for granting `MemberAdder` permission).
+entry fun new_and_share<Token: drop>(
+    group_id: ID,
+    fee: u64,
+    ctx: &mut TxContext,
+) {
+    share(new<Token>(group_id, fee, ctx));
+}
+
+/// Allows the transaction sender to join the group by paying the required fee.
+/// The sender is added as a member with no initial permissions.
+/// Fees accumulate in the rule's balance for later withdrawal.
+///
+/// # Type Parameters
+/// - `Token`: The coin type for payment
+///
+/// # Parameters
+/// - `rule`: Mutable reference to the PaidJoinRule actor
+/// - `group`: Mutable reference to the PermissionsGroup
+/// - `payment`: Mutable reference to Coin for payment (fee is deducted in place)
+/// - `ctx`: Transaction context
 ///
 /// # Aborts
-/// - If payment value is less than the configured fee
-public fun satisfy<T>(
-    request: &mut JoinRequest<T>,
-    policy: &JoinPolicy<T>,
-    payment: Coin<SUI>,
+/// - `EInsufficientPayment`: if payment is less than the required fee
+/// - `EGroupMismatch`: if group doesn't match rule's group_id
+/// - From `object_add_member`: if rule doesn't have `MemberAdder` permission
+/// - From `object_add_member`: if sender is already a member
+public fun join<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &mut PermissionsGroup<Messaging>,
+    payment: &mut Coin<Token>,
+    ctx: &mut TxContext,
 ) {
-    let config = join_policy::get_rule_config<T, PaymentRule, PaymentConfig>(policy);
+    assert!(payment.value() >= rule.fee, EInsufficientPayment);
+    assert!(object::id(group) == rule.group_id, EGroupMismatch);
 
-    // Validate payment amount
-    assert!(payment.value() >= config.fee, EInsufficientPayment);
+    // Split exact fee from payment and add to balance
+    let fee_balance = payment.balance_mut().split(rule.fee);
+    rule.balance.join(fee_balance);
 
-    // Transfer payment to recipient
-    transfer::public_transfer(payment, config.recipient);
+    // Add sender as member via the actor object
+    group.object_add_member(&rule.id, ctx);
+}
 
-    // Add receipt proving this rule was satisfied
-    join_policy::add_receipt<T, PaymentRule>(request, PaymentRule {});
+/// Entry version of `join` for CLI usage.
+entry fun join_entry<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &mut PermissionsGroup<Messaging>,
+    payment: &mut Coin<Token>,
+    ctx: &mut TxContext,
+) {
+    join(rule, group, payment, ctx);
+}
+
+/// Withdraws accumulated funds from the rule.
+/// Only callable by members with `FundsManager` permission on the group.
+///
+/// # Type Parameters
+/// - `Token`: The coin type to withdraw
+///
+/// # Parameters
+/// - `rule`: Mutable reference to the PaidJoinRule
+/// - `group`: Reference to the PermissionsGroup (for permission check)
+/// - `amount`: Amount to withdraw in Token's smallest unit
+/// - `ctx`: Transaction context
+///
+/// # Returns
+/// A `Coin<Token>` containing the withdrawn amount.
+///
+/// # Aborts
+/// - `EGroupMismatch`: if group doesn't match rule's group_id
+/// - `ENotPermitted`: if caller doesn't have `FundsManager` permission
+/// - `EInsufficientBalance`: if rule balance is less than requested amount
+public fun withdraw<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &PermissionsGroup<Messaging>,
+    amount: u64,
+    ctx: &mut TxContext,
+): Coin<Token> {
+    assert!(object::id(group) == rule.group_id, EGroupMismatch);
+    assert!(group.has_permission<Messaging, FundsManager>(ctx.sender()), ENotPermitted);
+    assert!(rule.balance.value() >= amount, EInsufficientBalance);
+
+    coin::from_balance(rule.balance.split(amount), ctx)
+}
+
+/// Entry version of `withdraw` that transfers directly to sender.
+entry fun withdraw_entry<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &PermissionsGroup<Messaging>,
+    amount: u64,
+    ctx: &mut TxContext,
+) {
+    let coin = withdraw(rule, group, amount, ctx);
+    transfer::public_transfer(coin, ctx.sender());
+}
+
+/// Withdraws all accumulated funds from the rule.
+/// Only callable by members with `FundsManager` permission on the group.
+///
+/// # Type Parameters
+/// - `Token`: The coin type to withdraw
+///
+/// # Parameters
+/// - `rule`: Mutable reference to the PaidJoinRule
+/// - `group`: Reference to the PermissionsGroup (for permission check)
+/// - `ctx`: Transaction context
+///
+/// # Returns
+/// A `Coin<Token>` containing all accumulated funds.
+///
+/// # Aborts
+/// - `EGroupMismatch`: if group doesn't match rule's group_id
+/// - `ENotPermitted`: if caller doesn't have `FundsManager` permission
+public fun withdraw_all<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &PermissionsGroup<Messaging>,
+    ctx: &mut TxContext,
+): Coin<Token> {
+    let amount = rule.balance.value();
+    withdraw(rule, group, amount, ctx)
+}
+
+/// Entry version of `withdraw_all` that transfers directly to sender.
+entry fun withdraw_all_entry<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &PermissionsGroup<Messaging>,
+    ctx: &mut TxContext,
+) {
+    let coin = withdraw_all(rule, group, ctx);
+    transfer::public_transfer(coin, ctx.sender());
 }
 
 // === Getters ===
 
-/// Returns the fee configured for a policy's payment rule.
-public fun get_fee<T>(policy: &JoinPolicy<T>): u64 {
-    let config = join_policy::get_rule_config<T, PaymentRule, PaymentConfig>(policy);
-    config.fee
+/// Returns the join fee.
+public fun fee<Token: drop>(rule: &PaidJoinRule<Token>): u64 {
+    rule.fee
 }
 
-/// Returns the recipient configured for a policy's payment rule.
-public fun get_recipient<T>(policy: &JoinPolicy<T>): address {
-    let config = join_policy::get_rule_config<T, PaymentRule, PaymentConfig>(policy);
-    config.recipient
+/// Returns the group ID this rule is associated with.
+public fun group_id<Token: drop>(rule: &PaidJoinRule<Token>): ID {
+    rule.group_id
+}
+
+/// Returns the current accumulated balance.
+public fun balance_value<Token: drop>(rule: &PaidJoinRule<Token>): u64 {
+    rule.balance.value()
 }
 
 // === Test Helpers ===
 
 #[test_only]
-public struct TestWitness has drop {}
-
-#[test_only]
-public fun create_config_for_testing(fee: u64, recipient: address): PaymentConfig {
-    PaymentConfig { fee, recipient }
-}
-
-// === Tests ===
-
-#[test]
-fun test_paid_join_success() {
-    use messaging::messaging;
-    use sui::coin;
-
-    let creator_ctx = &mut tx_context::dummy();
-    let creator = creator_ctx.sender();
-
-    // Create MessagingGroup (creator becomes member with all permissions)
-    let mut group = messaging::new(creator_ctx);
-
-    // Create policy with payment rule (10 MIST fee, creator receives payment)
-    let (mut policy, cap) = join_policy::new_for_testing<TestWitness>(creator_ctx);
-    add_rule(&mut policy, &cap, 10, creator);
-
-    // New user wants to join
-    let new_user = @0xCAFE;
-    let user_ctx = &tx_context::new_from_hint(new_user, 0, 0, 0, 0);
-
-    // Create join request
-    let mut request = join_policy::new_join_request(&policy, user_ctx);
-
-    // Pay to satisfy the rule
-    let payment = coin::mint_for_testing<SUI>(10, creator_ctx);
-    satisfy(&mut request, &policy, payment);
-
-    // Confirm request - returns JoinApproval
-    let approval = join_policy::confirm_request(&policy, request);
-
-    // Add member to MessagingGroup using the approval
-    group.add_member_with_approval(approval);
-
-    // Verify member was added
-    assert!(group.is_member(new_user));
-
-    // Cleanup
-    let _config = remove_rule(&mut policy, &cap);
-    join_policy::destroy_policy_for_testing(policy);
-    join_policy::destroy_cap_for_testing(cap);
-    std::unit_test::destroy(group);
-}
-
-#[test]
-#[expected_failure(abort_code = EInsufficientPayment)]
-fun test_paid_join_insufficient_payment() {
-    use messaging::messaging;
-    use sui::coin;
-
-    let creator_ctx = &mut tx_context::dummy();
-    let creator = creator_ctx.sender();
-
-    // Create MessagingGroup
-    let mut group = messaging::new(creator_ctx);
-
-    // Create policy with payment rule (10 MIST fee)
-    let (mut policy, cap) = join_policy::new_for_testing<TestWitness>(creator_ctx);
-    add_rule(&mut policy, &cap, 10, creator);
-
-    // New user wants to join
-    let new_user = @0xCAFE;
-    let user_ctx = &tx_context::new_from_hint(new_user, 0, 0, 0, 0);
-
-    // Create join request
-    let mut request = join_policy::new_join_request(&policy, user_ctx);
-
-    // Pay less than required - should fail
-    let payment = coin::mint_for_testing<SUI>(5, creator_ctx);
-    satisfy(&mut request, &policy, payment);
-
-    // Won't reach here
-    let approval = join_policy::confirm_request(&policy, request);
-    group.add_member_with_approval(approval);
-
-    // Cleanup (won't reach)
-    let _config = remove_rule(&mut policy, &cap);
-    join_policy::destroy_policy_for_testing(policy);
-    join_policy::destroy_cap_for_testing(cap);
-    std::unit_test::destroy(group);
-}
-
-#[test]
-fun test_paid_join_overpayment_accepted() {
-    use messaging::messaging;
-    use sui::coin;
-
-    let creator_ctx = &mut tx_context::dummy();
-    let creator = creator_ctx.sender();
-
-    // Create MessagingGroup
-    let mut group = messaging::new(creator_ctx);
-
-    // Create policy with payment rule (10 MIST fee)
-    let (mut policy, cap) = join_policy::new_for_testing<TestWitness>(creator_ctx);
-    add_rule(&mut policy, &cap, 10, creator);
-
-    // New user wants to join
-    let new_user = @0xCAFE;
-    let user_ctx = &tx_context::new_from_hint(new_user, 0, 0, 0, 0);
-
-    // Create join request
-    let mut request = join_policy::new_join_request(&policy, user_ctx);
-
-    // Pay more than required - should succeed (overpayment as tip/donation)
-    let payment = coin::mint_for_testing<SUI>(100, creator_ctx);
-    satisfy(&mut request, &policy, payment);
-
-    // Confirm request - returns JoinApproval
-    let approval = join_policy::confirm_request(&policy, request);
-
-    // Add member to MessagingGroup using the approval
-    group.add_member_with_approval(approval);
-
-    // Verify member was added
-    assert!(group.is_member(new_user));
-
-    // Cleanup
-    let _config = remove_rule(&mut policy, &cap);
-    join_policy::destroy_policy_for_testing(policy);
-    join_policy::destroy_cap_for_testing(cap);
-    std::unit_test::destroy(group);
-}
-
-#[test]
-fun test_getters() {
-    let creator_ctx = &mut tx_context::dummy();
-    let recipient = @0xBEEF;
-
-    // Create policy with payment rule
-    let (mut policy, cap) = join_policy::new_for_testing<TestWitness>(creator_ctx);
-    add_rule(&mut policy, &cap, 42, recipient);
-
-    // Test getters
-    assert!(get_fee(&policy) == 42);
-    assert!(get_recipient(&policy) == recipient);
-
-    // Cleanup
-    let _config = remove_rule(&mut policy, &cap);
-    join_policy::destroy_policy_for_testing(policy);
-    join_policy::destroy_cap_for_testing(cap);
+public fun destroy_for_testing<Token: drop>(rule: PaidJoinRule<Token>) {
+    let PaidJoinRule { id, balance, .. } = rule;
+    balance.destroy_for_testing();
+    object::delete(id);
 }

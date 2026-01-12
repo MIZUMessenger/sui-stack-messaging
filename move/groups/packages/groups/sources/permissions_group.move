@@ -25,6 +25,7 @@ const ENotPermitted: u64 = 0;
 const EMemberNotFound: u64 = 1;
 const ELastPermissionsManager: u64 = 2;
 const EPermissionsGroupAlreadyExists: u64 = 3;
+const EAlreadyMember: u64 = 4;
 
 // === Permission Witnesses ===
 
@@ -125,14 +126,14 @@ public fun new_derived<T: drop, DerivationKey: copy + drop + store>(
 ///
 /// # Aborts
 /// - `ENotPermitted`: if caller doesn't have `MemberAdder` permission
-/// - `EMemberNotFound`: if new_member is already a member
+/// - `EAlreadyMember`: if new_member is already a member
 public fun add_member<T: drop>(
     self: &mut PermissionsGroup<T>,
     new_member: address,
     ctx: &TxContext,
 ) {
     assert!(self.has_permission<T, MemberAdder>(ctx.sender()), ENotPermitted);
-    assert!(!self.is_member<T>(new_member), EMemberNotFound);
+    assert!(!self.is_member<T>(new_member), EAlreadyMember);
     self.permissions.add(new_member, vec_set::empty<TypeName>());
 }
 
@@ -147,7 +148,7 @@ public fun add_member<T: drop>(
 ///
 /// # Aborts
 /// - `ENotPermitted`: if actor_object doesn't have `MemberAdder` permission
-/// - `EMemberNotFound`: if sender is already a member
+/// - `EAlreadyMember`: if sender is already a member
 public fun object_add_member<T: drop>(
     self: &mut PermissionsGroup<T>,
     actor_object: &UID,
@@ -156,7 +157,7 @@ public fun object_add_member<T: drop>(
     let actor_address = actor_object.to_address();
     assert!(self.has_permission<T, MemberAdder>(actor_address), ENotPermitted);
     let new_member = ctx.sender();
-    assert!(!self.is_member<T>(new_member), EMemberNotFound);
+    assert!(!self.is_member<T>(new_member), EAlreadyMember);
     self.permissions.add(new_member, vec_set::empty<TypeName>());
 }
 
