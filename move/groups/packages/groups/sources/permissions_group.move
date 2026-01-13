@@ -358,20 +358,31 @@ public fun grant_base_permissions<T: drop>(
 ) {
     assert!(self.has_permission<T, PermissionsManager>(ctx.sender()), ENotPermitted);
     assert!(self.is_member<T>(member), EMemberNotFound);
-    let base_permissions = base_permissions_set();
-    let member_permissions_set = self.permissions.borrow_mut(member);
-    base_permissions.into_keys().do!(|permission| {
-        member_permissions_set.insert(permission);
-        if (permission == type_name::with_defining_ids<PermissionsManager>()) {
-            self.managers_count = self.managers_count + 1;
-        };
-    });
+    self.internal_grant_base_permissions<T>(member);
+}
 
-    event::emit(PermissionsGranted<T> {
-        group_id: object::id(self),
-        member,
-        permissions: base_permissions_set().into_keys(),
-    });
+/// Grants all base permissions to the transaction sender via an actor object.
+/// Enables third-party contracts to grant base permissions with custom logic.
+/// The actor object must have `PermissionsManager` permission on the group.
+///
+/// # Parameters
+/// - `self`: Mutable reference to the PermissionsGroup
+/// - `actor_object`: UID of the actor object with `PermissionsManager` permission
+/// - `ctx`: Transaction context (sender will receive all base permissions)
+///
+/// # Aborts
+/// - `ENotPermitted`: if actor_object doesn't have `PermissionsManager` permission
+/// - `EMemberNotFound`: if sender is not a member
+public fun object_grant_base_permissions<T: drop>(
+    self: &mut PermissionsGroup<T>,
+    actor_object: &UID,
+    ctx: &mut TxContext,
+) {
+    let actor_address = actor_object.to_address();
+    assert!(self.has_permission<T, PermissionsManager>(actor_address), ENotPermitted);
+    let member = ctx.sender();
+    assert!(self.is_member<T>(member), EMemberNotFound);
+    self.internal_grant_base_permissions<T>(member);
 }
 
 /// Grants a permission to the transaction sender via an actor object.
@@ -468,19 +479,83 @@ public fun revoke_base_permissions<T: drop>(
 ) {
     assert!(self.has_permission<T, PermissionsManager>(ctx.sender()), ENotPermitted);
     assert!(self.permissions.contains(member), EMemberNotFound);
-    self.safe_decrement_managers_count(member);
-    let member_permissions_set = self.permissions.borrow_mut(member);
-    base_permissions_set().into_keys().do!(|permission| {
-        if (member_permissions_set.contains(&permission)) {
-            member_permissions_set.remove(&permission);
-        };
-    });
+    self.internal_revoke_base_permissions<T>(member);
+}
 
-    event::emit(PermissionsRevoked<T> {
-        group_id: object::id(self),
-        member,
-        permissions: base_permissions_set().into_keys(),
-    });
+/// Revokes all base permissions from the transaction sender via an actor object.
+/// Enables third-party contracts to revoke base permissions with custom logic.
+/// The actor object must have `PermissionsManager` permission on the group.
+///
+/// # Parameters
+/// - `self`: Mutable reference to the PermissionsGroup
+/// - `actor_object`: UID of the actor object with `PermissionsManager` permission
+/// - `ctx`: Transaction context (sender will have base permissions revoked)
+///
+/// # Aborts
+/// - `ENotPermitted`: if actor_object doesn't have `PermissionsManager` permission
+/// - `EMemberNotFound`: if sender is not a member
+/// - `ELastPermissionsManager`: if sender has `PermissionsManager` and revoking would leave no
+/// managers
+public fun object_revoke_base_permissions<T: drop>(
+    self: &mut PermissionsGroup<T>,
+    actor_object: &UID,
+    ctx: &mut TxContext,
+) {
+    let actor_address = actor_object.to_address();
+    assert!(self.has_permission<T, PermissionsManager>(actor_address), ENotPermitted);
+    let member = ctx.sender();
+    assert!(self.permissions.contains(member), EMemberNotFound);
+    self.internal_revoke_base_permissions<T>(member);
+}
+
+/// Revokes all permissions from a member.
+/// Removes both base permissions and any custom permissions.
+/// The member remains in the group but with no permissions.
+///
+/// # Parameters
+/// - `self`: Mutable reference to the PermissionsGroup
+/// - `member`: Address of the member to revoke all permissions from
+/// - `ctx`: Transaction context
+///
+/// # Aborts
+/// - `ENotPermitted`: if caller doesn't have `PermissionsManager` permission
+/// - `EMemberNotFound`: if member doesn't exist
+/// - `ELastPermissionsManager`: if member has `PermissionsManager` and revoking would leave no
+/// managers
+public fun revoke_all_permissions<T: drop>(
+    self: &mut PermissionsGroup<T>,
+    member: address,
+    ctx: &TxContext,
+) {
+    assert!(self.has_permission<T, PermissionsManager>(ctx.sender()), ENotPermitted);
+    assert!(self.permissions.contains(member), EMemberNotFound);
+    self.internal_revoke_all_permissions<T>(member);
+}
+
+/// Revokes all permissions from the transaction sender via an actor object.
+/// Enables third-party contracts to revoke all permissions with custom logic.
+/// The actor object must have `PermissionsManager` permission on the group.
+///
+/// # Parameters
+/// - `self`: Mutable reference to the PermissionsGroup
+/// - `actor_object`: UID of the actor object with `PermissionsManager` permission
+/// - `ctx`: Transaction context (sender will have all permissions revoked)
+///
+/// # Aborts
+/// - `ENotPermitted`: if actor_object doesn't have `PermissionsManager` permission
+/// - `EMemberNotFound`: if sender is not a member
+/// - `ELastPermissionsManager`: if sender has `PermissionsManager` and revoking would leave no
+/// managers
+public fun object_revoke_all_permissions<T: drop>(
+    self: &mut PermissionsGroup<T>,
+    actor_object: &UID,
+    ctx: &mut TxContext,
+) {
+    let actor_address = actor_object.to_address();
+    assert!(self.has_permission<T, PermissionsManager>(actor_address), ENotPermitted);
+    let member = ctx.sender();
+    assert!(self.permissions.contains(member), EMemberNotFound);
+    self.internal_revoke_all_permissions<T>(member);
 }
 
 /// Revokes a permission from the transaction sender via an actor object.
@@ -616,4 +691,56 @@ fun internal_grant_permission<T: drop, NewPermission: drop>(
     ) {
         self.managers_count = self.managers_count + 1;
     };
+}
+
+/// Internal helper to grant all base permissions to a member.
+/// Emits `PermissionsGranted` event.
+fun internal_grant_base_permissions<T: drop>(self: &mut PermissionsGroup<T>, member: address) {
+    let base_permissions = base_permissions_set();
+    let member_permissions_set = self.permissions.borrow_mut(member);
+    base_permissions.into_keys().do!(|permission| {
+        member_permissions_set.insert(permission);
+        if (permission == type_name::with_defining_ids<PermissionsManager>()) {
+            self.managers_count = self.managers_count + 1;
+        };
+    });
+
+    event::emit(PermissionsGranted<T> {
+        group_id: object::id(self),
+        member,
+        permissions: base_permissions_set().into_keys(),
+    });
+}
+
+/// Internal helper to revoke all base permissions from a member.
+/// Emits `PermissionsRevoked` event.
+fun internal_revoke_base_permissions<T: drop>(self: &mut PermissionsGroup<T>, member: address) {
+    self.safe_decrement_managers_count(member);
+    let member_permissions_set = self.permissions.borrow_mut(member);
+    base_permissions_set().into_keys().do!(|permission| {
+        if (member_permissions_set.contains(&permission)) {
+            member_permissions_set.remove(&permission);
+        };
+    });
+
+    event::emit(PermissionsRevoked<T> {
+        group_id: object::id(self),
+        member,
+        permissions: base_permissions_set().into_keys(),
+    });
+}
+
+/// Internal helper to revoke all permissions from a member.
+/// Emits `PermissionsRevoked` event with all permissions that were revoked.
+fun internal_revoke_all_permissions<T: drop>(self: &mut PermissionsGroup<T>, member: address) {
+    self.safe_decrement_managers_count(member);
+    let old_permissions = self.permissions.remove(member);
+    let revoked_permissions = old_permissions.into_keys();
+    self.permissions.add(member, vec_set::empty<TypeName>());
+
+    event::emit(PermissionsRevoked<T> {
+        group_id: object::id(self),
+        member,
+        permissions: revoked_permissions,
+    });
 }
