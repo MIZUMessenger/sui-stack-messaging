@@ -10,10 +10,10 @@ use messaging::messaging::{
     MessagingSender,
     MessagingReader,
     MessagingEditor,
-    MessagingDeleter,
+    MessagingDeleter
 };
 use std::unit_test::{assert_eq, destroy};
-use sui::test_scenario::{Self as ts};
+use sui::test_scenario as ts;
 
 // === Test Addresses ===
 
@@ -355,7 +355,7 @@ fun encryption_history_encrypted_key_invalid_version_fails() {
 /// Generate a vector of bytes larger than MAX_ENCRYPTED_DEK_BYTES (1024).
 fun make_oversized_dek(): vector<u8> {
     let mut dek = vector::empty<u8>();
-    let mut i = 0;
+    let mut i: u64 = 0;
     while (i < 1025) {
         dek.push_back(0x42);
         i = i + 1;
