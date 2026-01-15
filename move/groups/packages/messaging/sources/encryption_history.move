@@ -30,7 +30,7 @@ const EEncryptedDEKTooLarge: u64 = 2;
 /// - AES-256-GCM key (32 bytes) encrypted with AES-256-GCM will result in 48 bytes
 /// - potentially AAD (additional authenticated data) - variable size, typically 16-32 bytes
 /// - Seal package ID (32 bytes)
-/// - Identity bytes: Cretor's Sui address (32 bytes) + nonce (up to 32 bytes)
+/// - Identity bytes: Creator's Sui address (32 bytes) + nonce (up to 32 bytes)
 /// - services: vector((address (32 bytes), weight (1 byte))) - typically 2-3 entries
 /// - Encrypted key shares - {
 ///     nonce(96 bytes),

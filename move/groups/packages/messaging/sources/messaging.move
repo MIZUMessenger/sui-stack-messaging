@@ -136,6 +136,9 @@ public fun create_group(
 /// - `initial_encrypted_dek`: Initial Seal-encrypted DEK bytes
 /// - `initial_members`: Set of addresses to grant `MessagingReader` permission
 /// - `ctx`: Transaction context
+///
+/// # Note
+/// See `create_group` for details on creator permissions and initial member handling.
 #[allow(lint(share_owned))]
 public fun create_and_share_group(
     namespace: &mut MessagingNamespace,
@@ -181,6 +184,10 @@ public fun rotate_encryption_key(
 /// - `group`: Mutable reference to the PermissionsGroup<Messaging>
 /// - `member`: Address to grant permissions to
 /// - `ctx`: Transaction context
+///
+/// # Aborts
+/// - `ENotPermitted` (from `permissions_group`): if caller doesn't have `CorePermissionsManager`
+/// or `ExtensionPermissionsManager` permission
 public fun grant_all_messaging_permissions(
     group: &mut PermissionsGroup<Messaging>,
     member: address,
@@ -199,6 +206,10 @@ public fun grant_all_messaging_permissions(
 /// - `group`: Mutable reference to the PermissionsGroup<Messaging>
 /// - `member`: Address to grant permissions to
 /// - `ctx`: Transaction context
+///
+/// # Aborts
+/// - `ENotPermitted` (from `permissions_group`): if caller doesn't have `CorePermissionsManager`
+/// permission
 public fun grant_all_permissions(
     group: &mut PermissionsGroup<Messaging>,
     member: address,

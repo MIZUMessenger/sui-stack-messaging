@@ -3,6 +3,7 @@ module example_app::custom_seal_policy_tests;
 
 use groups::permissions_group::PermissionsGroup;
 use messaging::messaging::{Self, Messaging, MessagingNamespace};
+use sui::vec_set;
 use example_app::custom_seal_policy;
 use sui::clock;
 use sui::coin;
@@ -27,6 +28,7 @@ fun setup_group(ts: &mut Scenario): ID {
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
         b"test_encrypted_dek",
+        vec_set::empty(),
         ts.ctx(),
     );
     let group_id = object::id(&group);
@@ -178,6 +180,7 @@ fun seal_approve_wrong_group() {
     let (group1, encryption_history1) = messaging::create_group(
         &mut namespace,
         b"test_encrypted_dek_1",
+        vec_set::empty(),
         ts.ctx(),
     );
     let group1_id = object::id(&group1);
@@ -188,6 +191,7 @@ fun seal_approve_wrong_group() {
     let (group2, encryption_history2) = messaging::create_group(
         &mut namespace,
         b"test_encrypted_dek_2",
+        vec_set::empty(),
         ts.ctx(),
     );
     group2_id = object::id(&group2);

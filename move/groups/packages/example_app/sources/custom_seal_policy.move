@@ -24,11 +24,11 @@
 ///
 /// ## Usage Flow
 ///
-/// 1. Create MessagingGroup using messaging::messaging::new_with_encryption()
-/// 2. Create Service via create_service(group_id, fee, ttl)
-/// 3. Users subscribe via subscribe(service, payment, clock)
+/// 1. Create MessagingGroup using `messaging::messaging::create_group()`
+/// 2. Create Service via `create_service(group_id, fee, ttl)`
+/// 3. Users subscribe via `subscribe(service, payment, clock)`
 /// 4. Encrypt content using this package's ID and service.id as namespace
-/// 5. seal_approve validates subscription before decryption
+/// 5. `seal_approve` validates subscription before decryption
 ///
 module example_app::custom_seal_policy;
 
@@ -121,7 +121,7 @@ entry fun create_service_and_share<Token: drop>(
 /// - A new Subscription object
 ///
 /// # Aborts
-/// - If payment amount doesn't match service fee
+/// - `EInvalidFee`: if payment amount doesn't match service fee
 public fun subscribe<Token: drop>(
     service: &Service<Token>,
     payment: Coin<Token>,
@@ -204,6 +204,13 @@ public fun is_subscription_valid<Token: drop>(
 /// is being accessed.
 ///
 /// Namespace format: [service_id (32 bytes)][nonce (variable)]
+///
+/// # Parameters
+/// - `service`: Reference to the Service
+/// - `id`: The Seal identity bytes to validate
+///
+/// # Returns
+/// `true` if the namespace prefix matches, `false` otherwise.
 fun check_namespace<Token: drop>(service: &Service<Token>, id: &vector<u8>): bool {
     let namespace = object::id(service).to_bytes();
     let namespace_len = namespace.length();
@@ -223,7 +230,18 @@ fun check_namespace<Token: drop>(service: &Service<Token>, id: &vector<u8>): boo
 }
 
 /// Checks all conditions for seal approval.
-/// Returns true if the subscription is valid, namespace matches, and caller is a member.
+///
+/// # Parameters
+/// - `id`: The Seal identity bytes
+/// - `sub`: Reference to the user's Subscription
+/// - `service`: Reference to the Service
+/// - `group`: Reference to the PermissionsGroup<Messaging>
+/// - `clock`: Clock for expiry validation
+/// - `ctx`: Transaction context for sender verification
+///
+/// # Returns
+/// `true` if all conditions pass (subscription valid, namespace matches, caller is member),
+/// `false` otherwise.
 fun check_policy<Token: drop>(
     id: &vector<u8>,
     sub: &Subscription<Token>,

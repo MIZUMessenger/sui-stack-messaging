@@ -1,8 +1,9 @@
 #[test_only]
 module example_app::paid_join_rule_tests;
 
-use groups::permissions_group::{PermissionsGroup, MemberAdder};
-use messaging::messaging::{Self, Messaging, MessagingNamespace};
+use groups::permissions_group::{PermissionsGroup, ExtensionPermissionsManager};
+use messaging::messaging::{Self, Messaging, MessagingNamespace, MessagingReader};
+use sui::vec_set;
 use example_app::paid_join_rule::{Self, PaidJoinRule, FundsManager};
 use std::unit_test::{assert_eq, destroy};
 use sui::coin;
@@ -14,7 +15,7 @@ const BOB: address = @0xB0B;
 const CHARLIE: address = @0xC4A1E;
 const FEE: u64 = 100;
 
-/// Sets up a messaging group with a PaidJoinRule that has MemberAdder permission.
+/// Sets up a messaging group with a PaidJoinRule that has ExtensionPermissionsManager permission.
 /// Uses the real create_group flow with MessagingNamespace and EncryptionHistory.
 /// Returns the group_id for use in tests.
 fun setup_for_testing(ts: &mut Scenario): ID {
@@ -28,6 +29,7 @@ fun setup_for_testing(ts: &mut Scenario): ID {
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
         b"test_encrypted_dek",
+        vec_set::empty(),
         ts.ctx(),
     );
     let group_id = object::id(&group);
@@ -41,12 +43,11 @@ fun setup_for_testing(ts: &mut Scenario): ID {
     let rule_address = object::id(&rule).to_address();
     paid_join_rule::share(rule);
 
-    // Alice adds rule as member with MemberAdder permission
+    // Alice grants ExtensionPermissionsManager to the rule so it can add members
     // Also grants herself FundsManager permission
     ts.next_tx(ALICE);
     let mut group = ts.take_shared<PermissionsGroup<Messaging>>();
-    group.add_member(rule_address, ts.ctx());
-    group.grant_permission<Messaging, MemberAdder>(rule_address, ts.ctx());
+    group.grant_permission<Messaging, ExtensionPermissionsManager>(rule_address, ts.ctx());
     group.grant_permission<Messaging, FundsManager>(ALICE, ts.ctx());
     ts::return_shared(group);
 
@@ -116,8 +117,8 @@ fun join_with_insufficient_payment() {
     abort // will differ from EInsufficientPayment
 }
 
-#[test, expected_failure]
-fun join_without_rule_permission() {
+#[test, expected_failure(abort_code = sui::dynamic_field::EFieldDoesNotExist)]
+fun join_rule_not_member() {
     let mut ts = ts::begin(ALICE);
 
     // Initialize messaging module
@@ -130,6 +131,7 @@ fun join_without_rule_permission() {
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
         b"test_encrypted_dek",
+        vec_set::empty(),
         ts.ctx(),
     );
     let group_id = object::id(&group);
@@ -137,24 +139,70 @@ fun join_without_rule_permission() {
     transfer::public_share_object(encryption_history);
     ts::return_shared(namespace);
 
-    // Create rule but DON'T add it as member with permission
+    // Create rule but DON'T add it as a member at all
     ts.next_tx(ALICE);
     let rule = paid_join_rule::new<SUI>(group_id, FEE, ts.ctx());
     paid_join_rule::share(rule);
 
-    // Bob tries to join but rule doesn't have MemberAdder permission
+    // Bob tries to join but rule is not a member of the group
     ts.next_tx(BOB);
     let mut group = ts.take_shared<PermissionsGroup<Messaging>>();
     let mut rule = ts.take_shared<PaidJoinRule<SUI>>();
     let mut payment = coin::mint_for_testing<SUI>(FEE, ts.ctx());
 
-    // This call aborts because rule doesn't have MemberAdder permission
+    // This call aborts because rule is not in the group's permissions table
     paid_join_rule::join(&mut rule, &mut group, &mut payment, ts.ctx());
 
     abort
 }
 
-#[test, expected_failure(abort_code = groups::permissions_group::EAlreadyMember)]
+#[test, expected_failure(abort_code = groups::permissions_group::ENotPermitted)]
+fun join_rule_without_manager_permission() {
+    let mut ts = ts::begin(ALICE);
+
+    // Initialize messaging module
+    ts.next_tx(ALICE);
+    messaging::init_for_testing(ts.ctx());
+
+    // Create group
+    ts.next_tx(ALICE);
+    let mut namespace = ts.take_shared<MessagingNamespace>();
+    let (group, encryption_history) = messaging::create_group(
+        &mut namespace,
+        b"test_encrypted_dek",
+        vec_set::empty(),
+        ts.ctx(),
+    );
+    let group_id = object::id(&group);
+    transfer::public_share_object(group);
+    transfer::public_share_object(encryption_history);
+    ts::return_shared(namespace);
+
+    // Create rule
+    ts.next_tx(ALICE);
+    let rule = paid_join_rule::new<SUI>(group_id, FEE, ts.ctx());
+    let rule_address = object::id(&rule).to_address();
+    paid_join_rule::share(rule);
+
+    // Grant rule only MessagingReader (not ExtensionPermissionsManager)
+    ts.next_tx(ALICE);
+    let mut group = ts.take_shared<PermissionsGroup<Messaging>>();
+    group.grant_permission<Messaging, MessagingReader>(rule_address, ts.ctx());
+    ts::return_shared(group);
+
+    // Bob tries to join but rule only has MessagingReader, not ExtensionPermissionsManager
+    ts.next_tx(BOB);
+    let mut group = ts.take_shared<PermissionsGroup<Messaging>>();
+    let mut rule = ts.take_shared<PaidJoinRule<SUI>>();
+    let mut payment = coin::mint_for_testing<SUI>(FEE, ts.ctx());
+
+    // This call aborts with ENotPermitted because rule lacks ExtensionPermissionsManager
+    paid_join_rule::join(&mut rule, &mut group, &mut payment, ts.ctx());
+
+    abort
+}
+
+#[test, expected_failure(abort_code = sui::vec_set::EKeyAlreadyExists)]
 fun join_twice_fails() {
     let mut ts = ts::begin(ALICE);
     setup_for_testing(&mut ts);
@@ -169,16 +217,16 @@ fun join_twice_fails() {
     ts::return_shared(rule);
     ts::return_shared(group);
 
-    // Bob tries to join again - should fail (already a member)
+    // Bob tries to join again - should fail (already has MessagingReader permission)
     ts.next_tx(BOB);
     let mut group = ts.take_shared<PermissionsGroup<Messaging>>();
     let mut rule = ts.take_shared<PaidJoinRule<SUI>>();
     let mut payment = coin::mint_for_testing<SUI>(FEE, ts.ctx());
 
-    // This call aborts with EAlreadyMember
+    // This call aborts because Bob already has MessagingReader permission
     paid_join_rule::join(&mut rule, &mut group, &mut payment, ts.ctx());
 
-    abort // will differ from EAlreadyMember
+    abort
 }
 
 #[test]
@@ -318,6 +366,7 @@ fun join_wrong_group() {
     let (group1, encryption_history1) = messaging::create_group(
         &mut namespace,
         b"test_encrypted_dek_1",
+        vec_set::empty(),
         ts.ctx(),
     );
     let group1_id = object::id(&group1);
@@ -327,6 +376,7 @@ fun join_wrong_group() {
     let (group2, encryption_history2) = messaging::create_group(
         &mut namespace,
         b"test_encrypted_dek_2",
+        vec_set::empty(),
         ts.ctx(),
     );
     let group2_id = object::id(&group2);
@@ -340,11 +390,10 @@ fun join_wrong_group() {
     let rule_address = object::id(&rule).to_address();
     paid_join_rule::share(rule);
 
-    // Add rule to group1 with permission
+    // Grant ExtensionPermissionsManager to the rule on group1
     ts.next_tx(ALICE);
     let mut group1 = ts.take_shared_by_id<PermissionsGroup<Messaging>>(group1_id);
-    group1.add_member(rule_address, ts.ctx());
-    group1.grant_permission<Messaging, MemberAdder>(rule_address, ts.ctx());
+    group1.grant_permission<Messaging, ExtensionPermissionsManager>(rule_address, ts.ctx());
     ts::return_shared(group1);
 
     // Bob tries to join group2 using rule that's for group1 - should fail
@@ -356,5 +405,5 @@ fun join_wrong_group() {
     // This call aborts with EGroupMismatch
     paid_join_rule::join(&mut rule, &mut group2, &mut payment, ts.ctx());
 
-    abort // will differ from EGroupMismatch
+    abort
 }

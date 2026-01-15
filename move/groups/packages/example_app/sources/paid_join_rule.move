@@ -7,13 +7,14 @@
 ///
 /// This pattern enables self-service group joining with payment:
 /// 1. Group admin creates a `PaidJoinRule` actor with fee configuration
-/// 2. Admin adds the actor's address as a member with `MemberAdder` permission
+/// 2. Admin grants the actor's address `ExtensionPermissionsManager` permission
 /// 3. Users call `join()` to self-serve join by paying the fee
 /// 4. Fees accumulate in the rule's `Balance<Token>`
 /// 5. Members with `FundsManager` permission can withdraw accumulated funds
 ///
-/// The actor object's UID is passed to `object_add_member`, which checks that
-/// the actor has `MemberAdder` permission before adding the transaction sender.
+/// The actor object's UID is passed to `object_grant_permission`, which checks that
+/// the actor has `ExtensionPermissionsManager` permission before granting `MessagingReader`
+/// to the transaction sender (making them a member).
 ///
 /// ## Permissions
 ///
@@ -23,15 +24,14 @@
 ///
 /// ```move
 /// // 1. Admin creates the group
-/// let mut group = messaging::create_group(...);
+/// let (mut group, encryption_history) = messaging::messaging::create_group(...);
 ///
 /// // 2. Admin creates the paid join rule (generic over token type)
 /// let rule = paid_join_rule::new<SUI>(group_id, 1_000_000_000, ctx); // 1 SUI fee
 /// let rule_address = object::id(&rule).to_address();
 ///
-/// // 3. Admin adds the rule as a member with MemberAdder permission
-/// group.add_member(rule_address, ctx);
-/// group.grant_permission<Messaging, MemberAdder>(rule_address, ctx);
+/// // 3. Admin grants ExtensionPermissionsManager to the rule so it can add members
+/// group.grant_permission<Messaging, ExtensionPermissionsManager>(rule_address, ctx);
 ///
 /// // 4. Admin grants FundsManager permission to themselves or a treasurer
 /// group.grant_permission<Messaging, FundsManager>(treasurer, ctx);
@@ -39,7 +39,7 @@
 /// // 5. Share the rule so users can access it
 /// transfer::share_object(rule);
 ///
-/// // 6. User self-serves to join
+/// // 6. User self-serves to join (gets MessagingReader permission)
 /// paid_join_rule::join<SUI>(&mut rule, &mut group, &mut payment, ctx);
 ///
 /// // 7. Treasurer withdraws accumulated funds
@@ -49,7 +49,7 @@
 module example_app::paid_join_rule;
 
 use groups::permissions_group::PermissionsGroup;
-use messaging::messaging::Messaging;
+use messaging::messaging::{Messaging, MessagingReader};
 use sui::balance::{Self, Balance};
 use sui::coin::{Self, Coin};
 
@@ -69,7 +69,7 @@ public struct FundsManager() has drop;
 // === Structs ===
 
 /// Actor object that enables paid self-service group joining.
-/// Must be added as a group member with `MemberAdder` permission.
+/// Must be granted `ExtensionPermissionsManager` permission to add members.
 /// Accumulates fees in a `Balance<Token>` that can be withdrawn by `FundsManager`.
 public struct PaidJoinRule<phantom Token> has key {
     id: UID,
@@ -84,7 +84,8 @@ public struct PaidJoinRule<phantom Token> has key {
 // === Public Functions ===
 
 /// Creates a new PaidJoinRule actor.
-/// The returned object should be shared after the admin grants it `MemberAdder` permission.
+/// The returned object should be shared after the admin grants it `ExtensionPermissionsManager`
+/// permission.
 ///
 /// # Type Parameters
 /// - `Token`: The coin type accepted for payment (e.g., `SUI`)
@@ -120,7 +121,7 @@ public fun share<Token: drop>(rule: PaidJoinRule<Token>) {
 
 /// Creates a new PaidJoinRule and shares it immediately.
 /// Note: Use `new` + `share` separately if you need the rule's address before sharing
-/// (e.g., for granting `MemberAdder` permission).
+/// (e.g., for granting `ExtensionPermissionsManager` permission).
 entry fun new_and_share<Token: drop>(
     group_id: ID,
     fee: u64,
@@ -130,7 +131,7 @@ entry fun new_and_share<Token: drop>(
 }
 
 /// Allows the transaction sender to join the group by paying the required fee.
-/// The sender is added as a member with no initial permissions.
+/// The sender is granted `MessagingReader` permission (making them a member).
 /// Fees accumulate in the rule's balance for later withdrawal.
 ///
 /// # Type Parameters
@@ -145,8 +146,8 @@ entry fun new_and_share<Token: drop>(
 /// # Aborts
 /// - `EInsufficientPayment`: if payment is less than the required fee
 /// - `EGroupMismatch`: if group doesn't match rule's group_id
-/// - From `object_add_member`: if rule doesn't have `MemberAdder` permission
-/// - From `object_add_member`: if sender is already a member
+/// - `ENotPermitted` (from `permissions_group`): if rule doesn't have `ExtensionPermissionsManager`
+/// permission
 public fun join<Token: drop>(
     rule: &mut PaidJoinRule<Token>,
     group: &mut PermissionsGroup<Messaging>,
@@ -160,8 +161,8 @@ public fun join<Token: drop>(
     let fee_balance = payment.balance_mut().split(rule.fee);
     rule.balance.join(fee_balance);
 
-    // Add sender as member via the actor object
-    group.object_add_member(&rule.id, ctx);
+    // Grant MessagingReader permission to sender via the actor object
+    group.object_grant_permission<Messaging, MessagingReader>(&rule.id, ctx);
 }
 
 /// Entry version of `join` for CLI usage.

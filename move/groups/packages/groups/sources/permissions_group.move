@@ -550,6 +550,7 @@ public fun is_member<T: drop>(self: &PermissionsGroup<T>, member: address): bool
 }
 
 /// Returns the creator's address of the PermissionsGroup.
+///
 /// # Parameters
 /// - `self`: Reference to the PermissionsGroup
 ///
