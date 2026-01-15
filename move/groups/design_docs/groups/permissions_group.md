@@ -8,13 +8,12 @@ Module: permissions_group
 Generic permission system for group management.
 
 
-<a name="@Core_Permissions_0"></a>
+<a name="@Permissions_0"></a>
 
-### Core Permissions
+### Permissions
 
 
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>: Super-admin role that can grant/revoke all permissions and remove
-members
+- <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>: Super-admin role that can grant/revoke all permissions and remove members
 - <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>: Can grant/revoke extension permissions (permissions defined in
 third-party packages)
 
@@ -30,9 +29,8 @@ one permission
 don't exist
 - **Revoking may remove**: Revoking the last permission automatically removes the member from
 the group
-- **Permission hierarchy**: Only <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> can grant/revoke
-<code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>; all other permissions
-can be managed by either <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> or <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>
+- **Permission hierarchy**: Only <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> can grant/revoke <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>; all other
+permissions can be managed by either <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> or <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>
 
 
 <a name="@Invariants_2"></a>
@@ -40,14 +38,14 @@ can be managed by either <code><a href="../groups/permissions_group.md#groups_pe
 ### Invariants
 
 
-- At least one <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> must always exist
+- At least one <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> must always exist
 - Members always have at least one permission (empty permission sets are not allowed)
 
 
-    -  [Core Permissions](#@Core_Permissions_0)
+    -  [Permissions](#@Permissions_0)
     -  [Key Concepts](#@Key_Concepts_1)
     -  [Invariants](#@Invariants_2)
--  [Struct `CorePermissionsManager`](#groups_permissions_group_CorePermissionsManager)
+-  [Struct `Administrator`](#groups_permissions_group_Administrator)
 -  [Struct `ExtensionPermissionsManager`](#groups_permissions_group_ExtensionPermissionsManager)
 -  [Struct `PermissionsGroup`](#groups_permissions_group_PermissionsGroup)
 -  [Struct `GroupCreated`](#groups_permissions_group_GroupCreated)
@@ -80,47 +78,32 @@ can be managed by either <code><a href="../groups/permissions_group.md#groups_pe
 -  [Function `object_remove_member`](#groups_permissions_group_object_remove_member)
     -  [Parameters](#@Parameters_19)
     -  [Aborts](#@Aborts_20)
--  [Function `grant_core_permissions`](#groups_permissions_group_grant_core_permissions)
-    -  [Parameters](#@Parameters_21)
-    -  [Aborts](#@Aborts_22)
--  [Function `object_grant_core_permissions`](#groups_permissions_group_object_grant_core_permissions)
-    -  [Parameters](#@Parameters_23)
-    -  [Aborts](#@Aborts_24)
 -  [Function `revoke_permission`](#groups_permissions_group_revoke_permission)
-    -  [Type Parameters](#@Type_Parameters_25)
-    -  [Parameters](#@Parameters_26)
-    -  [Aborts](#@Aborts_27)
+    -  [Type Parameters](#@Type_Parameters_21)
+    -  [Parameters](#@Parameters_22)
+    -  [Aborts](#@Aborts_23)
 -  [Function `object_revoke_permission`](#groups_permissions_group_object_revoke_permission)
-    -  [Type Parameters](#@Type_Parameters_28)
-    -  [Parameters](#@Parameters_29)
-    -  [Aborts](#@Aborts_30)
--  [Function `revoke_core_permissions`](#groups_permissions_group_revoke_core_permissions)
-    -  [Parameters](#@Parameters_31)
-    -  [Aborts](#@Aborts_32)
--  [Function `object_revoke_core_permissions`](#groups_permissions_group_object_revoke_core_permissions)
-    -  [Parameters](#@Parameters_33)
-    -  [Aborts](#@Aborts_34)
+    -  [Type Parameters](#@Type_Parameters_24)
+    -  [Parameters](#@Parameters_25)
+    -  [Aborts](#@Aborts_26)
 -  [Function `has_permission`](#groups_permissions_group_has_permission)
-    -  [Type Parameters](#@Type_Parameters_35)
-    -  [Parameters](#@Parameters_36)
-    -  [Returns](#@Returns_37)
+    -  [Type Parameters](#@Type_Parameters_27)
+    -  [Parameters](#@Parameters_28)
+    -  [Returns](#@Returns_29)
 -  [Function `is_member`](#groups_permissions_group_is_member)
-    -  [Parameters](#@Parameters_38)
-    -  [Returns](#@Returns_39)
+    -  [Parameters](#@Parameters_30)
+    -  [Returns](#@Returns_31)
 -  [Function `creator`](#groups_permissions_group_creator)
-    -  [Parameters](#@Parameters_40)
-    -  [Returns](#@Returns_41)
--  [Function `core_managers_count`](#groups_permissions_group_core_managers_count)
-    -  [Parameters](#@Parameters_42)
-    -  [Returns](#@Returns_43)
--  [Function `core_permissions_set`](#groups_permissions_group_core_permissions_set)
+    -  [Parameters](#@Parameters_32)
+    -  [Returns](#@Returns_33)
+-  [Function `administrators_count`](#groups_permissions_group_administrators_count)
+    -  [Parameters](#@Parameters_34)
+    -  [Returns](#@Returns_35)
 -  [Function `assert_can_manage_permission`](#groups_permissions_group_assert_can_manage_permission)
 -  [Function `internal_add_member`](#groups_permissions_group_internal_add_member)
--  [Function `safe_decrement_core_managers_count`](#groups_permissions_group_safe_decrement_core_managers_count)
+-  [Function `safe_decrement_administrators_count`](#groups_permissions_group_safe_decrement_administrators_count)
 -  [Function `internal_grant_permission`](#groups_permissions_group_internal_grant_permission)
 -  [Function `internal_revoke_permission`](#groups_permissions_group_internal_revoke_permission)
--  [Function `internal_grant_core_permissions`](#groups_permissions_group_internal_grant_core_permissions)
--  [Function `internal_revoke_core_permissions`](#groups_permissions_group_internal_revoke_core_permissions)
 
 
 <pre><code><b>use</b> <a href="../dependencies/std/address.md#std_address">std::address</a>;
@@ -152,18 +135,17 @@ can be managed by either <code><a href="../groups/permissions_group.md#groups_pe
 
 
 
-<a name="groups_permissions_group_CorePermissionsManager"></a>
+<a name="groups_permissions_group_Administrator"></a>
 
-## Struct `CorePermissionsManager`
+## Struct `Administrator`
 
-Permission to manage core permissions defined in the groups package.
+Permission to manage all permissions defined in the groups package.
 This is the super-admin role that can:
-- Grant/revoke both core and extension permissions
+- Grant/revoke all permissions (including other Administrators)
 - Remove members from the group
-- Manage other CorePermissionsManagers
 
 
-<pre><code><b>public</b> <b>struct</b> <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a> <b>has</b> drop
+<pre><code><b>public</b> <b>struct</b> <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a> <b>has</b> drop
 </code></pre>
 
 
@@ -183,7 +165,7 @@ This is the super-admin role that can:
 ## Struct `ExtensionPermissionsManager`
 
 Permission to manage extension permissions defined in third-party packages.
-Can grant/revoke extension permissions but NOT core permissions.
+Can grant/revoke extension permissions but NOT <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>.
 This provides a safer delegation model for package-specific permissions.
 
 
@@ -233,10 +215,10 @@ Parameterized by <code>T</code> to scope permissions to a specific package.
  Object addresses enable <code>object_*</code> functions for third-party "actor" contracts.
 </dd>
 <dt>
-<code><a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a>: u64</code>
+<code><a href="../groups/permissions_group.md#groups_permissions_group_administrators_count">administrators_count</a>: u64</code>
 </dt>
 <dd>
- Tracks <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> count to enforce invariant.
+ Tracks <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> count to enforce at-least-one invariant.
 </dd>
 <dt>
 <code><a href="../groups/permissions_group.md#groups_permissions_group_creator">creator</a>: <b>address</b></code>
@@ -500,11 +482,11 @@ Emitted when permissions are revoked from a member.
 
 
 
-<a name="groups_permissions_group_ELastPermissionsManager"></a>
+<a name="groups_permissions_group_ELastAdministrator"></a>
 
 
 
-<pre><code><b>const</b> <a href="../groups/permissions_group.md#groups_permissions_group_ELastPermissionsManager">ELastPermissionsManager</a>: u64 = 2;
+<pre><code><b>const</b> <a href="../groups/permissions_group.md#groups_permissions_group_ELastAdministrator">ELastAdministrator</a>: u64 = 2;
 </code></pre>
 
 
@@ -523,7 +505,7 @@ Emitted when permissions are revoked from a member.
 ## Function `new`
 
 Creates a new PermissionsGroup with the sender as initial admin.
-Grants <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> and <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code> to creator.
+Grants <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> and <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code> to creator.
 
 
 <a name="@Type_Parameters_4"></a>
@@ -544,7 +526,7 @@ Grants <code><a href="../groups/permissions_group.md#groups_permissions_group_Co
 
 ### Returns
 
-A new <code><a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;</code> with sender having all core permissions.
+A new <code><a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;</code> with sender having <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> and <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_new">new</a>&lt;T: drop&gt;(ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;
@@ -557,14 +539,17 @@ A new <code><a href="../groups/permissions_group.md#groups_permissions_group_Per
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_new">new</a>&lt;T: drop&gt;(ctx: &<b>mut</b> TxContext): <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt; {
-    <b>let</b> creator_permissions_set = <a href="../groups/permissions_group.md#groups_permissions_group_core_permissions_set">core_permissions_set</a>();
     <b>let</b> <a href="../groups/permissions_group.md#groups_permissions_group_creator">creator</a> = ctx.sender();
+    // Initialize <a href="../groups/permissions_group.md#groups_permissions_group_creator">creator</a> with <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a> and <a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a>
+    <b>let</b> <b>mut</b> creator_permissions = vec_set::empty&lt;TypeName&gt;();
+    creator_permissions.insert(type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>&gt;());
+    creator_permissions.insert(type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a>&gt;());
     <b>let</b> <b>mut</b> permissions_table = table::new&lt;<b>address</b>, VecSet&lt;TypeName&gt;&gt;(ctx);
-    permissions_table.add(<a href="../groups/permissions_group.md#groups_permissions_group_creator">creator</a>, creator_permissions_set);
+    permissions_table.add(<a href="../groups/permissions_group.md#groups_permissions_group_creator">creator</a>, creator_permissions);
     <b>let</b> group = <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt; {
         id: object::new(ctx),
         permissions: permissions_table,
-        <a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a>: 1,
+        <a href="../groups/permissions_group.md#groups_permissions_group_administrators_count">administrators_count</a>: 1,
         <a href="../groups/permissions_group.md#groups_permissions_group_creator">creator</a>,
     };
     event::emit(<a href="../groups/permissions_group.md#groups_permissions_group_GroupCreated">GroupCreated</a>&lt;T&gt; {
@@ -584,7 +569,7 @@ A new <code><a href="../groups/permissions_group.md#groups_permissions_group_Per
 ## Function `new_derived`
 
 Creates a new derived PermissionsGroup with deterministic address.
-Grants <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> and <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code> to creator.
+Grants <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> and <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code> to creator.
 
 
 <a name="@Type_Parameters_7"></a>
@@ -636,14 +621,17 @@ A new <code><a href="../groups/permissions_group.md#groups_permissions_group_Per
         !derived_object::exists(derivation_uid, derivation_key),
         <a href="../groups/permissions_group.md#groups_permissions_group_EPermissionsGroupAlreadyExists">EPermissionsGroupAlreadyExists</a>,
     );
-    <b>let</b> creator_permissions_set = <a href="../groups/permissions_group.md#groups_permissions_group_core_permissions_set">core_permissions_set</a>();
     <b>let</b> <a href="../groups/permissions_group.md#groups_permissions_group_creator">creator</a> = ctx.sender();
+    // Initialize <a href="../groups/permissions_group.md#groups_permissions_group_creator">creator</a> with <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a> and <a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a>
+    <b>let</b> <b>mut</b> creator_permissions = vec_set::empty&lt;TypeName&gt;();
+    creator_permissions.insert(type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>&gt;());
+    creator_permissions.insert(type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a>&gt;());
     <b>let</b> <b>mut</b> permissions_table = table::new&lt;<b>address</b>, VecSet&lt;TypeName&gt;&gt;(ctx);
-    permissions_table.add(<a href="../groups/permissions_group.md#groups_permissions_group_creator">creator</a>, creator_permissions_set);
+    permissions_table.add(<a href="../groups/permissions_group.md#groups_permissions_group_creator">creator</a>, creator_permissions);
     <b>let</b> group = <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt; {
         id: derived_object::claim(derivation_uid, derivation_key),
         permissions: permissions_table,
-        <a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a>: 1,
+        <a href="../groups/permissions_group.md#groups_permissions_group_administrators_count">administrators_count</a>: 1,
         <a href="../groups/permissions_group.md#groups_permissions_group_creator">creator</a>,
     };
     event::emit(<a href="../groups/permissions_group.md#groups_permissions_group_GroupDerived">GroupDerived</a>&lt;T&gt; {
@@ -669,8 +657,8 @@ If the member doesn't exist, they are automatically added to the group.
 Emits both <code><a href="../groups/permissions_group.md#groups_permissions_group_MemberAdded">MemberAdded</a></code> (if new) and <code><a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGranted">PermissionsGranted</a></code> events.
 
 Permission requirements:
-- To grant <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>: caller must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>
-- To grant any other permission: caller must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> OR
+- To grant <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>: caller must have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>
+- To grant any other permission: caller must have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> OR
 <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>
 
 
@@ -732,8 +720,8 @@ Enables third-party contracts to grant permissions with custom logic.
 If the sender is not already a member, they are automatically added.
 
 Permission requirements:
-- To grant <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>: actor must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>
-- To grant any other permission: actor must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> OR
+- To grant <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>: actor must have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>
+- To grant any other permission: actor must have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> OR
 <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>
 
 
@@ -793,7 +781,7 @@ Permission requirements:
 ## Function `remove_member`
 
 Removes a member from the PermissionsGroup.
-Requires <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission as this is a powerful admin operation.
+Requires <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> permission as this is a powerful admin operation.
 
 
 <a name="@Parameters_17"></a>
@@ -809,9 +797,9 @@ Requires <code><a href="../groups/permissions_group.md#groups_permissions_group_
 
 ### Aborts
 
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission
+- <code><a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> permission
 - <code><a href="../groups/permissions_group.md#groups_permissions_group_EMemberNotFound">EMemberNotFound</a></code>: if member doesn't exist
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ELastPermissionsManager">ELastPermissionsManager</a></code>: if removing would leave no CorePermissionsManagers
+- <code><a href="../groups/permissions_group.md#groups_permissions_group_ELastAdministrator">ELastAdministrator</a></code>: if removing would leave no Administrators
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_remove_member">remove_member</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
@@ -828,9 +816,9 @@ Requires <code><a href="../groups/permissions_group.md#groups_permissions_group_
     member: <b>address</b>,
     ctx: &TxContext,
 ) {
-    <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;(ctx.sender()), <a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a>);
+    <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>&gt;(ctx.sender()), <a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a>);
     <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_is_member">is_member</a>&lt;T&gt;(member), <a href="../groups/permissions_group.md#groups_permissions_group_EMemberNotFound">EMemberNotFound</a>);
-    self.<a href="../groups/permissions_group.md#groups_permissions_group_safe_decrement_core_managers_count">safe_decrement_core_managers_count</a>(member);
+    self.<a href="../groups/permissions_group.md#groups_permissions_group_safe_decrement_administrators_count">safe_decrement_administrators_count</a>(member);
     self.permissions.remove(member);
     event::emit(<a href="../groups/permissions_group.md#groups_permissions_group_MemberRemoved">MemberRemoved</a>&lt;T&gt; {
         group_id: object::id(self),
@@ -849,7 +837,7 @@ Requires <code><a href="../groups/permissions_group.md#groups_permissions_group_
 
 Removes the transaction sender from the group via an actor object.
 Enables third-party contracts to implement custom leave logic.
-The actor object must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission on the group.
+The actor object must have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> permission on the group.
 
 
 <a name="@Parameters_19"></a>
@@ -857,7 +845,7 @@ The actor object must have <code><a href="../groups/permissions_group.md#groups_
 ### Parameters
 
 - <code>self</code>: Mutable reference to the PermissionsGroup
-- <code>actor_object</code>: UID of the actor object with <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission
+- <code>actor_object</code>: UID of the actor object with <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> permission
 - <code>ctx</code>: Transaction context (sender will be removed)
 
 
@@ -865,9 +853,9 @@ The actor object must have <code><a href="../groups/permissions_group.md#groups_
 
 ### Aborts
 
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a></code>: if actor_object doesn't have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission
+- <code><a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a></code>: if actor_object doesn't have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> permission
 - <code><a href="../groups/permissions_group.md#groups_permissions_group_EMemberNotFound">EMemberNotFound</a></code>: if sender is not a member
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ELastPermissionsManager">ELastPermissionsManager</a></code>: if removing would leave no CorePermissionsManagers
+- <code><a href="../groups/permissions_group.md#groups_permissions_group_ELastAdministrator">ELastAdministrator</a></code>: if removing would leave no Administrators
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_object_remove_member">object_remove_member</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, actor_object: &<a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
@@ -885,114 +873,15 @@ The actor object must have <code><a href="../groups/permissions_group.md#groups_
     ctx: &<b>mut</b> TxContext,
 ) {
     <b>let</b> actor_address = actor_object.to_address();
-    <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;(actor_address), <a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a>);
+    <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>&gt;(actor_address), <a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a>);
     <b>let</b> member = ctx.sender();
     <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_is_member">is_member</a>&lt;T&gt;(member), <a href="../groups/permissions_group.md#groups_permissions_group_EMemberNotFound">EMemberNotFound</a>);
-    self.<a href="../groups/permissions_group.md#groups_permissions_group_safe_decrement_core_managers_count">safe_decrement_core_managers_count</a>(member);
+    self.<a href="../groups/permissions_group.md#groups_permissions_group_safe_decrement_administrators_count">safe_decrement_administrators_count</a>(member);
     self.permissions.remove(member);
     event::emit(<a href="../groups/permissions_group.md#groups_permissions_group_MemberRemoved">MemberRemoved</a>&lt;T&gt; {
         group_id: object::id(self),
         member,
     });
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="groups_permissions_group_grant_core_permissions"></a>
-
-## Function `grant_core_permissions`
-
-Grants all core permissions to a member.
-Includes: <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>, <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>.
-If the member doesn't exist, they are automatically added.
-
-
-<a name="@Parameters_21"></a>
-
-### Parameters
-
-- <code>self</code>: Mutable reference to the PermissionsGroup
-- <code>member</code>: Address of the member to grant permissions to
-- <code>ctx</code>: Transaction context
-
-
-<a name="@Aborts_22"></a>
-
-### Aborts
-
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_grant_core_permissions">grant_core_permissions</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_grant_core_permissions">grant_core_permissions</a>&lt;T: drop&gt;(
-    self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;,
-    member: <b>address</b>,
-    ctx: &<b>mut</b> TxContext,
-) {
-    <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;(ctx.sender()), <a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a>);
-    self.<a href="../groups/permissions_group.md#groups_permissions_group_internal_grant_core_permissions">internal_grant_core_permissions</a>&lt;T&gt;(member);
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="groups_permissions_group_object_grant_core_permissions"></a>
-
-## Function `object_grant_core_permissions`
-
-Grants all core permissions to the transaction sender via an actor object.
-Enables third-party contracts to grant core permissions with custom logic.
-The actor object must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission on the group.
-If the sender is not already a member, they are automatically added.
-
-
-<a name="@Parameters_23"></a>
-
-### Parameters
-
-- <code>self</code>: Mutable reference to the PermissionsGroup
-- <code>actor_object</code>: UID of the actor object with <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission
-- <code>ctx</code>: Transaction context (sender will receive all core permissions)
-
-
-<a name="@Aborts_24"></a>
-
-### Aborts
-
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a></code>: if actor_object doesn't have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_object_grant_core_permissions">object_grant_core_permissions</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, actor_object: &<a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_object_grant_core_permissions">object_grant_core_permissions</a>&lt;T: drop&gt;(
-    self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;,
-    actor_object: &UID,
-    ctx: &<b>mut</b> TxContext,
-) {
-    <b>let</b> actor_address = actor_object.to_address();
-    <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;(actor_address), <a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a>);
-    <b>let</b> member = ctx.sender();
-    self.<a href="../groups/permissions_group.md#groups_permissions_group_internal_grant_core_permissions">internal_grant_core_permissions</a>&lt;T&gt;(member);
 }
 </code></pre>
 
@@ -1009,12 +898,12 @@ If this is the member's last permission, they are automatically removed from the
 Emits <code><a href="../groups/permissions_group.md#groups_permissions_group_PermissionsRevoked">PermissionsRevoked</a></code> and potentially <code><a href="../groups/permissions_group.md#groups_permissions_group_MemberRemoved">MemberRemoved</a></code> events.
 
 Permission requirements:
-- To revoke <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>: caller must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>
-- To revoke any other permission: caller must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> OR
+- To revoke <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>: caller must have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>
+- To revoke any other permission: caller must have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> OR
 <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>
 
 
-<a name="@Type_Parameters_25"></a>
+<a name="@Type_Parameters_21"></a>
 
 ### Type Parameters
 
@@ -1022,7 +911,7 @@ Permission requirements:
 - <code>ExistingPermission</code>: Permission type to revoke
 
 
-<a name="@Parameters_26"></a>
+<a name="@Parameters_22"></a>
 
 ### Parameters
 
@@ -1031,13 +920,13 @@ Permission requirements:
 - <code>ctx</code>: Transaction context
 
 
-<a name="@Aborts_27"></a>
+<a name="@Aborts_23"></a>
 
 ### Aborts
 
 - <code><a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have appropriate manager permission
 - <code><a href="../groups/permissions_group.md#groups_permissions_group_EMemberNotFound">EMemberNotFound</a></code>: if member doesn't exist
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ELastPermissionsManager">ELastPermissionsManager</a></code>: if revoking <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> would leave no core managers
+- <code><a href="../groups/permissions_group.md#groups_permissions_group_ELastAdministrator">ELastAdministrator</a></code>: if revoking <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> would leave no administrators
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_revoke_permission">revoke_permission</a>&lt;T: drop, ExistingPermission: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
@@ -1074,12 +963,12 @@ Enables third-party contracts to revoke permissions with custom logic.
 If this is the sender's last permission, they are automatically removed from the group.
 
 Permission requirements:
-- To revoke <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>: actor must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>
-- To revoke any other permission: actor must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> OR
+- To revoke <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>: actor must have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>
+- To revoke any other permission: actor must have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> OR
 <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>
 
 
-<a name="@Type_Parameters_28"></a>
+<a name="@Type_Parameters_24"></a>
 
 ### Type Parameters
 
@@ -1087,7 +976,7 @@ Permission requirements:
 - <code>ExistingPermission</code>: Permission type to revoke
 
 
-<a name="@Parameters_29"></a>
+<a name="@Parameters_25"></a>
 
 ### Parameters
 
@@ -1096,13 +985,13 @@ Permission requirements:
 - <code>ctx</code>: Transaction context (sender will have the permission revoked)
 
 
-<a name="@Aborts_30"></a>
+<a name="@Aborts_26"></a>
 
 ### Aborts
 
 - <code><a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a></code>: if actor_object doesn't have appropriate manager permission
 - <code><a href="../groups/permissions_group.md#groups_permissions_group_EMemberNotFound">EMemberNotFound</a></code>: if sender is not a member
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ELastPermissionsManager">ELastPermissionsManager</a></code>: if revoking <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> would leave no core managers
+- <code><a href="../groups/permissions_group.md#groups_permissions_group_ELastAdministrator">ELastAdministrator</a></code>: if revoking <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> would leave no administrators
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_object_revoke_permission">object_revoke_permission</a>&lt;T: drop, ExistingPermission: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, actor_object: &<a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
@@ -1132,112 +1021,6 @@ Permission requirements:
 
 </details>
 
-<a name="groups_permissions_group_revoke_core_permissions"></a>
-
-## Function `revoke_core_permissions`
-
-Revokes all core permissions from a member.
-Only removes core permissions (<code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>, <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>).
-Custom permissions added by third-party packages are preserved.
-
-
-<a name="@Parameters_31"></a>
-
-### Parameters
-
-- <code>self</code>: Mutable reference to the PermissionsGroup
-- <code>member</code>: Address of the member to revoke core permissions from
-- <code>ctx</code>: Transaction context
-
-
-<a name="@Aborts_32"></a>
-
-### Aborts
-
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_EMemberNotFound">EMemberNotFound</a></code>: if member doesn't exist
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ELastPermissionsManager">ELastPermissionsManager</a></code>: if member has <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> and revoking would leave no
-core managers
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_revoke_core_permissions">revoke_core_permissions</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_revoke_core_permissions">revoke_core_permissions</a>&lt;T: drop&gt;(
-    self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;,
-    member: <b>address</b>,
-    ctx: &TxContext,
-) {
-    <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;(ctx.sender()), <a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a>);
-    <b>assert</b>!(self.permissions.contains(member), <a href="../groups/permissions_group.md#groups_permissions_group_EMemberNotFound">EMemberNotFound</a>);
-    self.<a href="../groups/permissions_group.md#groups_permissions_group_internal_revoke_core_permissions">internal_revoke_core_permissions</a>&lt;T&gt;(member);
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="groups_permissions_group_object_revoke_core_permissions"></a>
-
-## Function `object_revoke_core_permissions`
-
-Revokes all core permissions from the transaction sender via an actor object.
-Enables third-party contracts to revoke core permissions with custom logic.
-The actor object must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission on the group.
-
-
-<a name="@Parameters_33"></a>
-
-### Parameters
-
-- <code>self</code>: Mutable reference to the PermissionsGroup
-- <code>actor_object</code>: UID of the actor object with <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission
-- <code>ctx</code>: Transaction context (sender will have core permissions revoked)
-
-
-<a name="@Aborts_34"></a>
-
-### Aborts
-
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a></code>: if actor_object doesn't have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> permission
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_EMemberNotFound">EMemberNotFound</a></code>: if sender is not a member
-- <code><a href="../groups/permissions_group.md#groups_permissions_group_ELastPermissionsManager">ELastPermissionsManager</a></code>: if sender has <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> and revoking would leave no
-core managers
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_object_revoke_core_permissions">object_revoke_core_permissions</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, actor_object: &<a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_object_revoke_core_permissions">object_revoke_core_permissions</a>&lt;T: drop&gt;(
-    self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;,
-    actor_object: &UID,
-    ctx: &<b>mut</b> TxContext,
-) {
-    <b>let</b> actor_address = actor_object.to_address();
-    <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;(actor_address), <a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a>);
-    <b>let</b> member = ctx.sender();
-    <b>assert</b>!(self.permissions.contains(member), <a href="../groups/permissions_group.md#groups_permissions_group_EMemberNotFound">EMemberNotFound</a>);
-    self.<a href="../groups/permissions_group.md#groups_permissions_group_internal_revoke_core_permissions">internal_revoke_core_permissions</a>&lt;T&gt;(member);
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="groups_permissions_group_has_permission"></a>
 
 ## Function `has_permission`
@@ -1245,7 +1028,7 @@ core managers
 Checks if the given address has the specified permission.
 
 
-<a name="@Type_Parameters_35"></a>
+<a name="@Type_Parameters_27"></a>
 
 ### Type Parameters
 
@@ -1253,7 +1036,7 @@ Checks if the given address has the specified permission.
 - <code>Permission</code>: Permission type to check
 
 
-<a name="@Parameters_36"></a>
+<a name="@Parameters_28"></a>
 
 ### Parameters
 
@@ -1261,7 +1044,7 @@ Checks if the given address has the specified permission.
 - <code>member</code>: Address to check
 
 
-<a name="@Returns_37"></a>
+<a name="@Returns_29"></a>
 
 ### Returns
 
@@ -1296,7 +1079,7 @@ Checks if the given address has the specified permission.
 Checks if the given address is a member of the group.
 
 
-<a name="@Parameters_38"></a>
+<a name="@Parameters_30"></a>
 
 ### Parameters
 
@@ -1304,7 +1087,7 @@ Checks if the given address is a member of the group.
 - <code>member</code>: Address to check
 
 
-<a name="@Returns_39"></a>
+<a name="@Returns_31"></a>
 
 ### Returns
 
@@ -1336,14 +1119,14 @@ Checks if the given address is a member of the group.
 Returns the creator's address of the PermissionsGroup.
 
 
-<a name="@Parameters_40"></a>
+<a name="@Parameters_32"></a>
 
 ### Parameters
 
 - <code>self</code>: Reference to the PermissionsGroup
 
 
-<a name="@Returns_41"></a>
+<a name="@Returns_33"></a>
 
 ### Returns
 
@@ -1368,28 +1151,28 @@ The address of the creator.
 
 </details>
 
-<a name="groups_permissions_group_core_managers_count"></a>
+<a name="groups_permissions_group_administrators_count"></a>
 
-## Function `core_managers_count`
+## Function `administrators_count`
 
-Returns the number of <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>s in the PermissionsGroup.
+Returns the number of <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>s in the PermissionsGroup.
 
 
-<a name="@Parameters_42"></a>
+<a name="@Parameters_34"></a>
 
 ### Parameters
 
 - <code>self</code>: Reference to the PermissionsGroup
 
 
-<a name="@Returns_43"></a>
+<a name="@Returns_35"></a>
 
 ### Returns
 
-The count of <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>s.
+The count of <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>s.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a>&lt;T: drop&gt;(self: &<a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;): u64
+<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_administrators_count">administrators_count</a>&lt;T: drop&gt;(self: &<a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;): u64
 </code></pre>
 
 
@@ -1398,36 +1181,8 @@ The count of <code><a href="../groups/permissions_group.md#groups_permissions_gr
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a>&lt;T: drop&gt;(self: &<a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;): u64 {
-    self.<a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a>
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="groups_permissions_group_core_permissions_set"></a>
-
-## Function `core_permissions_set`
-
-Returns a VecSet containing all core permissions.
-
-
-<pre><code><b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_core_permissions_set">core_permissions_set</a>(): <a href="../dependencies/sui/vec_set.md#sui_vec_set_VecSet">sui::vec_set::VecSet</a>&lt;<a href="../dependencies/std/type_name.md#std_type_name_TypeName">std::type_name::TypeName</a>&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_core_permissions_set">core_permissions_set</a>(): VecSet&lt;TypeName&gt; {
-    <b>let</b> <b>mut</b> permissions = vec_set::empty&lt;TypeName&gt;();
-    permissions.insert(type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;());
-    permissions.insert(type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a>&gt;());
-    permissions
+<pre><code><b>public</b> <b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_administrators_count">administrators_count</a>&lt;T: drop&gt;(self: &<a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;): u64 {
+    self.<a href="../groups/permissions_group.md#groups_permissions_group_administrators_count">administrators_count</a>
 }
 </code></pre>
 
@@ -1440,8 +1195,8 @@ Returns a VecSet containing all core permissions.
 ## Function `assert_can_manage_permission`
 
 Asserts that the manager has permission to manage (grant/revoke) the specified permission type.
-- To manage <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>: manager must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>
-- To manage any other permission: manager must have <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code> OR
+- To manage <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>: manager must have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>
+- To manage any other permission: manager must have <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> OR
 <code><a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>
 
 
@@ -1460,15 +1215,15 @@ Asserts that the manager has permission to manage (grant/revoke) the specified p
 ) {
     <b>let</b> permission_type = type_name::with_defining_ids&lt;Permission&gt;();
     <b>let</b> managing_core_manager =
-        permission_type == type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;();
+        permission_type == type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>&gt;();
     <b>if</b> (managing_core_manager) {
-        // Only <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a> can manage <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>
-        <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;(manager), <a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a>);
+        // Only <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a> can manage <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>
+        <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>&gt;(manager), <a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a>);
     } <b>else</b> {
-        // For all other permissions, either <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a> or <a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a>
+        // For all other permissions, either <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a> or <a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a>
         // can manage
         <b>assert</b>!(
-            self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;(manager) ||
+            self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>&gt;(manager) ||
             self.<a href="../groups/permissions_group.md#groups_permissions_group_has_permission">has_permission</a>&lt;T, <a href="../groups/permissions_group.md#groups_permissions_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a>&gt;(manager),
             <a href="../groups/permissions_group.md#groups_permissions_group_ENotPermitted">ENotPermitted</a>,
         );
@@ -1513,16 +1268,16 @@ Emits <code><a href="../groups/permissions_group.md#groups_permissions_group_Mem
 
 </details>
 
-<a name="groups_permissions_group_safe_decrement_core_managers_count"></a>
+<a name="groups_permissions_group_safe_decrement_administrators_count"></a>
 
-## Function `safe_decrement_core_managers_count`
+## Function `safe_decrement_administrators_count`
 
-Decrements core_managers_count if member has <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>.
-Used when revoking core permissions or removing a member.
-Aborts if this would leave no core managers.
+Decrements administrators_count if member has <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>.
+Used when revoking <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code> permission or removing a member.
+Aborts if this would leave no administrators.
 
 
-<pre><code><b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_safe_decrement_core_managers_count">safe_decrement_core_managers_count</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>)
+<pre><code><b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_safe_decrement_administrators_count">safe_decrement_administrators_count</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>)
 </code></pre>
 
 
@@ -1531,11 +1286,11 @@ Aborts if this would leave no core managers.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_safe_decrement_core_managers_count">safe_decrement_core_managers_count</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>) {
+<pre><code><b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_safe_decrement_administrators_count">safe_decrement_administrators_count</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>) {
     <b>let</b> member_permissions_set = self.permissions.borrow(member);
-    <b>if</b> (member_permissions_set.contains(&type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;())) {
-        <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a> &gt; 1, <a href="../groups/permissions_group.md#groups_permissions_group_ELastPermissionsManager">ELastPermissionsManager</a>);
-        self.<a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a> = self.<a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a> - 1;
+    <b>if</b> (member_permissions_set.contains(&type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>&gt;())) {
+        <b>assert</b>!(self.<a href="../groups/permissions_group.md#groups_permissions_group_administrators_count">administrators_count</a> &gt; 1, <a href="../groups/permissions_group.md#groups_permissions_group_ELastAdministrator">ELastAdministrator</a>);
+        self.<a href="../groups/permissions_group.md#groups_permissions_group_administrators_count">administrators_count</a> = self.<a href="../groups/permissions_group.md#groups_permissions_group_administrators_count">administrators_count</a> - 1;
     };
 }
 </code></pre>
@@ -1550,7 +1305,7 @@ Aborts if this would leave no core managers.
 
 Internal helper to grant a permission to a member.
 Adds the member if they don't exist, then grants the permission.
-Increments core_managers_count if granting <code><a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a></code>.
+Increments administrators_count if granting <code><a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a></code>.
 Emits <code><a href="../groups/permissions_group.md#groups_permissions_group_MemberAdded">MemberAdded</a></code> event if member is new.
 
 
@@ -1572,11 +1327,11 @@ Emits <code><a href="../groups/permissions_group.md#groups_permissions_group_Mem
     // Grant the permission
     <b>let</b> member_permissions_set = self.permissions.borrow_mut(member);
     member_permissions_set.insert(type_name::with_defining_ids&lt;NewPermission&gt;());
-    // Track <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a> count
+    // Track <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a> count
     <b>if</b> (
-        type_name::with_defining_ids&lt;NewPermission&gt;() == type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;()
+        type_name::with_defining_ids&lt;NewPermission&gt;() == type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>&gt;()
     ) {
-        self.<a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a> = self.<a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a> + 1;
+        self.<a href="../groups/permissions_group.md#groups_permissions_group_administrators_count">administrators_count</a> = self.<a href="../groups/permissions_group.md#groups_permissions_group_administrators_count">administrators_count</a> + 1;
     };
     event::emit(<a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGranted">PermissionsGranted</a>&lt;T&gt; {
         group_id: object::id(self),
@@ -1610,11 +1365,11 @@ Internal helper to remove a member from the PermissionsGroup.
     self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;,
     member: <b>address</b>,
 ) {
-    // Check <b>if</b> revoking <a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>
+    // Check <b>if</b> revoking <a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>
     <b>if</b> (
-        type_name::with_defining_ids&lt;ExistingPermission&gt;() == type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;()
+        type_name::with_defining_ids&lt;ExistingPermission&gt;() == type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_Administrator">Administrator</a>&gt;()
     ) {
-        self.<a href="../groups/permissions_group.md#groups_permissions_group_safe_decrement_core_managers_count">safe_decrement_core_managers_count</a>(member);
+        self.<a href="../groups/permissions_group.md#groups_permissions_group_safe_decrement_administrators_count">safe_decrement_administrators_count</a>(member);
     };
     // Revoke the permission
     {
@@ -1635,85 +1390,6 @@ Internal helper to remove a member from the PermissionsGroup.
             member,
         });
     };
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="groups_permissions_group_internal_grant_core_permissions"></a>
-
-## Function `internal_grant_core_permissions`
-
-Internal helper to grant all core permissions to a member.
-Adds the member if they don't exist.
-Emits <code><a href="../groups/permissions_group.md#groups_permissions_group_MemberAdded">MemberAdded</a></code> (if new) and <code><a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGranted">PermissionsGranted</a></code> events.
-
-
-<pre><code><b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_internal_grant_core_permissions">internal_grant_core_permissions</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_internal_grant_core_permissions">internal_grant_core_permissions</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>) {
-    // Add member <b>if</b> they don't exist
-    self.<a href="../groups/permissions_group.md#groups_permissions_group_internal_add_member">internal_add_member</a>(member);
-    // Grant all core permissions
-    <b>let</b> core_perms = <a href="../groups/permissions_group.md#groups_permissions_group_core_permissions_set">core_permissions_set</a>();
-    <b>let</b> member_permissions_set = self.permissions.borrow_mut(member);
-    core_perms.into_keys().do!(|permission| {
-        member_permissions_set.insert(permission);
-        <b>if</b> (permission == type_name::with_defining_ids&lt;<a href="../groups/permissions_group.md#groups_permissions_group_CorePermissionsManager">CorePermissionsManager</a>&gt;()) {
-            self.<a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a> = self.<a href="../groups/permissions_group.md#groups_permissions_group_core_managers_count">core_managers_count</a> + 1;
-        };
-    });
-    event::emit(<a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGranted">PermissionsGranted</a>&lt;T&gt; {
-        group_id: object::id(self),
-        member,
-        permissions: <a href="../groups/permissions_group.md#groups_permissions_group_core_permissions_set">core_permissions_set</a>().into_keys(),
-    });
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="groups_permissions_group_internal_revoke_core_permissions"></a>
-
-## Function `internal_revoke_core_permissions`
-
-Internal helper to revoke all core permissions from a member.
-Emits <code><a href="../groups/permissions_group.md#groups_permissions_group_PermissionsRevoked">PermissionsRevoked</a></code> event.
-
-
-<pre><code><b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_internal_revoke_core_permissions">internal_revoke_core_permissions</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">groups::permissions_group::PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="../groups/permissions_group.md#groups_permissions_group_internal_revoke_core_permissions">internal_revoke_core_permissions</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../groups/permissions_group.md#groups_permissions_group_PermissionsGroup">PermissionsGroup</a>&lt;T&gt;, member: <b>address</b>) {
-    self.<a href="../groups/permissions_group.md#groups_permissions_group_safe_decrement_core_managers_count">safe_decrement_core_managers_count</a>(member);
-    <b>let</b> member_permissions_set = self.permissions.borrow_mut(member);
-    <a href="../groups/permissions_group.md#groups_permissions_group_core_permissions_set">core_permissions_set</a>().into_keys().do!(|permission| {
-        <b>if</b> (member_permissions_set.contains(&permission)) {
-            member_permissions_set.remove(&permission);
-        };
-    });
-    event::emit(<a href="../groups/permissions_group.md#groups_permissions_group_PermissionsRevoked">PermissionsRevoked</a>&lt;T&gt; {
-        group_id: object::id(self),
-        member,
-        permissions: <a href="../groups/permissions_group.md#groups_permissions_group_core_permissions_set">core_permissions_set</a>().into_keys(),
-    });
 }
 </code></pre>
 

@@ -61,7 +61,7 @@ fun custom_logic_and_assertions(_ctx: &TxContext) {}
 // Each wrapper calls custom_logic_and_assertions() before the actual operation.
 
 /// Self-service leave: sender removes themselves from the group.
-/// Actor must have `CorePermissionsManager` permission.
+/// Actor must have `Administrator` permission.
 public fun leave<T: drop>(
     actor: &SelfServiceActor,
     group: &mut PermissionsGroup<T>,
@@ -72,7 +72,7 @@ public fun leave<T: drop>(
 }
 
 /// Self-service grant: sender grants themselves a permission.
-/// Actor must have appropriate manager permission (CorePermissionsManager or
+/// Actor must have appropriate manager permission (Administrator or
 /// ExtensionPermissionsManager).
 public fun custom_grant_permission<T: drop, P: drop>(
     actor: &SelfServiceActor,
@@ -84,7 +84,7 @@ public fun custom_grant_permission<T: drop, P: drop>(
 }
 
 /// Self-service revoke: sender revokes a permission from themselves.
-/// Actor must have appropriate manager permission (CorePermissionsManager or
+/// Actor must have appropriate manager permission (Administrator or
 /// ExtensionPermissionsManager).
 public fun custom_revoke_permission<T: drop, P: drop>(
     actor: &SelfServiceActor,
@@ -95,34 +95,12 @@ public fun custom_revoke_permission<T: drop, P: drop>(
     group.object_revoke_permission<T, P>(&actor.id, ctx);
 }
 
-/// Self-service grant core: sender grants themselves all core permissions.
-/// Actor must have `CorePermissionsManager` permission.
-public fun custom_grant_core_permissions<T: drop>(
-    actor: &SelfServiceActor,
-    group: &mut PermissionsGroup<T>,
-    ctx: &mut TxContext,
-) {
-    custom_logic_and_assertions(ctx);
-    group.object_grant_core_permissions<T>(&actor.id, ctx);
-}
-
-/// Self-service revoke core: sender revokes all core permissions from themselves.
-/// Actor must have `CorePermissionsManager` permission.
-public fun custom_revoke_core_permissions<T: drop>(
-    actor: &SelfServiceActor,
-    group: &mut PermissionsGroup<T>,
-    ctx: &mut TxContext,
-) {
-    custom_logic_and_assertions(ctx);
-    group.object_revoke_core_permissions<T>(&actor.id, ctx);
-}
-
 // === Tests ===
 
 #[test_only]
 use groups::permissions_group;
 #[test_only]
-use groups::permissions_group::{CorePermissionsManager, ExtensionPermissionsManager};
+use groups::permissions_group::{Administrator, ExtensionPermissionsManager};
 #[test_only]
 use sui::test_scenario as ts;
 #[test_only]
@@ -223,8 +201,8 @@ fun actor_custom_remove_member_works() {
     let mut group = permissions_group::new<TestWitness>(ts.ctx());
     let actor_obj = new(ts.ctx());
 
-    // Grant CorePermissionsManager to the actor and CustomPermission to Bob
-    group.grant_permission<TestWitness, CorePermissionsManager>(to_address(&actor_obj), ts.ctx());
+    // Grant Administrator to the actor and CustomPermission to Bob
+    group.grant_permission<TestWitness, Administrator>(to_address(&actor_obj), ts.ctx());
     group.grant_permission<TestWitness, CustomPermission>(BOB, ts.ctx());
     transfer::public_share_object(group);
     actor_obj.share();
@@ -242,69 +220,6 @@ fun actor_custom_remove_member_works() {
     ts.end();
 }
 
-#[test]
-fun actor_grant_core_permissions_works() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    let mut group = permissions_group::new<TestWitness>(ts.ctx());
-    let actor_obj = new(ts.ctx());
-
-    // Grant CorePermissionsManager to the actor
-    group.grant_permission<TestWitness, CorePermissionsManager>(to_address(&actor_obj), ts.ctx());
-    transfer::public_share_object(group);
-    actor_obj.share();
-
-    // Bob uses actor to grant himself core permissions
-    ts.next_tx(BOB);
-    let mut group = ts.take_shared<PermissionsGroup<TestWitness>>();
-    let actor_obj = ts.take_shared<SelfServiceActor>();
-    actor_obj.custom_grant_core_permissions<TestWitness>(&mut group, ts.ctx());
-
-    assert_eq!(group.has_permission<TestWitness, CorePermissionsManager>(BOB), true);
-    assert_eq!(group.has_permission<TestWitness, ExtensionPermissionsManager>(BOB), true);
-    // Count is 3: ALICE (creator) + actor (has CorePermissionsManager) + BOB (just granted)
-    assert_eq!(group.core_managers_count<TestWitness>(), 3);
-
-    ts::return_shared(group);
-    ts::return_shared(actor_obj);
-    ts.end();
-}
-
-#[test]
-fun actor_revoke_core_permissions_works() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    let mut group = permissions_group::new<TestWitness>(ts.ctx());
-    let actor_obj = new(ts.ctx());
-
-    // Grant CorePermissionsManager to the actor
-    group.grant_permission<TestWitness, CorePermissionsManager>(to_address(&actor_obj), ts.ctx());
-    // Grant core permissions and custom permission to Bob
-    group.grant_core_permissions<TestWitness>(BOB, ts.ctx());
-    group.grant_permission<TestWitness, CustomPermission>(BOB, ts.ctx());
-    transfer::public_share_object(group);
-    actor_obj.share();
-
-    // Bob uses actor to revoke his own core permissions
-    ts.next_tx(BOB);
-    let mut group = ts.take_shared<PermissionsGroup<TestWitness>>();
-    let actor_obj = ts.take_shared<SelfServiceActor>();
-    actor_obj.custom_revoke_core_permissions<TestWitness>(&mut group, ts.ctx());
-
-    assert_eq!(group.is_member(BOB), true);
-    assert_eq!(group.has_permission<TestWitness, CorePermissionsManager>(BOB), false);
-    assert_eq!(group.has_permission<TestWitness, ExtensionPermissionsManager>(BOB), false);
-    assert_eq!(group.has_permission<TestWitness, CustomPermission>(BOB), true);
-    // Count is 2: ALICE (creator) + actor (has CorePermissionsManager)
-    assert_eq!(group.core_managers_count<TestWitness>(), 2);
-
-    ts::return_shared(group);
-    ts::return_shared(actor_obj);
-    ts.end();
-}
-
 // === Failure tests for object_* functions ===
 
 #[test, expected_failure(abort_code = permissions_group::ENotPermitted)]
@@ -315,13 +230,13 @@ fun actor_remove_member_without_permission_fails() {
     let mut group = permissions_group::new<TestWitness>(ts.ctx());
     let actor_obj = new(ts.ctx());
 
-    // Actor has no CorePermissionsManager permission
+    // Actor has no Administrator permission
     group.grant_permission<TestWitness, CustomPermission>(to_address(&actor_obj), ts.ctx());
     group.grant_permission<TestWitness, CustomPermission>(BOB, ts.ctx());
     transfer::public_share_object(group);
     actor_obj.share();
 
-    // Bob tries to use actor to leave (should fail - actor lacks CorePermissionsManager)
+    // Bob tries to use actor to leave (should fail - actor lacks Administrator)
     ts.next_tx(BOB);
     let mut group = ts.take_shared<PermissionsGroup<TestWitness>>();
     let actor_obj = ts.take_shared<SelfServiceActor>();
@@ -338,8 +253,8 @@ fun actor_remove_non_member_fails() {
     let mut group = permissions_group::new<TestWitness>(ts.ctx());
     let actor_obj = new(ts.ctx());
 
-    // Grant CorePermissionsManager to actor
-    group.grant_permission<TestWitness, CorePermissionsManager>(to_address(&actor_obj), ts.ctx());
+    // Grant Administrator to actor
+    group.grant_permission<TestWitness, Administrator>(to_address(&actor_obj), ts.ctx());
     transfer::public_share_object(group);
     actor_obj.share();
 
@@ -348,28 +263,6 @@ fun actor_remove_non_member_fails() {
     let mut group = ts.take_shared<PermissionsGroup<TestWitness>>();
     let actor_obj = ts.take_shared<SelfServiceActor>();
     actor_obj.leave<TestWitness>(&mut group, ts.ctx());
-
-    abort
-}
-
-#[test, expected_failure(abort_code = permissions_group::ENotPermitted)]
-fun actor_grant_core_permissions_without_permission_fails() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    let mut group = permissions_group::new<TestWitness>(ts.ctx());
-    let actor_obj = new(ts.ctx());
-
-    // Actor has no CorePermissionsManager permission
-    group.grant_permission<TestWitness, CustomPermission>(to_address(&actor_obj), ts.ctx());
-    transfer::public_share_object(group);
-    actor_obj.share();
-
-    // Bob tries to use actor to grant himself core permissions (should fail)
-    ts.next_tx(BOB);
-    let mut group = ts.take_shared<PermissionsGroup<TestWitness>>();
-    let actor_obj = ts.take_shared<SelfServiceActor>();
-    actor_obj.custom_grant_core_permissions<TestWitness>(&mut group, ts.ctx());
 
     abort
 }
@@ -392,52 +285,6 @@ fun actor_revoke_permission_non_member_fails() {
     let mut group = ts.take_shared<PermissionsGroup<TestWitness>>();
     let actor_obj = ts.take_shared<SelfServiceActor>();
     actor_obj.custom_revoke_permission<TestWitness, CustomPermission>(&mut group, ts.ctx());
-
-    abort
-}
-
-#[test, expected_failure(abort_code = permissions_group::ENotPermitted)]
-fun actor_revoke_core_permissions_without_permission_fails() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    let mut group = permissions_group::new<TestWitness>(ts.ctx());
-    let actor_obj = new(ts.ctx());
-
-    // Actor has no CorePermissionsManager permission
-    group.grant_permission<TestWitness, CustomPermission>(to_address(&actor_obj), ts.ctx());
-    // Bob has core permissions
-    group.grant_core_permissions<TestWitness>(BOB, ts.ctx());
-    transfer::public_share_object(group);
-    actor_obj.share();
-
-    // Bob tries to use actor to revoke his core permissions (should fail)
-    ts.next_tx(BOB);
-    let mut group = ts.take_shared<PermissionsGroup<TestWitness>>();
-    let actor_obj = ts.take_shared<SelfServiceActor>();
-    actor_obj.custom_revoke_core_permissions<TestWitness>(&mut group, ts.ctx());
-
-    abort
-}
-
-#[test, expected_failure(abort_code = permissions_group::EMemberNotFound)]
-fun actor_revoke_core_permissions_non_member_fails() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    let mut group = permissions_group::new<TestWitness>(ts.ctx());
-    let actor_obj = new(ts.ctx());
-
-    // Grant CorePermissionsManager to actor
-    group.grant_permission<TestWitness, CorePermissionsManager>(to_address(&actor_obj), ts.ctx());
-    transfer::public_share_object(group);
-    actor_obj.share();
-
-    // Bob (not a member) tries to use actor to revoke core permissions (should fail)
-    ts.next_tx(BOB);
-    let mut group = ts.take_shared<PermissionsGroup<TestWitness>>();
-    let actor_obj = ts.take_shared<SelfServiceActor>();
-    actor_obj.custom_revoke_core_permissions<TestWitness>(&mut group, ts.ctx());
 
     abort
 }

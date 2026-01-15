@@ -30,8 +30,8 @@ Layer 3: example_app (third-party examples)
 1. **Generic Permissions System**: `PermissionsGroup<T>` is a top-level object (`key + store`) generic by type `T: drop`, specifying the application using the permissions. This allows the group to be passed alongside other objects for authentication without wrapping.
 
 2. **Permission Hierarchy**:
-   - `CorePermissionsManager`: Super-admin role for managing core permissions (grant/revoke any permission)
-   - `ExtensionPermissionsManager`: Can grant/revoke extension permissions (for third-party packages)
+   - `Administrator`: Super-admin role that can grant/revoke all permissions including `Administrator` itself
+   - `ExtensionPermissionsManager`: Can grant/revoke extension permissions only (for third-party packages)
    - Extension permissions are application-specific (e.g., `MessagingReader`, `MessagingSender`)
 
 3. **Membership Model**: Membership is implicit - having at least one permission makes an address a member. No separate membership concept.
@@ -72,7 +72,7 @@ Layer 3: example_app (third-party examples)
 
 | Permission | Description |
 |------------|-------------|
-| `CorePermissionsManager` | Can grant/revoke ALL permissions including other `CorePermissionsManager` |
+| `Administrator` | Can grant/revoke ALL permissions including other `Administrator` |
 | `ExtensionPermissionsManager` | Can grant/revoke extension permissions (non-core) |
 
 ### Messaging Permissions (messaging package)

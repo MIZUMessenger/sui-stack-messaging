@@ -2,10 +2,9 @@
 ///
 /// Generic permission system for group management.
 ///
-/// ## Core Permissions
+/// ## Permissions
 ///
-/// - `CorePermissionsManager`: Super-admin role that can grant/revoke all permissions and remove
-/// members
+/// - `Administrator`: Super-admin role that can grant/revoke all permissions and remove members
 /// - `ExtensionPermissionsManager`: Can grant/revoke extension permissions (permissions defined in
 /// third-party packages)
 ///
@@ -17,13 +16,12 @@
 /// don't exist
 /// - **Revoking may remove**: Revoking the last permission automatically removes the member from
 /// the group
-/// - **Permission hierarchy**: Only `CorePermissionsManager` can grant/revoke
-/// `CorePermissionsManager`; all other permissions
-///   can be managed by either `CorePermissionsManager` or `ExtensionPermissionsManager`
+/// - **Permission hierarchy**: Only `Administrator` can grant/revoke `Administrator`; all other
+/// permissions can be managed by either `Administrator` or `ExtensionPermissionsManager`
 ///
 /// ## Invariants
 ///
-/// - At least one `CorePermissionsManager` must always exist
+/// - At least one `Administrator` must always exist
 /// - Members always have at least one permission (empty permission sets are not allowed)
 module groups::permissions_group;
 
@@ -37,20 +35,19 @@ use sui::vec_set::{Self, VecSet};
 
 const ENotPermitted: u64 = 0;
 const EMemberNotFound: u64 = 1;
-const ELastPermissionsManager: u64 = 2;
+const ELastAdministrator: u64 = 2;
 const EPermissionsGroupAlreadyExists: u64 = 3;
 
 // === Permission Witnesses ===
 
-/// Permission to manage core permissions defined in the groups package.
+/// Permission to manage all permissions defined in the groups package.
 /// This is the super-admin role that can:
-/// - Grant/revoke both core and extension permissions
+/// - Grant/revoke all permissions (including other Administrators)
 /// - Remove members from the group
-/// - Manage other CorePermissionsManagers
-public struct CorePermissionsManager() has drop;
+public struct Administrator() has drop;
 
 /// Permission to manage extension permissions defined in third-party packages.
-/// Can grant/revoke extension permissions but NOT core permissions.
+/// Can grant/revoke extension permissions but NOT `Administrator`.
 /// This provides a safer delegation model for package-specific permissions.
 public struct ExtensionPermissionsManager() has drop;
 
@@ -74,8 +71,8 @@ public struct PermissionsGroup<phantom T: drop> has key, store {
     /// Maps member addresses (user or object) to their permission set.
     /// Object addresses enable `object_*` functions for third-party "actor" contracts.
     permissions: Table<address, VecSet<TypeName>>,
-    /// Tracks `CorePermissionsManager` count to enforce invariant.
-    core_managers_count: u64,
+    /// Tracks `Administrator` count to enforce at-least-one invariant.
+    administrators_count: u64,
     /// Original creator's address
     creator: address,
 }
@@ -141,7 +138,7 @@ public struct PermissionsRevoked<phantom T> has copy, drop {
 // === Public Functions ===
 
 /// Creates a new PermissionsGroup with the sender as initial admin.
-/// Grants `CorePermissionsManager` and `ExtensionPermissionsManager` to creator.
+/// Grants `Administrator` and `ExtensionPermissionsManager` to creator.
 ///
 /// # Type Parameters
 /// - `T`: Package witness type to scope permissions
@@ -150,18 +147,22 @@ public struct PermissionsRevoked<phantom T> has copy, drop {
 /// - `ctx`: Transaction context
 ///
 /// # Returns
-/// A new `PermissionsGroup<T>` with sender having all core permissions.
+/// A new `PermissionsGroup<T>` with sender having `Administrator` and `ExtensionPermissionsManager`.
 public fun new<T: drop>(ctx: &mut TxContext): PermissionsGroup<T> {
-    let creator_permissions_set = core_permissions_set();
     let creator = ctx.sender();
 
+    // Initialize creator with Administrator and ExtensionPermissionsManager
+    let mut creator_permissions = vec_set::empty<TypeName>();
+    creator_permissions.insert(type_name::with_defining_ids<Administrator>());
+    creator_permissions.insert(type_name::with_defining_ids<ExtensionPermissionsManager>());
+
     let mut permissions_table = table::new<address, VecSet<TypeName>>(ctx);
-    permissions_table.add(creator, creator_permissions_set);
+    permissions_table.add(creator, creator_permissions);
 
     let group = PermissionsGroup<T> {
         id: object::new(ctx),
         permissions: permissions_table,
-        core_managers_count: 1,
+        administrators_count: 1,
         creator,
     };
 
@@ -174,7 +175,7 @@ public fun new<T: drop>(ctx: &mut TxContext): PermissionsGroup<T> {
 }
 
 /// Creates a new derived PermissionsGroup with deterministic address.
-/// Grants `CorePermissionsManager` and `ExtensionPermissionsManager` to creator.
+/// Grants `Administrator` and `ExtensionPermissionsManager` to creator.
 ///
 /// # Type Parameters
 /// - `T`: Package witness type to scope permissions
@@ -200,16 +201,20 @@ public fun new_derived<T: drop, DerivationKey: copy + drop + store>(
         EPermissionsGroupAlreadyExists,
     );
 
-    let creator_permissions_set = core_permissions_set();
     let creator = ctx.sender();
 
+    // Initialize creator with Administrator and ExtensionPermissionsManager
+    let mut creator_permissions = vec_set::empty<TypeName>();
+    creator_permissions.insert(type_name::with_defining_ids<Administrator>());
+    creator_permissions.insert(type_name::with_defining_ids<ExtensionPermissionsManager>());
+
     let mut permissions_table = table::new<address, VecSet<TypeName>>(ctx);
-    permissions_table.add(creator, creator_permissions_set);
+    permissions_table.add(creator, creator_permissions);
 
     let group = PermissionsGroup<T> {
         id: derived_object::claim(derivation_uid, derivation_key),
         permissions: permissions_table,
-        core_managers_count: 1,
+        administrators_count: 1,
         creator,
     };
 
@@ -228,8 +233,8 @@ public fun new_derived<T: drop, DerivationKey: copy + drop + store>(
 /// Emits both `MemberAdded` (if new) and `PermissionsGranted` events.
 ///
 /// Permission requirements:
-/// - To grant `CorePermissionsManager`: caller must have `CorePermissionsManager`
-/// - To grant any other permission: caller must have `CorePermissionsManager` OR
+/// - To grant `Administrator`: caller must have `Administrator`
+/// - To grant any other permission: caller must have `Administrator` OR
 /// `ExtensionPermissionsManager`
 ///
 /// # Type Parameters
@@ -260,8 +265,8 @@ public fun grant_permission<T: drop, NewPermission: drop>(
 /// If the sender is not already a member, they are automatically added.
 ///
 /// Permission requirements:
-/// - To grant `CorePermissionsManager`: actor must have `CorePermissionsManager`
-/// - To grant any other permission: actor must have `CorePermissionsManager` OR
+/// - To grant `Administrator`: actor must have `Administrator`
+/// - To grant any other permission: actor must have `Administrator` OR
 /// `ExtensionPermissionsManager`
 ///
 /// # Type Parameters
@@ -291,7 +296,7 @@ public fun object_grant_permission<T: drop, NewPermission: drop>(
 }
 
 /// Removes a member from the PermissionsGroup.
-/// Requires `CorePermissionsManager` permission as this is a powerful admin operation.
+/// Requires `Administrator` permission as this is a powerful admin operation.
 ///
 /// # Parameters
 /// - `self`: Mutable reference to the PermissionsGroup
@@ -299,17 +304,17 @@ public fun object_grant_permission<T: drop, NewPermission: drop>(
 /// - `ctx`: Transaction context
 ///
 /// # Aborts
-/// - `ENotPermitted`: if caller doesn't have `CorePermissionsManager` permission
+/// - `ENotPermitted`: if caller doesn't have `Administrator` permission
 /// - `EMemberNotFound`: if member doesn't exist
-/// - `ELastPermissionsManager`: if removing would leave no CorePermissionsManagers
+/// - `ELastAdministrator`: if removing would leave no Administrators
 public fun remove_member<T: drop>(
     self: &mut PermissionsGroup<T>,
     member: address,
     ctx: &TxContext,
 ) {
-    assert!(self.has_permission<T, CorePermissionsManager>(ctx.sender()), ENotPermitted);
+    assert!(self.has_permission<T, Administrator>(ctx.sender()), ENotPermitted);
     assert!(self.is_member<T>(member), EMemberNotFound);
-    self.safe_decrement_core_managers_count(member);
+    self.safe_decrement_administrators_count(member);
     self.permissions.remove(member);
 
     event::emit(MemberRemoved<T> {
@@ -320,27 +325,27 @@ public fun remove_member<T: drop>(
 
 /// Removes the transaction sender from the group via an actor object.
 /// Enables third-party contracts to implement custom leave logic.
-/// The actor object must have `CorePermissionsManager` permission on the group.
+/// The actor object must have `Administrator` permission on the group.
 ///
 /// # Parameters
 /// - `self`: Mutable reference to the PermissionsGroup
-/// - `actor_object`: UID of the actor object with `CorePermissionsManager` permission
+/// - `actor_object`: UID of the actor object with `Administrator` permission
 /// - `ctx`: Transaction context (sender will be removed)
 ///
 /// # Aborts
-/// - `ENotPermitted`: if actor_object doesn't have `CorePermissionsManager` permission
+/// - `ENotPermitted`: if actor_object doesn't have `Administrator` permission
 /// - `EMemberNotFound`: if sender is not a member
-/// - `ELastPermissionsManager`: if removing would leave no CorePermissionsManagers
+/// - `ELastAdministrator`: if removing would leave no Administrators
 public fun object_remove_member<T: drop>(
     self: &mut PermissionsGroup<T>,
     actor_object: &UID,
     ctx: &mut TxContext,
 ) {
     let actor_address = actor_object.to_address();
-    assert!(self.has_permission<T, CorePermissionsManager>(actor_address), ENotPermitted);
+    assert!(self.has_permission<T, Administrator>(actor_address), ENotPermitted);
     let member = ctx.sender();
     assert!(self.is_member<T>(member), EMemberNotFound);
-    self.safe_decrement_core_managers_count(member);
+    self.safe_decrement_administrators_count(member);
 
     self.permissions.remove(member);
 
@@ -350,58 +355,13 @@ public fun object_remove_member<T: drop>(
     });
 }
 
-/// Grants all core permissions to a member.
-/// Includes: `CorePermissionsManager`, `ExtensionPermissionsManager`.
-/// If the member doesn't exist, they are automatically added.
-///
-/// # Parameters
-/// - `self`: Mutable reference to the PermissionsGroup
-/// - `member`: Address of the member to grant permissions to
-/// - `ctx`: Transaction context
-///
-/// # Aborts
-/// - `ENotPermitted`: if caller doesn't have `CorePermissionsManager` permission
-public fun grant_core_permissions<T: drop>(
-    self: &mut PermissionsGroup<T>,
-    member: address,
-    ctx: &mut TxContext,
-) {
-    assert!(self.has_permission<T, CorePermissionsManager>(ctx.sender()), ENotPermitted);
-
-    self.internal_grant_core_permissions<T>(member);
-}
-
-/// Grants all core permissions to the transaction sender via an actor object.
-/// Enables third-party contracts to grant core permissions with custom logic.
-/// The actor object must have `CorePermissionsManager` permission on the group.
-/// If the sender is not already a member, they are automatically added.
-///
-/// # Parameters
-/// - `self`: Mutable reference to the PermissionsGroup
-/// - `actor_object`: UID of the actor object with `CorePermissionsManager` permission
-/// - `ctx`: Transaction context (sender will receive all core permissions)
-///
-/// # Aborts
-/// - `ENotPermitted`: if actor_object doesn't have `CorePermissionsManager` permission
-public fun object_grant_core_permissions<T: drop>(
-    self: &mut PermissionsGroup<T>,
-    actor_object: &UID,
-    ctx: &mut TxContext,
-) {
-    let actor_address = actor_object.to_address();
-    assert!(self.has_permission<T, CorePermissionsManager>(actor_address), ENotPermitted);
-
-    let member = ctx.sender();
-    self.internal_grant_core_permissions<T>(member);
-}
-
 /// Revokes a permission from a member.
 /// If this is the member's last permission, they are automatically removed from the group.
 /// Emits `PermissionsRevoked` and potentially `MemberRemoved` events.
 ///
 /// Permission requirements:
-/// - To revoke `CorePermissionsManager`: caller must have `CorePermissionsManager`
-/// - To revoke any other permission: caller must have `CorePermissionsManager` OR
+/// - To revoke `Administrator`: caller must have `Administrator`
+/// - To revoke any other permission: caller must have `Administrator` OR
 /// `ExtensionPermissionsManager`
 ///
 /// # Type Parameters
@@ -416,7 +376,7 @@ public fun object_grant_core_permissions<T: drop>(
 /// # Aborts
 /// - `ENotPermitted`: if caller doesn't have appropriate manager permission
 /// - `EMemberNotFound`: if member doesn't exist
-/// - `ELastPermissionsManager`: if revoking `CorePermissionsManager` would leave no core managers
+/// - `ELastAdministrator`: if revoking `Administrator` would leave no administrators
 public fun revoke_permission<T: drop, ExistingPermission: drop>(
     self: &mut PermissionsGroup<T>,
     member: address,
@@ -434,8 +394,8 @@ public fun revoke_permission<T: drop, ExistingPermission: drop>(
 /// If this is the sender's last permission, they are automatically removed from the group.
 ///
 /// Permission requirements:
-/// - To revoke `CorePermissionsManager`: actor must have `CorePermissionsManager`
-/// - To revoke any other permission: actor must have `CorePermissionsManager` OR
+/// - To revoke `Administrator`: actor must have `Administrator`
+/// - To revoke any other permission: actor must have `Administrator` OR
 /// `ExtensionPermissionsManager`
 ///
 /// # Type Parameters
@@ -450,7 +410,7 @@ public fun revoke_permission<T: drop, ExistingPermission: drop>(
 /// # Aborts
 /// - `ENotPermitted`: if actor_object doesn't have appropriate manager permission
 /// - `EMemberNotFound`: if sender is not a member
-/// - `ELastPermissionsManager`: if revoking `CorePermissionsManager` would leave no core managers
+/// - `ELastAdministrator`: if revoking `Administrator` would leave no administrators
 public fun object_revoke_permission<T: drop, ExistingPermission: drop>(
     self: &mut PermissionsGroup<T>,
     actor_object: &UID,
@@ -464,56 +424,6 @@ public fun object_revoke_permission<T: drop, ExistingPermission: drop>(
     assert!(self.permissions.contains(member), EMemberNotFound);
 
     self.internal_revoke_permission<T, ExistingPermission>(member);
-}
-
-/// Revokes all core permissions from a member.
-/// Only removes core permissions (`CorePermissionsManager`, `ExtensionPermissionsManager`).
-/// Custom permissions added by third-party packages are preserved.
-///
-/// # Parameters
-/// - `self`: Mutable reference to the PermissionsGroup
-/// - `member`: Address of the member to revoke core permissions from
-/// - `ctx`: Transaction context
-///
-/// # Aborts
-/// - `ENotPermitted`: if caller doesn't have `CorePermissionsManager` permission
-/// - `EMemberNotFound`: if member doesn't exist
-/// - `ELastPermissionsManager`: if member has `CorePermissionsManager` and revoking would leave no
-/// core managers
-public fun revoke_core_permissions<T: drop>(
-    self: &mut PermissionsGroup<T>,
-    member: address,
-    ctx: &TxContext,
-) {
-    assert!(self.has_permission<T, CorePermissionsManager>(ctx.sender()), ENotPermitted);
-    assert!(self.permissions.contains(member), EMemberNotFound);
-    self.internal_revoke_core_permissions<T>(member);
-}
-
-/// Revokes all core permissions from the transaction sender via an actor object.
-/// Enables third-party contracts to revoke core permissions with custom logic.
-/// The actor object must have `CorePermissionsManager` permission on the group.
-///
-/// # Parameters
-/// - `self`: Mutable reference to the PermissionsGroup
-/// - `actor_object`: UID of the actor object with `CorePermissionsManager` permission
-/// - `ctx`: Transaction context (sender will have core permissions revoked)
-///
-/// # Aborts
-/// - `ENotPermitted`: if actor_object doesn't have `CorePermissionsManager` permission
-/// - `EMemberNotFound`: if sender is not a member
-/// - `ELastPermissionsManager`: if sender has `CorePermissionsManager` and revoking would leave no
-/// core managers
-public fun object_revoke_core_permissions<T: drop>(
-    self: &mut PermissionsGroup<T>,
-    actor_object: &UID,
-    ctx: &mut TxContext,
-) {
-    let actor_address = actor_object.to_address();
-    assert!(self.has_permission<T, CorePermissionsManager>(actor_address), ENotPermitted);
-    let member = ctx.sender();
-    assert!(self.permissions.contains(member), EMemberNotFound);
-    self.internal_revoke_core_permissions<T>(member);
 }
 
 // === Getters ===
@@ -560,30 +470,22 @@ public fun creator<T: drop>(self: &PermissionsGroup<T>): address {
     self.creator
 }
 
-/// Returns the number of `CorePermissionsManager`s in the PermissionsGroup.
+/// Returns the number of `Administrator`s in the PermissionsGroup.
 ///
 /// # Parameters
 /// - `self`: Reference to the PermissionsGroup
 ///
 /// # Returns
-/// The count of `CorePermissionsManager`s.
-public fun core_managers_count<T: drop>(self: &PermissionsGroup<T>): u64 {
-    self.core_managers_count
+/// The count of `Administrator`s.
+public fun administrators_count<T: drop>(self: &PermissionsGroup<T>): u64 {
+    self.administrators_count
 }
 
 // === Private Functions ===
 
-/// Returns a VecSet containing all core permissions.
-fun core_permissions_set(): VecSet<TypeName> {
-    let mut permissions = vec_set::empty<TypeName>();
-    permissions.insert(type_name::with_defining_ids<CorePermissionsManager>());
-    permissions.insert(type_name::with_defining_ids<ExtensionPermissionsManager>());
-    permissions
-}
-
 /// Asserts that the manager has permission to manage (grant/revoke) the specified permission type.
-/// - To manage `CorePermissionsManager`: manager must have `CorePermissionsManager`
-/// - To manage any other permission: manager must have `CorePermissionsManager` OR
+/// - To manage `Administrator`: manager must have `Administrator`
+/// - To manage any other permission: manager must have `Administrator` OR
 /// `ExtensionPermissionsManager`
 fun assert_can_manage_permission<T: drop, Permission: drop>(
     self: &PermissionsGroup<T>,
@@ -591,16 +493,16 @@ fun assert_can_manage_permission<T: drop, Permission: drop>(
 ) {
     let permission_type = type_name::with_defining_ids<Permission>();
     let managing_core_manager =
-        permission_type == type_name::with_defining_ids<CorePermissionsManager>();
+        permission_type == type_name::with_defining_ids<Administrator>();
 
     if (managing_core_manager) {
-        // Only CorePermissionsManager can manage CorePermissionsManager
-        assert!(self.has_permission<T, CorePermissionsManager>(manager), ENotPermitted);
+        // Only Administrator can manage Administrator
+        assert!(self.has_permission<T, Administrator>(manager), ENotPermitted);
     } else {
-        // For all other permissions, either CorePermissionsManager or ExtensionPermissionsManager
+        // For all other permissions, either Administrator or ExtensionPermissionsManager
         // can manage
         assert!(
-            self.has_permission<T, CorePermissionsManager>(manager) ||
+            self.has_permission<T, Administrator>(manager) ||
             self.has_permission<T, ExtensionPermissionsManager>(manager),
             ENotPermitted,
         );
@@ -620,20 +522,20 @@ fun internal_add_member<T: drop>(self: &mut PermissionsGroup<T>, new_member: add
     };
 }
 
-/// Decrements core_managers_count if member has `CorePermissionsManager`.
-/// Used when revoking core permissions or removing a member.
-/// Aborts if this would leave no core managers.
-fun safe_decrement_core_managers_count<T: drop>(self: &mut PermissionsGroup<T>, member: address) {
+/// Decrements administrators_count if member has `Administrator`.
+/// Used when revoking `Administrator` permission or removing a member.
+/// Aborts if this would leave no administrators.
+fun safe_decrement_administrators_count<T: drop>(self: &mut PermissionsGroup<T>, member: address) {
     let member_permissions_set = self.permissions.borrow(member);
-    if (member_permissions_set.contains(&type_name::with_defining_ids<CorePermissionsManager>())) {
-        assert!(self.core_managers_count > 1, ELastPermissionsManager);
-        self.core_managers_count = self.core_managers_count - 1;
+    if (member_permissions_set.contains(&type_name::with_defining_ids<Administrator>())) {
+        assert!(self.administrators_count > 1, ELastAdministrator);
+        self.administrators_count = self.administrators_count - 1;
     };
 }
 
 /// Internal helper to grant a permission to a member.
 /// Adds the member if they don't exist, then grants the permission.
-/// Increments core_managers_count if granting `CorePermissionsManager`.
+/// Increments administrators_count if granting `Administrator`.
 /// Emits `MemberAdded` event if member is new.
 fun internal_grant_permission<T: drop, NewPermission: drop>(
     self: &mut PermissionsGroup<T>,
@@ -646,11 +548,11 @@ fun internal_grant_permission<T: drop, NewPermission: drop>(
     let member_permissions_set = self.permissions.borrow_mut(member);
     member_permissions_set.insert(type_name::with_defining_ids<NewPermission>());
 
-    // Track CorePermissionsManager count
+    // Track Administrator count
     if (
-        type_name::with_defining_ids<NewPermission>() == type_name::with_defining_ids<CorePermissionsManager>()
+        type_name::with_defining_ids<NewPermission>() == type_name::with_defining_ids<Administrator>()
     ) {
-        self.core_managers_count = self.core_managers_count + 1;
+        self.administrators_count = self.administrators_count + 1;
     };
 
     event::emit(PermissionsGranted<T> {
@@ -665,11 +567,11 @@ fun internal_revoke_permission<T: drop, ExistingPermission: drop>(
     self: &mut PermissionsGroup<T>,
     member: address,
 ) {
-    // Check if revoking CorePermissionsManager
+    // Check if revoking Administrator
     if (
-        type_name::with_defining_ids<ExistingPermission>() == type_name::with_defining_ids<CorePermissionsManager>()
+        type_name::with_defining_ids<ExistingPermission>() == type_name::with_defining_ids<Administrator>()
     ) {
-        self.safe_decrement_core_managers_count(member);
+        self.safe_decrement_administrators_count(member);
     };
 
     // Revoke the permission
@@ -695,44 +597,3 @@ fun internal_revoke_permission<T: drop, ExistingPermission: drop>(
     };
 }
 
-/// Internal helper to grant all core permissions to a member.
-/// Adds the member if they don't exist.
-/// Emits `MemberAdded` (if new) and `PermissionsGranted` events.
-fun internal_grant_core_permissions<T: drop>(self: &mut PermissionsGroup<T>, member: address) {
-    // Add member if they don't exist
-    self.internal_add_member(member);
-
-    // Grant all core permissions
-    let core_perms = core_permissions_set();
-    let member_permissions_set = self.permissions.borrow_mut(member);
-    core_perms.into_keys().do!(|permission| {
-        member_permissions_set.insert(permission);
-        if (permission == type_name::with_defining_ids<CorePermissionsManager>()) {
-            self.core_managers_count = self.core_managers_count + 1;
-        };
-    });
-
-    event::emit(PermissionsGranted<T> {
-        group_id: object::id(self),
-        member,
-        permissions: core_permissions_set().into_keys(),
-    });
-}
-
-/// Internal helper to revoke all core permissions from a member.
-/// Emits `PermissionsRevoked` event.
-fun internal_revoke_core_permissions<T: drop>(self: &mut PermissionsGroup<T>, member: address) {
-    self.safe_decrement_core_managers_count(member);
-    let member_permissions_set = self.permissions.borrow_mut(member);
-    core_permissions_set().into_keys().do!(|permission| {
-        if (member_permissions_set.contains(&permission)) {
-            member_permissions_set.remove(&permission);
-        };
-    });
-
-    event::emit(PermissionsRevoked<T> {
-        group_id: object::id(self),
-        member,
-        permissions: core_permissions_set().into_keys(),
-    });
-}

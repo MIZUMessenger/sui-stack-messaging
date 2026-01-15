@@ -8,8 +8,8 @@
 ///
 /// ## Permissions
 ///
-/// Core (from groups, auto-granted to creator):
-/// - `CorePermissionsManager`: Super-admin role that can grant/revoke all permissions
+/// From groups (auto-granted to creator):
+/// - `Administrator`: Super-admin role that can grant/revoke all permissions
 /// - `ExtensionPermissionsManager`: Can grant/revoke extension permissions
 ///
 /// Messaging-specific:
@@ -27,7 +27,7 @@
 ///
 module messaging::messaging;
 
-use groups::permissions_group::{Self, PermissionsGroup};
+use groups::permissions_group::{Self, PermissionsGroup, Administrator, ExtensionPermissionsManager};
 use messaging::encryption_history::{Self, EncryptionHistory, EncryptionKeyRotator};
 use sui::vec_set::VecSet;
 
@@ -200,7 +200,8 @@ public fun grant_all_messaging_permissions(
     group.grant_permission<Messaging, EncryptionKeyRotator>(member, ctx);
 }
 
-/// Grants all permissions (core + messaging) to a member, making them an admin.
+/// Grants all permissions (Administrator, ExtensionPermissionsManager + messaging) to a member,
+/// making them an admin.
 ///
 /// # Parameters
 /// - `group`: Mutable reference to the PermissionsGroup<Messaging>
@@ -208,14 +209,14 @@ public fun grant_all_messaging_permissions(
 /// - `ctx`: Transaction context
 ///
 /// # Aborts
-/// - `ENotPermitted` (from `permissions_group`): if caller doesn't have `CorePermissionsManager`
-/// permission
+/// - `ENotPermitted` (from `permissions_group`): if caller doesn't have `Administrator` permission
 public fun grant_all_permissions(
     group: &mut PermissionsGroup<Messaging>,
     member: address,
     ctx: &mut TxContext,
 ) {
-    group.grant_core_permissions<Messaging>(member, ctx);
+    group.grant_permission<Messaging, Administrator>(member, ctx);
+    group.grant_permission<Messaging, ExtensionPermissionsManager>(member, ctx);
     grant_all_messaging_permissions(group, member, ctx);
 }
 
