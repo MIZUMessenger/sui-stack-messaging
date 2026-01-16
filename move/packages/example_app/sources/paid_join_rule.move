@@ -1,0 +1,273 @@
+/// Module: paid_join_rule
+///
+/// Example third-party contract demonstrating payment-gated group membership
+/// using the `object_*` actor pattern with accumulated funds management.
+///
+/// ## Pattern Overview
+///
+/// This pattern enables self-service group joining with payment:
+/// 1. Group admin creates a `PaidJoinRule` actor with fee configuration
+/// 2. Admin grants the actor's address `ExtensionPermissionsManager` permission
+/// 3. Users call `join()` to self-serve join by paying the fee
+/// 4. Fees accumulate in the rule's `Balance<Token>`
+/// 5. Members with `FundsManager` permission can withdraw accumulated funds
+///
+/// The actor object's UID is passed to `object_grant_permission`, which checks that
+/// the actor has `ExtensionPermissionsManager` permission before granting `MessagingReader`
+/// to the transaction sender (making them a member).
+///
+/// ## Permissions
+///
+/// - `FundsManager`: Permission to withdraw accumulated fees from the rule
+///
+/// ## Usage Flow
+///
+/// ```move
+/// // 1. Admin creates the group
+/// let (mut group, encryption_history) = messaging::messaging::create_group(...);
+///
+/// // 2. Admin creates the paid join rule (generic over token type)
+/// let rule = paid_join_rule::new<SUI>(group_id, 1_000_000_000, ctx); // 1 SUI fee
+/// let rule_address = object::id(&rule).to_address();
+///
+/// // 3. Admin grants ExtensionPermissionsManager to the rule so it can add members
+/// group.grant_permission<Messaging, ExtensionPermissionsManager>(rule_address, ctx);
+///
+/// // 4. Admin grants FundsManager permission to themselves or a treasurer
+/// group.grant_permission<Messaging, FundsManager>(treasurer, ctx);
+///
+/// // 5. Share the rule so users can access it
+/// transfer::share_object(rule);
+///
+/// // 6. User self-serves to join (gets MessagingReader permission)
+/// paid_join_rule::join<SUI>(&mut rule, &mut group, &mut payment, ctx);
+///
+/// // 7. Treasurer withdraws accumulated funds
+/// let funds = paid_join_rule::withdraw<SUI>(&mut rule, &group, amount, ctx);
+/// ```
+///
+module example_app::paid_join_rule;
+
+use permissioned_groups::permissioned_group::PermissionedGroup;
+use messaging::messaging::{Messaging, MessagingReader};
+use sui::balance::{Self, Balance};
+use sui::coin::{Self, Coin};
+
+// === Error Codes ===
+
+const EInsufficientPayment: u64 = 0;
+const EInsufficientBalance: u64 = 1;
+const EGroupMismatch: u64 = 2;
+const ENotPermitted: u64 = 3;
+
+// === Permission Witnesses ===
+
+/// Permission to withdraw accumulated funds from the rule.
+/// Must be granted via `group.grant_permission<Messaging, FundsManager>(member, ctx)`.
+public struct FundsManager() has drop;
+
+// === Structs ===
+
+/// Actor object that enables paid self-service group joining.
+/// Must be granted `ExtensionPermissionsManager` permission to add members.
+/// Accumulates fees in a `Balance<Token>` that can be withdrawn by `FundsManager`.
+public struct PaidJoinRule<phantom Token> has key {
+    id: UID,
+    /// The group this rule is associated with
+    group_id: ID,
+    /// Fee in Token's smallest unit required to join
+    fee: u64,
+    /// Accumulated fees from join payments
+    balance: Balance<Token>,
+}
+
+// === Public Functions ===
+
+/// Creates a new PaidJoinRule actor.
+/// The returned object should be shared after the admin grants it `ExtensionPermissionsManager`
+/// permission.
+///
+/// # Type Parameters
+/// - `Token`: The coin type accepted for payment (e.g., `SUI`)
+///
+/// # Parameters
+/// - `group_id`: The ID of the group this rule controls access to
+/// - `fee`: Join fee in Token's smallest unit
+/// - `ctx`: Transaction context
+///
+/// # Returns
+/// A new `PaidJoinRule<Token>` object.
+public fun new<Token: drop>(
+    group_id: ID,
+    fee: u64,
+    ctx: &mut TxContext,
+): PaidJoinRule<Token> {
+    PaidJoinRule {
+        id: object::new(ctx),
+        group_id,
+        fee,
+        balance: balance::zero(),
+    }
+}
+
+/// Shares the PaidJoinRule object.
+/// Call this after creating the rule and obtaining its address for permission setup.
+///
+/// # Parameters
+/// - `rule`: The PaidJoinRule to share
+public fun share<Token: drop>(rule: PaidJoinRule<Token>) {
+    transfer::share_object(rule);
+}
+
+/// Creates a new PaidJoinRule and shares it immediately.
+/// Note: Use `new` + `share` separately if you need the rule's address before sharing
+/// (e.g., for granting `ExtensionPermissionsManager` permission).
+entry fun new_and_share<Token: drop>(
+    group_id: ID,
+    fee: u64,
+    ctx: &mut TxContext,
+) {
+    share(new<Token>(group_id, fee, ctx));
+}
+
+/// Allows the transaction sender to join the group by paying the required fee.
+/// The sender is granted `MessagingReader` permission (making them a member).
+/// Fees accumulate in the rule's balance for later withdrawal.
+///
+/// # Type Parameters
+/// - `Token`: The coin type for payment
+///
+/// # Parameters
+/// - `rule`: Mutable reference to the PaidJoinRule actor
+/// - `group`: Mutable reference to the PermissionedGroup
+/// - `payment`: Mutable reference to Coin for payment (fee is deducted in place)
+/// - `ctx`: Transaction context
+///
+/// # Aborts
+/// - `EInsufficientPayment`: if payment is less than the required fee
+/// - `EGroupMismatch`: if group doesn't match rule's group_id
+/// - `ENotPermitted` (from `permissions_group`): if rule doesn't have `ExtensionPermissionsManager`
+/// permission
+public fun join<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &mut PermissionedGroup<Messaging>,
+    payment: &mut Coin<Token>,
+    ctx: &mut TxContext,
+) {
+    assert!(payment.value() >= rule.fee, EInsufficientPayment);
+    assert!(object::id(group) == rule.group_id, EGroupMismatch);
+
+    // Split exact fee from payment and add to balance
+    let fee_balance = payment.balance_mut().split(rule.fee);
+    rule.balance.join(fee_balance);
+
+    // Grant MessagingReader permission to sender via the actor object
+    group.object_grant_permission<Messaging, MessagingReader>(&rule.id, ctx);
+}
+
+/// Entry version of `join` for CLI usage.
+entry fun join_entry<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &mut PermissionedGroup<Messaging>,
+    payment: &mut Coin<Token>,
+    ctx: &mut TxContext,
+) {
+    join(rule, group, payment, ctx);
+}
+
+/// Withdraws accumulated funds from the rule.
+/// Only callable by members with `FundsManager` permission on the group.
+///
+/// # Type Parameters
+/// - `Token`: The coin type to withdraw
+///
+/// # Parameters
+/// - `rule`: Mutable reference to the PaidJoinRule
+/// - `group`: Reference to the PermissionedGroup (for permission check)
+/// - `amount`: Amount to withdraw in Token's smallest unit
+/// - `ctx`: Transaction context
+///
+/// # Returns
+/// A `Coin<Token>` containing the withdrawn amount.
+///
+/// # Aborts
+/// - `EGroupMismatch`: if group doesn't match rule's group_id
+/// - `ENotPermitted`: if caller doesn't have `FundsManager` permission
+/// - `EInsufficientBalance`: if rule balance is less than requested amount
+public fun withdraw<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &PermissionedGroup<Messaging>,
+    amount: u64,
+    ctx: &mut TxContext,
+): Coin<Token> {
+    assert!(object::id(group) == rule.group_id, EGroupMismatch);
+    assert!(group.has_permission<Messaging, FundsManager>(ctx.sender()), ENotPermitted);
+    assert!(rule.balance.value() >= amount, EInsufficientBalance);
+
+    coin::from_balance(rule.balance.split(amount), ctx)
+}
+
+/// Entry version of `withdraw` that transfers directly to sender.
+entry fun withdraw_entry<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &PermissionedGroup<Messaging>,
+    amount: u64,
+    ctx: &mut TxContext,
+) {
+    let coin = withdraw(rule, group, amount, ctx);
+    transfer::public_transfer(coin, ctx.sender());
+}
+
+/// Withdraws all accumulated funds from the rule.
+/// Only callable by members with `FundsManager` permission on the group.
+///
+/// # Type Parameters
+/// - `Token`: The coin type to withdraw
+///
+/// # Parameters
+/// - `rule`: Mutable reference to the PaidJoinRule
+/// - `group`: Reference to the PermissionedGroup (for permission check)
+/// - `ctx`: Transaction context
+///
+/// # Returns
+/// A `Coin<Token>` containing all accumulated funds.
+///
+/// # Aborts
+/// - `EGroupMismatch`: if group doesn't match rule's group_id
+/// - `ENotPermitted`: if caller doesn't have `FundsManager` permission
+public fun withdraw_all<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &PermissionedGroup<Messaging>,
+    ctx: &mut TxContext,
+): Coin<Token> {
+    let amount = rule.balance.value();
+    withdraw(rule, group, amount, ctx)
+}
+
+/// Entry version of `withdraw_all` that transfers directly to sender.
+entry fun withdraw_all_entry<Token: drop>(
+    rule: &mut PaidJoinRule<Token>,
+    group: &PermissionedGroup<Messaging>,
+    ctx: &mut TxContext,
+) {
+    let coin = withdraw_all(rule, group, ctx);
+    transfer::public_transfer(coin, ctx.sender());
+}
+
+// === Getters ===
+
+/// Returns the join fee.
+public fun fee<Token: drop>(rule: &PaidJoinRule<Token>): u64 {
+    rule.fee
+}
+
+/// Returns the group ID this rule is associated with.
+public fun group_id<Token: drop>(rule: &PaidJoinRule<Token>): ID {
+    rule.group_id
+}
+
+/// Returns the current accumulated balance.
+public fun balance_value<Token: drop>(rule: &PaidJoinRule<Token>): u64 {
+    rule.balance.value()
+}
+
