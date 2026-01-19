@@ -32,7 +32,7 @@ export const publish = async () => {
     exec: execSync as any,
   });
   const { bytes, signature } = await signer.signTransaction(
-    fromBase64(unsignedBytes)
+    fromBase64(unsignedBytes),
   );
   const resp = await suiClient.executeTransactionBlock({
     transactionBlock: bytes,
@@ -53,7 +53,7 @@ export const publish = async () => {
   }
   fs.writeFileSync(
     ["data", "publish.json"].join(path.sep),
-    JSON.stringify(resp, null, 2)
+    JSON.stringify(resp, null, 2),
   );
   console.log("Response details stored in data/publish.json");
 };

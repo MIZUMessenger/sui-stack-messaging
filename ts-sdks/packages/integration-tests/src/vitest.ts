@@ -1,8 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import type { SuiClient } from '@mysten/sui/client';
-import type { Account, PublishedPackage } from './types.js';
+import type { PublishedPackage, SerializableAccount } from './types.js';
 
 declare module 'vitest' {
 	export interface ProvidedContext {
@@ -10,8 +9,8 @@ declare module 'vitest' {
 		graphqlPort: number;
 		faucetPort: number;
 		suiToolsContainerId: string;
-		adminAccount: Account;
-		suiClient: SuiClient;
+		adminAccount: SerializableAccount;
+		suiClientUrl: string;
 		publishedPackages: Record<string, PublishedPackage>;
 	}
 }

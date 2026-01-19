@@ -31,10 +31,7 @@ export const publishBytes = async () => {
   if (!fs.existsSync("data")) {
     fs.mkdirSync("data");
   }
-  fs.writeFileSync(
-    ["data", "publish-bytes.txt"].join(path.sep),
-    unsignedBytes
-  );
+  fs.writeFileSync(["data", "publish-bytes.txt"].join(path.sep), unsignedBytes);
   console.log("Response details stored in data/publish-bytes.txt");
 
   return unsignedBytes;

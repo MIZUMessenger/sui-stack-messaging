@@ -17,8 +17,14 @@ export async function execCommand(command: string[], containerId: string): Promi
 	const result = await client.container.exec(container, command);
 
 	if (result.exitCode !== 0) {
-		console.error(result.stderr);
-		throw new Error(`Command "${command.join(' ')}" failed with exit code ${result.exitCode}`);
+		const errorDetails = [
+			`Command: ${command.join(' ')}`,
+			`Exit code: ${result.exitCode}`,
+			`Stderr: ${result.stderr || '(empty)'}`,
+			`Stdout: ${result.output || '(empty)'}`,
+		].join('\n');
+		console.error('Command execution failed:\n', errorDetails);
+		throw new Error(`Command failed with exit code ${result.exitCode}:\n${errorDetails}`);
 	}
 
 	return result.output;

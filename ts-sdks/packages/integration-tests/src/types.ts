@@ -10,12 +10,21 @@ export interface Account {
 }
 
 /**
+ * Serializable version of Account for Vitest provide/inject.
+ * The secret key (bech32 encoded) can be used to reconstruct the keypair.
+ */
+export interface SerializableAccount {
+	secretKey: string;
+	address: string;
+}
+
+/**
  * Configuration for a Move package to be published during test setup.
  */
 export interface MovePackageConfig {
 	/** Name identifier for the package */
 	name: string;
-	/** Local path relative to integration-tests directory */
+	/** Local path relative to repository root */
 	localPath: string;
 	/** Path inside the test container */
 	containerPath: string;

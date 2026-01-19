@@ -5,8 +5,8 @@
   "description": "Integration tests for groups-sdk packages",
   "type": "module",
   "scripts": {
-    "test": "vitest run --workspace",
-    "test:watch": "vitest --workspace",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:permissioned-groups": "vitest run --project permissioned-groups",
     "test:messaging": "vitest run --project messaging",
     "test:example-apps": "vitest run --project example-apps"
@@ -21,6 +21,7 @@
     "vitest": "^4.0.16"
   },
   "dependencies": {
-    "@mysten/sui": "^1.39.0"
+    "@mysten/permissioned-groups": "workspace:*",
+    "@mysten/sui": "^1.45.2"
   }
 }

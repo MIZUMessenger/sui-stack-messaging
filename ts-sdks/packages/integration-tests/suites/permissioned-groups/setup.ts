@@ -11,7 +11,7 @@ import { getNewAccount } from '../../src/utils/get-new-account.js';
 import { PACKAGES } from './config.js';
 
 export default async function setup(project: TestProject) {
-	console.log('Setting up messaging test environment...');
+	console.log('Setting up permissioned-groups test environment...');
 
 	const fixture = await startSuiLocalnet({
 		packages: PACKAGES,
@@ -21,19 +21,19 @@ export default async function setup(project: TestProject) {
 	const LOCALNET_PORT = fixture.ports.localnet;
 	const FAUCET_PORT = fixture.ports.faucet;
 	const SUI_TOOLS_CONTAINER_ID = fixture.containerId;
+	const SUI_CLIENT_URL = `http://localhost:${LOCALNET_PORT}`;
 
 	project.provide('localnetPort', LOCALNET_PORT);
 	project.provide('graphqlPort', fixture.ports.graphql);
 	project.provide('faucetPort', FAUCET_PORT);
 	project.provide('suiToolsContainerId', SUI_TOOLS_CONTAINER_ID);
+	project.provide('suiClientUrl', SUI_CLIENT_URL);
 
 	// Initialize sui client in container
 	await execCommand(['sui', 'client', '--yes'], SUI_TOOLS_CONTAINER_ID);
 
 	console.log('Preparing admin account...');
-	const suiClient = new SuiClient({
-		url: `http://localhost:${LOCALNET_PORT}`,
-	});
+	const suiClient = new SuiClient({ url: SUI_CLIENT_URL });
 	const admin = getNewAccount();
 	await requestSuiFromFaucetV2({
 		host: `http://localhost:${FAUCET_PORT}`,
@@ -48,9 +48,12 @@ export default async function setup(project: TestProject) {
 		suiToolsContainerId: SUI_TOOLS_CONTAINER_ID,
 	});
 
-	project.provide('adminAccount', admin);
-	project.provide('suiClient', suiClient);
+	// Provide serializable account (secret key as base64)
+	project.provide('adminAccount', {
+		secretKey: admin.keypair.getSecretKey(),
+		address: admin.address,
+	});
 	project.provide('publishedPackages', publishedPackages);
 
-	console.log('messaging test environment is ready.');
+	console.log('permissioned-groups test environment is ready.');
 }

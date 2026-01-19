@@ -25,7 +25,7 @@ export const getPublishBytes = async ({
   // Build the move package and keep the meaningful part of the output
   const absolutePath = resolve(process.cwd(), packagePath);
   const output = await exec(
-    `sui move build --dump-bytecode-as-base64 --path ${absolutePath}`
+    `sui move build --dump-bytecode-as-base64 --path ${absolutePath}`,
   );
   const bodyStart = output.indexOf('{"modules"');
   if (bodyStart === -1) {
