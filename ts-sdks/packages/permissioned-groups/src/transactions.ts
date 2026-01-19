@@ -8,6 +8,7 @@ export interface PermissionedGroupsTransactionsOptions {
 }
 
 export class PermissionedGroupsTransactions {
+	// @ts-expect-error - Will be used in future implementation
 	#calls: PermissionedGroupsCalls;
 
 	constructor(options: PermissionedGroupsTransactionsOptions) {

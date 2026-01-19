@@ -11,4 +11,9 @@ export interface PermissionedGroupsCompatibleClient extends ClientWithCoreApi {}
 
 export interface PermissionedGroupsClientOptions {
 	client: PermissionedGroupsCompatibleClient;
+	/**
+	 * Custom package configuration for localnet, devnet, or custom deployments.
+	 * When provided, this config is used instead of the built-in testnet/mainnet configs.
+	 */
+	packageConfig?: PermissionedGroupsPackageConfig;
 }

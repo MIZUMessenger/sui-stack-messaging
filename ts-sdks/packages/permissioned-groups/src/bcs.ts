@@ -8,6 +8,7 @@ export interface PermissionedGroupsBCSOptions {
 }
 
 export class PermissionedGroupsBCS {
+	// @ts-expect-error - Will be used in future implementation
 	#packageConfig: PermissionedGroupsPackageConfig;
 
 	constructor(options: PermissionedGroupsBCSOptions) {

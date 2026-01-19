@@ -1,0 +1,10 @@
+# Data directory
+data
+
+# Node.js
+node_modules
+.tsbuildinfo
+*.tsbuildinfo
+
+# IDE
+.DS_Store
