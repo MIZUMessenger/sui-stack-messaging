@@ -1,17 +1,17 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { PermissionedGroupsCalls } from './calls.js';
+import type { PermissionedGroupsCall } from './call.js';
 
 export interface PermissionedGroupsTransactionsOptions {
-	calls: PermissionedGroupsCalls;
+	call: PermissionedGroupsCall;
 }
 
 export class PermissionedGroupsTransactions {
 	// @ts-expect-error - Will be used in future implementation
-	#calls: PermissionedGroupsCalls;
+	#call: PermissionedGroupsCall;
 
 	constructor(options: PermissionedGroupsTransactionsOptions) {
-		this.#calls = options.calls;
+		this.#call = options.call;
 	}
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { ClientWithCoreApi } from '@mysten/sui/experimental';
+import { isValidNamedPackage, isValidSuiAddress } from '@mysten/sui/utils';
 import { PermissionedGroupsClientError } from './error.js';
 import {
 	TESTNET_PERMISSIONED_GROUPS_PACKAGE_CONFIG,
@@ -12,37 +13,48 @@ import type {
 	PermissionedGroupsCompatibleClient,
 	PermissionedGroupsPackageConfig,
 } from './types.js';
-import { PermissionedGroupsCalls } from './calls.js';
+import { PermissionedGroupsCall } from './call.js';
 import { PermissionedGroupsTransactions } from './transactions.js';
 import { PermissionedGroupsBCS } from './bcs.js';
 
 export function permissionedGroups<const Name = 'groups'>({
 	name = 'groups' as Name,
+	witnessType,
 	packageConfig,
-}: { name?: Name; packageConfig?: PermissionedGroupsPackageConfig } = {}) {
+}: {
+	name?: Name;
+	/** The witness type from the extending package (e.g., '0xabc::my_module::MY_WITNESS') */
+	witnessType: string;
+	packageConfig?: PermissionedGroupsPackageConfig;
+}) {
 	return {
 		name,
 		register: (client: ClientWithCoreApi) => {
-			return new PermissionedGroupsClient({ client, packageConfig });
+			return new PermissionedGroupsClient({ client, witnessType, packageConfig });
 		},
 	};
 }
 
 export class PermissionedGroupsClient {
 	#packageConfig: PermissionedGroupsPackageConfig;
-	// @ts-expect-error - Will be used in future implementation
 	#client: PermissionedGroupsCompatibleClient;
+	#witnessType: string;
 
-	calls: PermissionedGroupsCalls;
+	call: PermissionedGroupsCall;
 	tx: PermissionedGroupsTransactions;
 	bcs: PermissionedGroupsBCS;
 
 	constructor(options: PermissionedGroupsClientOptions) {
-		if (options.client) {
-			this.#client = options.client;
-		} else {
-			throw new PermissionedGroupsClientError('suiClient must be provided');
+		if (!options.client) {
+			throw new PermissionedGroupsClientError('client must be provided');
 		}
+		this.#client = options.client;
+
+		if (!options.witnessType) {
+			throw new PermissionedGroupsClientError('witnessType must be provided');
+		}
+		PermissionedGroupsClient.#validateWitnessType(options.witnessType);
+		this.#witnessType = options.witnessType;
 
 		// Use custom packageConfig if provided, otherwise determine from network
 		if (options.packageConfig) {
@@ -63,8 +75,31 @@ export class PermissionedGroupsClient {
 			}
 		}
 
-		this.calls = new PermissionedGroupsCalls({ packageConfig: this.#packageConfig });
-		this.tx = new PermissionedGroupsTransactions({ calls: this.calls });
+		this.call = new PermissionedGroupsCall({
+			packageConfig: this.#packageConfig,
+			witnessType: this.#witnessType,
+		});
+		this.tx = new PermissionedGroupsTransactions({ call: this.call });
 		this.bcs = new PermissionedGroupsBCS({ packageConfig: this.#packageConfig });
+	}
+
+	/**
+	 * Validates that a witnessType is a valid Move struct tag.
+	 * @throws {PermissionedGroupsClientError} if the witnessType is invalid
+	 */
+	static #validateWitnessType(witnessType: string): void {
+		// Must have at least 3 parts: address::module::name
+		const parts = witnessType.split('::');
+		if (parts.length < 3) {
+			throw new PermissionedGroupsClientError(
+				`Invalid witnessType: "${witnessType}". Must be a valid Move type (e.g., '0xabc::module::Type').`,
+			);
+		}
+		const [address] = parts;
+		if (!isValidSuiAddress(address) && !isValidNamedPackage(address)) {
+			throw new PermissionedGroupsClientError(
+				`Invalid witnessType address: "${address}". Must be a valid Sui address or MVR package name.`,
+			);
+		}
 	}
 }
