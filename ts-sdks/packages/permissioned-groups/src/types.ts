@@ -106,6 +106,20 @@ export interface ObjectRemoveMemberCallOptions {
 	actorObjectUid: string | TransactionArgument;
 }
 
+/** Options for transferring a created group to an address */
+export interface TransferGroupCallOptions {
+	/** Address to transfer the group to */
+	recipient: string;
+}
+
+/** Options for transferring a derived group to an address */
+export interface TransferDerivedGroupCallOptions<
+	DerivationKey extends BcsType<unknown> = BcsType<unknown>,
+> extends NewDerivedGroupCallOptions<DerivationKey> {
+	/** Address to transfer the group to */
+	recipient: string;
+}
+
 // === Top-level Imperative Options (add signer) ===
 
 /** Options for creating a new group (imperative) */

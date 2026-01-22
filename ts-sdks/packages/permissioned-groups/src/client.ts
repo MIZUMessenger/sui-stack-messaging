@@ -79,8 +79,12 @@ export class PermissionedGroupsClient {
 			packageConfig: this.#packageConfig,
 			witnessType: this.#witnessType,
 		});
-		this.tx = new PermissionedGroupsTransactions({ call: this.call });
 		this.bcs = new PermissionedGroupsBCS({ packageConfig: this.#packageConfig });
+		this.tx = new PermissionedGroupsTransactions({
+			witnessType: this.#witnessType,
+			call: this.call,
+			bcs: this.bcs,
+		});
 	}
 
 	/**
