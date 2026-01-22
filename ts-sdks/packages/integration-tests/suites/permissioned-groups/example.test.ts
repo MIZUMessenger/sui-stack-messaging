@@ -6,10 +6,12 @@ import { SuiClient } from '@mysten/sui/client';
 import { permissionedGroups } from '@mysten/permissioned-groups';
 
 describe('permissioned-groups', () => {
-	it('should have published the package', () => {
+	it('should have published the packages', () => {
 		const publishedPackages = inject('publishedPackages');
 		expect(publishedPackages['permissioned-groups']).toBeDefined();
 		expect(publishedPackages['permissioned-groups'].packageId).toBeDefined();
+		expect(publishedPackages['dummy-test-witness']).toBeDefined();
+		expect(publishedPackages['dummy-test-witness'].packageId).toBeDefined();
 	});
 
 	it('should have a working sui client', async () => {
@@ -28,6 +30,8 @@ describe('permissioned-groups', () => {
 		const suiClientUrl = inject('suiClientUrl');
 		const publishedPackages = inject('publishedPackages');
 		const packageId = publishedPackages['permissioned-groups'].packageId;
+		const dummyTestWitnessPackageId = publishedPackages['dummy-test-witness'].packageId;
+		const witnessType = `${dummyTestWitnessPackageId}::dummy_test_witness::DUMMY_TEST_WITNESS`;
 
 		// Create SuiClient with MVR override for localnet
 		const suiClient = new SuiClient({
@@ -45,12 +49,13 @@ describe('permissioned-groups', () => {
 		const client = suiClient.$extend(
 			permissionedGroups({
 				packageConfig: { packageId },
+				witnessType,
 			}),
 		);
 
 		// Verify the extension is available
 		expect(client.groups).toBeDefined();
-		expect(client.groups.calls).toBeDefined();
+		expect(client.groups.call).toBeDefined();
 		expect(client.groups.tx).toBeDefined();
 		expect(client.groups.bcs).toBeDefined();
 	});
@@ -59,6 +64,8 @@ describe('permissioned-groups', () => {
 		const suiClientUrl = inject('suiClientUrl');
 		const publishedPackages = inject('publishedPackages');
 		const packageId = publishedPackages['permissioned-groups'].packageId;
+		const dummyTestWitnessPackageId = publishedPackages['dummy-test-witness'].packageId;
+		const witnessType = `${dummyTestWitnessPackageId}::dummy_test_witness::DUMMY_TEST_WITNESS`;
 
 		const suiClient = new SuiClient({
 			url: suiClientUrl,
@@ -74,6 +81,7 @@ describe('permissioned-groups', () => {
 		const client = suiClient.$extend(
 			permissionedGroups({
 				packageConfig: { packageId },
+				witnessType,
 			}),
 		);
 

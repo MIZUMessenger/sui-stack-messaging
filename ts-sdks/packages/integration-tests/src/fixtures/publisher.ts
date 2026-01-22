@@ -60,6 +60,8 @@ export async function publishPackage({
 interface PublishWithDepsResult extends PublishedPackage {
 	/** Package IDs of dependencies that were published */
 	dependencyPackageIds: string[];
+	/** All published packages in publish order (dependencies first, then root) */
+	publishedPackages: Array<{ packageId: string; modules: string[] }>;
 }
 
 /**
@@ -87,12 +89,12 @@ export async function publishPackageWithDeps({
 	// The last published package is the root package we requested
 	const rootPackage = result.publishedPackages[result.publishedPackages.length - 1];
 	console.log(`Published ${packageConfig.name} at ${rootPackage.packageId}`);
-	console.log(`Dependency package IDs: ${result.dependencyPackageIds.join(', ')}`);
 
 	return {
 		packageId: rootPackage.packageId,
 		objectChanges: result.objectChanges,
 		dependencyPackageIds: result.dependencyPackageIds,
+		publishedPackages: result.publishedPackages,
 	};
 }
 
@@ -137,7 +139,7 @@ export async function publishPackages({
 
 	const results: Record<string, PublishedPackage> = {};
 
-	// The root package is always the main published package
+	// The root package is always the main published package (last in publishedPackages)
 	results[rootPackage.name] = {
 		packageId: result.packageId,
 		objectChanges: result.objectChanges,
@@ -145,7 +147,7 @@ export async function publishPackages({
 
 	// Map dependency packages by order
 	// packages array is ordered by dependency (first = no deps, last = root)
-	// dependencyPackageIds are the packages referenced by the root's Publish transaction
+	// dependencyPackageIds are the packages referenced by the Publish transaction (in dependency order)
 	const dependencyConfigs = packages.slice(0, -1); // All except the last (root)
 
 	// Dependency IDs from transaction are in the order they appear in the Move.toml

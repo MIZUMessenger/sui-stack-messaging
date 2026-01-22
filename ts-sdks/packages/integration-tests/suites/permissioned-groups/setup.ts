@@ -29,8 +29,18 @@ export default async function setup(project: TestProject) {
 	project.provide('suiToolsContainerId', SUI_TOOLS_CONTAINER_ID);
 	project.provide('suiClientUrl', SUI_CLIENT_URL);
 
-	// Initialize sui client in container
+	// Initialize sui client in container and configure localnet environment
 	await execCommand(['sui', 'client', '--yes'], SUI_TOOLS_CONTAINER_ID);
+	// Add localnet environment (inside container, localnet is on localhost:9000)
+	await execCommand(
+		['sui', 'client', 'new-env', '--alias', 'localnet', '--rpc', 'http://127.0.0.1:9000'],
+		SUI_TOOLS_CONTAINER_ID,
+	);
+	// Switch to localnet environment
+	await execCommand(['sui', 'client', 'switch', '--env', 'localnet'], SUI_TOOLS_CONTAINER_ID);
+
+	// Fund the container's active address from faucet (using container's internal faucet port)
+	await execCommand(['sui', 'client', 'faucet', '--json'], SUI_TOOLS_CONTAINER_ID);
 
 	console.log('Preparing admin account...');
 	const suiClient = new SuiClient({ url: SUI_CLIENT_URL });
