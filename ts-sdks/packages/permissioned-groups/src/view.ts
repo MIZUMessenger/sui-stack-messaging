@@ -18,7 +18,7 @@ export interface PermissionedGroupsViewOptions {
 /**
  * View methods for querying permissioned group state.
  *
- * These methods use devInspect/dryRunTransaction to read on-chain state
+ * These methods will use transaction simulation to read on-chain state
  * without requiring a signature or spending gas.
  *
  * Note: Fields like `creator` and `administrators_count` are available
@@ -39,7 +39,7 @@ export interface PermissionedGroupsViewOptions {
  * ```
  */
 export class PermissionedGroupsView {
-	// Options stored for future use when the core API supports devInspect/return values.
+	// Options stored for future use when the core API supports simulateTransaction.
 	// eslint-disable-next-line @typescript-eslint/no-useless-constructor, @typescript-eslint/no-unused-vars
 	constructor(_options: PermissionedGroupsViewOptions) {}
 
@@ -56,9 +56,9 @@ export class PermissionedGroupsView {
 	async hasPermission(_options: HasPermissionViewOptions): Promise<boolean> {
 		throw new PermissionedGroupsNotImplementedError(
 			'hasPermission',
-			'The core client API (ClientWithCoreApi) does not yet expose devInspectTransactionBlock ' +
-				'or return values from dryRunTransaction. This will be implemented when the core API ' +
-				'adds support for reading Move function return values.',
+			'The core client API (ClientWithCoreApi) does not yet implement devInspectTransactionBlock. ' +
+				'This will be implemented when simulateTransaction is added to the core API, ' +
+				'which will provide commandResults containing Move function return values.',
 		);
 	}
 
@@ -75,9 +75,9 @@ export class PermissionedGroupsView {
 	async isMember(_options: IsMemberViewOptions): Promise<boolean> {
 		throw new PermissionedGroupsNotImplementedError(
 			'isMember',
-			'The core client API (ClientWithCoreApi) does not yet expose devInspectTransactionBlock ' +
-				'or return values from dryRunTransaction. This will be implemented when the core API ' +
-				'adds support for reading Move function return values.',
+			'The core client API (ClientWithCoreApi) does not yet implement devInspectTransactionBlock. ' +
+				'This will be implemented when simulateTransaction is added to the core API, ' +
+				'which will provide commandResults containing Move function return values.',
 		);
 	}
 }
