@@ -1,0 +1,53 @@
+{
+	"name": "@mysten/messaging-groups",
+	"version": "0.0.1",
+	"private": false,
+	"description": "Permissioned Messaging Groups",
+	"license": "Apache-2.0",
+	"author": "Mysten Labs <build@mystenlabs.com>",
+	"type": "commonjs",
+	"main": "./dist/cjs/index.js",
+	"module": "./dist/esm/index.js",
+	"types": "./dist/cjs/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/esm/index.js",
+			"require": "./dist/cjs/index.js"
+		}
+	},
+	"sideEffects": false,
+	"files": [
+		"dist"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/MystenLabs/groups-sdk.git"
+	},
+	"bugs": {
+		"url": "https://github.com/MystenLabs/groups-sdk/issues/new"
+	},
+	"scripts": {
+		"clean": "rm -rf tsconfig.tsbuildinfo ./dist",
+		"build": "build-package",
+		"codegen:summaries": "(cd ../../../move/packages/messaging && sui move summary)",
+		"codegen:patch": "node scripts/patch-address-mappings.js",
+		"codegen:generate": "sui-ts-codegen generate",
+		"codegen": "pnpm codegen:summaries && pnpm codegen:patch && pnpm codegen:generate && pnpm lint:fix",
+		"prettier:check": "prettier -c --ignore-unknown .",
+		"prettier:fix": "prettier -w --ignore-unknown .",
+		"eslint:check": "eslint --max-warnings=0 .",
+		"eslint:fix": "pnpm run eslint:check --fix",
+		"lint": "pnpm run eslint:check && pnpm run prettier:check",
+		"lint:fix": "pnpm run eslint:fix && pnpm run prettier:fix"
+	},
+	"devDependencies": {
+		"@mysten/build-scripts": "workspace:*",
+		"@mysten/codegen": "^0.5.13",
+		"typescript": "^5.9.3"
+	},
+	"dependencies": {
+		"@mysten/bcs": "^1.9.2",
+		"@mysten/sui": "^1.45.2",
+		"@mysten/permissioned-groups": "workspace:*"
+	}
+}

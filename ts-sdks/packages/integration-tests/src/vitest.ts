@@ -12,5 +12,7 @@ declare module 'vitest' {
 		adminAccount: SerializableAccount;
 		suiClientUrl: string;
 		publishedPackages: Record<string, PublishedPackage>;
+		/** MessagingNamespace shared object ID (messaging-groups suite only) */
+		messagingNamespaceId?: string;
 	}
 }

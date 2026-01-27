@@ -9,7 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineProject({
 	test: {
-		name: 'messaging',
+		name: 'messaging-groups',
 		root: __dirname,
 		globals: true,
 		environment: 'node',
