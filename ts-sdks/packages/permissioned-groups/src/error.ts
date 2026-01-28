@@ -2,14 +2,3 @@
 // SPDX-License-Identifier: Apache-2.0
 
 export class PermissionedGroupsClientError extends Error {}
-
-/**
- * Error thrown when a feature is not yet implemented.
- * This is used for features that are planned but blocked by upstream dependencies.
- */
-export class PermissionedGroupsNotImplementedError extends Error {
-	constructor(feature: string, reason: string) {
-		super(`${feature} is not yet implemented: ${reason}`);
-		this.name = 'PermissionedGroupsNotImplementedError';
-	}
-}
