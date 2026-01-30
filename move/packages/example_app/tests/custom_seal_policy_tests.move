@@ -9,11 +9,16 @@ use sui::clock;
 use sui::coin;
 use sui::sui::SUI;
 use sui::test_scenario::{Self as ts, Scenario};
+use std::string;
 use std::unit_test::destroy;
 
 const ALICE: address = @0xA11CE;
 const SERVICE_FEE: u64 = 10;
 const SERVICE_TTL: u64 = 1000;
+
+const TEST_UUID: vector<u8> = b"550e8400-e29b-41d4-a716-446655440000";
+const TEST_UUID_2: vector<u8> = b"550e8400-e29b-41d4-a716-446655440001";
+const TEST_UUID_3: vector<u8> = b"550e8400-e29b-41d4-a716-446655440002";
 
 /// Sets up a messaging group and returns its ID.
 /// Uses the real create_group flow with MessagingNamespace and EncryptionHistory.
@@ -27,6 +32,7 @@ fun setup_group(ts: &mut Scenario): ID {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID),
         b"test_encrypted_dek",
         vec_set::empty(),
         ts.ctx(),
@@ -179,6 +185,7 @@ fun seal_approve_wrong_group() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (group1, encryption_history1) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID_2),
         b"test_encrypted_dek_1",
         vec_set::empty(),
         ts.ctx(),
@@ -190,6 +197,7 @@ fun seal_approve_wrong_group() {
 
     let (group2, encryption_history2) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID_3),
         b"test_encrypted_dek_2",
         vec_set::empty(),
         ts.ctx(),

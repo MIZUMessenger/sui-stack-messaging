@@ -6,12 +6,16 @@
 /// `EncryptionHistory` is a derived object from `MessagingNamespace`, enabling
 /// deterministic address derivation for Seal encryption namespacing.
 ///
+/// Uses client-provided UUIDs for derivation, enabling predictable group IDs
+/// for single-transaction encryption with Seal.
+///
 /// All public entry points are in the `messaging` module:
 /// - `messaging::create_group` - creates group with encryption
 /// - `messaging::rotate_encryption_key` - rotates keys
 ///
 module messaging::encryption_history;
 
+use std::string::String;
 use sui::derived_object;
 use sui::event;
 use sui::table_vec::{Self, TableVec};
@@ -42,10 +46,12 @@ const MAX_ENCRYPTED_DEK_BYTES: u64 = 1024;
 // === Derivation Keys ===
 
 /// Key for deriving `EncryptionHistory` address from `MessagingNamespace`.
-public struct EncryptionHistoryTag(u64) has copy, drop, store;
+/// Uses client-provided UUID (String) for predictable address derivation.
+public struct EncryptionHistoryTag(String) has copy, drop, store;
 
 /// Key for deriving `PermissionsGroup<Messaging>` address from `MessagingNamespace`.
-public struct PermissionedGroupTag(u64) has copy, drop, store;
+/// Uses client-provided UUID (String) for predictable address derivation.
+public struct PermissionedGroupTag(String) has copy, drop, store;
 
 // === Permission Witnesses ===
 
@@ -60,8 +66,8 @@ public struct EncryptionHistory has key, store {
     id: UID,
     /// Associated `PermissionsGroup<Messaging>` ID.
     group_id: ID,
-    /// 0-based index of this group within the namespace.
-    group_index: u64,
+    /// UUID used for derivation.
+    uuid: String,
     /// Versioned encrypted DEKs. Index = version number.
     /// Each entry is Seal `EncryptedObject` bytes.
     encrypted_keys: TableVec<vector<u8>>,
@@ -75,8 +81,8 @@ public struct EncryptionHistoryCreated has copy, drop {
     encryption_history_id: ID,
     /// ID of the associated PermissionsGroup<Messaging>.
     group_id: ID,
-    /// 0-based index of this group within the namespace.
-    group_index: u64,
+    /// UUID used for derivation.
+    uuid: String,
     /// Initial encrypted DEK bytes.
     initial_encrypted_dek: vector<u8>,
 }
@@ -96,11 +102,11 @@ public struct EncryptionKeyRotated has copy, drop {
 // === Package Functions ===
 
 /// Creates a new `EncryptionHistory` derived from the namespace.
-/// Uses `EncryptionHistoryTag(groups_created)` as the derivation key.
+/// Uses `EncryptionHistoryTag(uuid)` as the derivation key.
 ///
 /// # Parameters
 /// - `namespace_uid`: Mutable reference to the MessagingNamespace UID
-/// - `groups_created`: Current groups_created counter value (used as derivation key)
+/// - `uuid`: Client-provided UUID for deterministic address derivation
 /// - `group_id`: ID of the associated PermissionsGroup<Messaging>
 /// - `initial_encrypted_dek`: Initial Seal-encrypted DEK bytes
 /// - `ctx`: Transaction context
@@ -109,17 +115,17 @@ public struct EncryptionKeyRotated has copy, drop {
 /// A new `EncryptionHistory` object.
 ///
 /// # Aborts
-/// - `EEncryptionHistoryAlreadyExists`: if derived address is already claimed
+/// - `EEncryptionHistoryAlreadyExists`: if derived address is already claimed (duplicate UUID)
 /// - `EEncryptedDEKTooLarge`: if the initial DEK exceeds maximum size
 public(package) fun new(
     namespace_uid: &mut UID,
-    groups_created: u64,
+    uuid: String,
     group_id: ID,
     initial_encrypted_dek: vector<u8>,
     ctx: &mut TxContext,
 ): EncryptionHistory {
     assert!(
-        !derived_object::exists(namespace_uid, EncryptionHistoryTag(groups_created)),
+        !derived_object::exists(namespace_uid, EncryptionHistoryTag(uuid)),
         EEncryptionHistoryAlreadyExists,
     );
     assert!(initial_encrypted_dek.length() <= MAX_ENCRYPTED_DEK_BYTES, EEncryptedDEKTooLarge);
@@ -127,14 +133,12 @@ public(package) fun new(
     let mut encrypted_keys = table_vec::empty<vector<u8>>(ctx);
     encrypted_keys.push_back(initial_encrypted_dek);
 
-    let group_index = groups_created - 1; // keep it 0-based
-
     let encryption_history = EncryptionHistory {
         id: derived_object::claim(
             namespace_uid,
-            EncryptionHistoryTag(groups_created),
+            EncryptionHistoryTag(uuid),
         ),
-        group_index,
+        uuid,
         group_id,
         encrypted_keys,
     };
@@ -142,7 +146,7 @@ public(package) fun new(
     event::emit(EncryptionHistoryCreated {
         encryption_history_id: object::id(&encryption_history),
         group_id,
-        group_index,
+        uuid: encryption_history.uuid,
         initial_encrypted_dek,
     });
 
@@ -172,12 +176,12 @@ public(package) fun rotate_key(self: &mut EncryptionHistory, new_encrypted_dek: 
 /// Returns the `PermissionsGroupTag` for address derivation.
 ///
 /// # Parameters
-/// - `index`: The group index (groups_created counter value)
+/// - `uuid`: Client-provided UUID for deterministic address derivation
 ///
 /// # Returns
-/// A `PermissionsGroupTag` wrapping the index.
-public(package) fun permissions_group_tag(index: u64): PermissionedGroupTag {
-    PermissionedGroupTag(index)
+/// A `PermissionsGroupTag` wrapping the UUID.
+public(package) fun permissions_group_tag(uuid: String): PermissionedGroupTag {
+    PermissionedGroupTag(uuid)
 }
 
 // === Getters ===
@@ -235,22 +239,25 @@ public fun current_encrypted_key(self: &EncryptionHistory): &vector<u8> {
 
 #[test, expected_failure(abort_code = EEncryptionHistoryAlreadyExists)]
 fun new_duplicate_derivation_key_fails() {
+    use std::string;
+
     let mut ctx = tx_context::dummy();
     let mut namespace_uid = object::new(&mut ctx);
+    let uuid = string::utf8(b"550e8400-e29b-41d4-a716-446655440000");
 
-    // Create first EncryptionHistory with groups_created = 1
+    // Create first EncryptionHistory with UUID
     let _eh1 = new(
         &mut namespace_uid,
-        1,
+        uuid,
         object::id_from_address(@0x1),
         b"dek1",
         &mut ctx,
     );
 
-    // Try to create second with same groups_created - should fail
+    // Try to create second with same UUID - should fail
     let _eh2 = new(
         &mut namespace_uid,
-        1,
+        uuid,
         object::id_from_address(@0x2),
         b"dek2",
         &mut ctx,
