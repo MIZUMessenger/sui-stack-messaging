@@ -9,13 +9,16 @@ Default <code>seal_approve</code> functions for Seal encryption access control.
 Called by Seal key servers (via dry-run) to authorize decryption.
 
 
-<a name="@Namespace_Format_0"></a>
+<a name="@Identity_Bytes_Format_0"></a>
 
-### Namespace Format
+### Identity Bytes Format
 
 
-Identity bytes: <code>[creator_address (32 bytes)][nonce]</code>
-Uses the group creator's address as namespace prefix for per-group encryption.
+Identity bytes: <code>[group_id (32 bytes)][key_version (8 bytes LE u64)]</code>
+Total: 40 bytes
+
+- <code>group_id</code>: The PermissionedGroup<Messaging> object ID
+- <code>key_version</code>: The encryption key version (supports key rotation)
 
 
 <a name="@Custom_Policies_1"></a>
@@ -28,12 +31,12 @@ Apps can implement custom <code>seal_approve</code> with different logic:
 - Must be in the same package used during <code>seal.encrypt</code>.
 
 
-    -  [Namespace Format](#@Namespace_Format_0)
+    -  [Identity Bytes Format](#@Identity_Bytes_Format_0)
     -  [Custom Policies](#@Custom_Policies_1)
 -  [Constants](#@Constants_2)
--  [Function `check_namespace`](#messaging_seal_policies_check_namespace)
+-  [Function `validate_identity`](#messaging_seal_policies_validate_identity)
     -  [Parameters](#@Parameters_3)
-    -  [Returns](#@Returns_4)
+    -  [Aborts](#@Aborts_4)
 -  [Function `seal_approve_reader`](#messaging_seal_policies_seal_approve_reader)
     -  [Parameters](#@Parameters_5)
     -  [Aborts](#@Aborts_6)
@@ -61,11 +64,13 @@ Apps can implement custom <code>seal_approve</code> with different logic:
 <b>use</b> <a href="../dependencies/sui/hash.md#sui_hash">sui::hash</a>;
 <b>use</b> <a href="../dependencies/sui/hex.md#sui_hex">sui::hex</a>;
 <b>use</b> <a href="../dependencies/sui/object.md#sui_object">sui::object</a>;
+<b>use</b> <a href="../dependencies/sui/package.md#sui_package">sui::package</a>;
 <b>use</b> <a href="../dependencies/sui/party.md#sui_party">sui::party</a>;
 <b>use</b> <a href="../dependencies/sui/table.md#sui_table">sui::table</a>;
 <b>use</b> <a href="../dependencies/sui/table_vec.md#sui_table_vec">sui::table_vec</a>;
 <b>use</b> <a href="../dependencies/sui/transfer.md#sui_transfer">sui::transfer</a>;
 <b>use</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context">sui::tx_context</a>;
+<b>use</b> <a href="../dependencies/sui/types.md#sui_types">sui::types</a>;
 <b>use</b> <a href="../dependencies/sui/vec_map.md#sui_vec_map">sui::vec_map</a>;
 <b>use</b> <a href="../dependencies/sui/vec_set.md#sui_vec_set">sui::vec_set</a>;
 </code></pre>
@@ -77,11 +82,11 @@ Apps can implement custom <code>seal_approve</code> with different logic:
 ## Constants
 
 
-<a name="messaging_seal_policies_EInvalidNamespace"></a>
+<a name="messaging_seal_policies_EInvalidIdentity"></a>
 
 
 
-<pre><code><b>const</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidNamespace">EInvalidNamespace</a>: u64 = 0;
+<pre><code><b>const</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidIdentity">EInvalidIdentity</a>: u64 = 0;
 </code></pre>
 
 
@@ -95,13 +100,41 @@ Apps can implement custom <code>seal_approve</code> with different logic:
 
 
 
-<a name="messaging_seal_policies_check_namespace"></a>
+<a name="messaging_seal_policies_EInvalidKeyVersion"></a>
 
-## Function `check_namespace`
 
-Validates that <code>id</code> has the correct Seal namespace prefix.
 
-Expected format: <code>[creator_address (32 bytes)][nonce]</code>
+<pre><code><b>const</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidKeyVersion">EInvalidKeyVersion</a>: u64 = 2;
+</code></pre>
+
+
+
+<a name="messaging_seal_policies_EEncryptionHistoryMismatch"></a>
+
+
+
+<pre><code><b>const</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_EEncryptionHistoryMismatch">EEncryptionHistoryMismatch</a>: u64 = 3;
+</code></pre>
+
+
+
+<a name="messaging_seal_policies_IDENTITY_BYTES_LENGTH"></a>
+
+Expected identity bytes length: 32 (group_id) + 8 (key_version) = 40 bytes
+
+
+<pre><code><b>const</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_IDENTITY_BYTES_LENGTH">IDENTITY_BYTES_LENGTH</a>: u64 = 40;
+</code></pre>
+
+
+
+<a name="messaging_seal_policies_validate_identity"></a>
+
+## Function `validate_identity`
+
+Validates identity bytes format and extracts components.
+
+Expected format: <code>[group_id (32 bytes)][key_version (8 bytes LE u64)]</code>
 
 
 <a name="@Parameters_3"></a>
@@ -109,17 +142,19 @@ Expected format: <code>[creator_address (32 bytes)][nonce]</code>
 ### Parameters
 
 - <code>group</code>: Reference to the PermissionedGroup<Messaging>
+- <code><a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a></code>: Reference to the EncryptionHistory
 - <code>id</code>: The Seal identity bytes to validate
 
 
-<a name="@Returns_4"></a>
+<a name="@Aborts_4"></a>
 
-### Returns
+### Aborts
 
-<code><b>true</b></code> if the namespace prefix matches, <code><b>false</b></code> otherwise.
+- <code><a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidIdentity">EInvalidIdentity</a></code>: if length != 40 or group_id doesn't match
+- <code><a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidKeyVersion">EInvalidKeyVersion</a></code>: if key_version > current_key_version
 
 
-<pre><code><b>fun</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_check_namespace">check_namespace</a>(group: &<a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, id: &vector&lt;u8&gt;): bool
+<pre><code><b>fun</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_validate_identity">validate_identity</a>(group: &<a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>: &<a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">messaging::encryption_history::EncryptionHistory</a>, id: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -128,20 +163,23 @@ Expected format: <code>[creator_address (32 bytes)][nonce]</code>
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_check_namespace">check_namespace</a>(group: &PermissionedGroup&lt;Messaging&gt;, id: &vector&lt;u8&gt;): bool {
-    <b>let</b> namespace = group.creator&lt;Messaging&gt;().to_bytes();
-    <b>let</b> namespace_len = namespace.length();
-    <b>if</b> (namespace_len &gt; id.length()) {
-        <b>return</b> <b>false</b>
-    };
-    <b>let</b> <b>mut</b> i = 0;
-    <b>while</b> (i &lt; namespace_len) {
-        <b>if</b> (namespace[i] != id[i]) {
-            <b>return</b> <b>false</b>
-        };
-        i = i + 1;
-    };
-    <b>true</b>
+<pre><code><b>fun</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_validate_identity">validate_identity</a>(
+    group: &PermissionedGroup&lt;Messaging&gt;,
+    <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>: &EncryptionHistory,
+    id: vector&lt;u8&gt;,
+) {
+    // Must be exactly 40 bytes: 32 (group_id) + 8 (key_version)
+    <b>assert</b>!(id.length() == <a href="../messaging/seal_policies.md#messaging_seal_policies_IDENTITY_BYTES_LENGTH">IDENTITY_BYTES_LENGTH</a>, <a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidIdentity">EInvalidIdentity</a>);
+    // Use BCS to parse the identity bytes
+    <b>let</b> <b>mut</b> bcs_bytes = bcs::new(id);
+    // Parse group_id (32 bytes <b>as</b> <b>address</b>)
+    <b>let</b> parsed_group_id = bcs_bytes.peel_address();
+    // Verify group_id matches
+    <b>assert</b>!(object::id_to_address(&object::id(group)) == parsed_group_id, <a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidIdentity">EInvalidIdentity</a>);
+    // Parse key_version (u64, little-endian)
+    <b>let</b> key_version = bcs_bytes.peel_u64();
+    // Key version must exist (be &lt;= current version)
+    <b>assert</b>!(key_version &lt;= <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>.current_key_version(), <a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidKeyVersion">EInvalidKeyVersion</a>);
 }
 </code></pre>
 
@@ -160,8 +198,9 @@ Default seal_approve that checks <code>MessagingReader</code> permission.
 
 ### Parameters
 
-- <code>id</code>: Seal identity bytes <code>[creator_address (32 bytes)][nonce]</code>
+- <code>id</code>: Seal identity bytes <code>[group_id (32 bytes)][key_version (8 bytes LE u64)]</code>
 - <code>group</code>: Reference to the PermissionedGroup<Messaging>
+- <code><a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a></code>: Reference to the EncryptionHistory
 - <code>ctx</code>: Transaction context
 
 
@@ -169,11 +208,13 @@ Default seal_approve that checks <code>MessagingReader</code> permission.
 
 ### Aborts
 
-- <code><a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidNamespace">EInvalidNamespace</a></code>: if <code>id</code> doesn't have correct creator address prefix
+- <code><a href="../messaging/seal_policies.md#messaging_seal_policies_EEncryptionHistoryMismatch">EEncryptionHistoryMismatch</a></code>: if encryption_history doesn't belong to this group
+- <code><a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidIdentity">EInvalidIdentity</a></code>: if identity bytes are malformed or group_id doesn't match
+- <code><a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidKeyVersion">EInvalidKeyVersion</a></code>: if key_version doesn't exist
 - <code><a href="../messaging/seal_policies.md#messaging_seal_policies_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have <code>MessagingReader</code> permission
 
 
-<pre><code><b>entry</b> <b>fun</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_seal_approve_reader">seal_approve_reader</a>(id: vector&lt;u8&gt;, group: &<a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+<pre><code><b>entry</b> <b>fun</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_seal_approve_reader">seal_approve_reader</a>(id: vector&lt;u8&gt;, group: &<a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>: &<a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">messaging::encryption_history::EncryptionHistory</a>, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
 </code></pre>
 
 
@@ -185,9 +226,12 @@ Default seal_approve that checks <code>MessagingReader</code> permission.
 <pre><code><b>entry</b> <b>fun</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_seal_approve_reader">seal_approve_reader</a>(
     id: vector&lt;u8&gt;,
     group: &PermissionedGroup&lt;Messaging&gt;,
+    <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>: &EncryptionHistory,
     ctx: &TxContext,
 ) {
-    <b>assert</b>!(<a href="../messaging/seal_policies.md#messaging_seal_policies_check_namespace">check_namespace</a>(group, &id), <a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidNamespace">EInvalidNamespace</a>);
+    // Verify <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a> belongs to this group
+    <b>assert</b>!(<a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>.group_id() == object::id(group), <a href="../messaging/seal_policies.md#messaging_seal_policies_EEncryptionHistoryMismatch">EEncryptionHistoryMismatch</a>);
+    <a href="../messaging/seal_policies.md#messaging_seal_policies_validate_identity">validate_identity</a>(group, <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>, id);
     <b>assert</b>!(group.has_permission&lt;Messaging, MessagingReader&gt;(ctx.sender()), <a href="../messaging/seal_policies.md#messaging_seal_policies_ENotPermitted">ENotPermitted</a>);
 }
 </code></pre>

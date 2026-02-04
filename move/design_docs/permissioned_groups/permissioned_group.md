@@ -519,6 +519,7 @@ Grants <code><a href="../permissioned_groups/permissioned_group.md#permissioned_
 
 ### Parameters
 
+- <code>_witness</code>: Instance of witness type <code>T</code> (proves caller owns the type)
 - <code>ctx</code>: Transaction context
 
 
@@ -529,7 +530,7 @@ Grants <code><a href="../permissioned_groups/permissioned_group.md#permissioned_
 A new <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">PermissionedGroup</a>&lt;T&gt;</code> with sender having <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a></code> and <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a></code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_new">new</a>&lt;T: drop&gt;(ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;T&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_new">new</a>&lt;T: drop&gt;(_witness: T, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;T&gt;
 </code></pre>
 
 
@@ -538,7 +539,7 @@ A new <code><a href="../permissioned_groups/permissioned_group.md#permissioned_g
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_new">new</a>&lt;T: drop&gt;(ctx: &<b>mut</b> TxContext): <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">PermissionedGroup</a>&lt;T&gt; {
+<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_new">new</a>&lt;T: drop&gt;(_witness: T, ctx: &<b>mut</b> TxContext): <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">PermissionedGroup</a>&lt;T&gt; {
     <b>let</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a> = ctx.sender();
     // Initialize <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a> with <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a> and <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a>
     <b>let</b> <b>mut</b> creator_permissions = vec_set::empty&lt;TypeName&gt;();
@@ -555,6 +556,21 @@ A new <code><a href="../permissioned_groups/permissioned_group.md#permissioned_g
     event::emit(<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_GroupCreated">GroupCreated</a>&lt;T&gt; {
         group_id: object::id(&group),
         <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a>,
+    });
+    // Emit <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_MemberAdded">MemberAdded</a> event <b>for</b> the <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a> (they are the first member)
+    event::emit(<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_MemberAdded">MemberAdded</a>&lt;T&gt; {
+        group_id: object::id(&group),
+        member: <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a>,
+    });
+    // Emit <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionsGranted">PermissionsGranted</a> event <b>for</b> the <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a>'s initial permissions
+    // This allows event subscribers (like relayers) to track initial admin permissions
+    event::emit(<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionsGranted">PermissionsGranted</a>&lt;T&gt; {
+        group_id: object::id(&group),
+        member: <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a>,
+        permissions: vector[
+            type_name::with_defining_ids&lt;<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a>&gt;(),
+            type_name::with_defining_ids&lt;<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a>&gt;(),
+        ],
     });
     group
 }
@@ -584,6 +600,7 @@ Grants <code><a href="../permissioned_groups/permissioned_group.md#permissioned_
 
 ### Parameters
 
+- <code>_witness</code>: Instance of witness type <code>T</code> (proves caller owns the type)
 - <code>derivation_uid</code>: Mutable reference to the parent UID for derivation
 - <code>derivation_key</code>: Key used for deterministic address derivation
 - <code>ctx</code>: Transaction context
@@ -603,7 +620,7 @@ A new <code><a href="../permissioned_groups/permissioned_group.md#permissioned_g
 - <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_EPermissionedGroupAlreadyExists">EPermissionedGroupAlreadyExists</a></code>: if derived address is already claimed
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_new_derived">new_derived</a>&lt;T: drop, DerivationKey: <b>copy</b>, drop, store&gt;(derivation_uid: &<b>mut</b> <a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, derivation_key: DerivationKey, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;T&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_new_derived">new_derived</a>&lt;T: drop, DerivationKey: <b>copy</b>, drop, store&gt;(_witness: T, derivation_uid: &<b>mut</b> <a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, derivation_key: DerivationKey, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;T&gt;
 </code></pre>
 
 
@@ -613,6 +630,7 @@ A new <code><a href="../permissioned_groups/permissioned_group.md#permissioned_g
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_new_derived">new_derived</a>&lt;T: drop, DerivationKey: <b>copy</b> + drop + store&gt;(
+    _witness: T,
     derivation_uid: &<b>mut</b> UID,
     derivation_key: DerivationKey,
     ctx: &<b>mut</b> TxContext,
@@ -639,6 +657,21 @@ A new <code><a href="../permissioned_groups/permissioned_group.md#permissioned_g
         <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a>,
         parent_id: object::uid_to_inner(derivation_uid),
         derivation_key_type: type_name::with_defining_ids&lt;DerivationKey&gt;(),
+    });
+    // Emit <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_MemberAdded">MemberAdded</a> event <b>for</b> the <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a> (they are the first member)
+    event::emit(<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_MemberAdded">MemberAdded</a>&lt;T&gt; {
+        group_id: object::id(&group),
+        member: <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a>,
+    });
+    // Emit <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionsGranted">PermissionsGranted</a> event <b>for</b> the <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a>'s initial permissions
+    // This allows event subscribers (like relayers) to track initial admin permissions
+    event::emit(<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionsGranted">PermissionsGranted</a>&lt;T&gt; {
+        group_id: object::id(&group),
+        member: <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_creator">creator</a>,
+        permissions: vector[
+            type_name::with_defining_ids&lt;<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a>&gt;(),
+            type_name::with_defining_ids&lt;<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_ExtensionPermissionsManager">ExtensionPermissionsManager</a>&gt;(),
+        ],
     });
     group
 }
@@ -715,9 +748,9 @@ Permission requirements:
 
 ## Function `object_grant_permission`
 
-Grants a permission to the transaction sender via an actor object.
+Grants a permission to a recipient via an actor object.
 Enables third-party contracts to grant permissions with custom logic.
-If the sender is not already a member, they are automatically added.
+If the recipient is not already a member, they are automatically added.
 
 Permission requirements:
 - To grant <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a></code>: actor must have <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a></code>
@@ -739,7 +772,7 @@ Permission requirements:
 
 - <code>self</code>: Mutable reference to the PermissionedGroup
 - <code>actor_object</code>: UID of the actor object with appropriate manager permission
-- <code>ctx</code>: Transaction context (sender will receive the permission)
+- <code>recipient</code>: Address of the member to receive the permission
 
 
 <a name="@Aborts_16"></a>
@@ -749,7 +782,7 @@ Permission requirements:
 - <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_ENotPermitted">ENotPermitted</a></code>: if actor_object doesn't have appropriate manager permission
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_object_grant_permission">object_grant_permission</a>&lt;T: drop, NewPermission: drop&gt;(self: &<b>mut</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;T&gt;, actor_object: &<a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_object_grant_permission">object_grant_permission</a>&lt;T: drop, NewPermission: drop&gt;(self: &<b>mut</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;T&gt;, actor_object: &<a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, recipient: <b>address</b>)
 </code></pre>
 
 
@@ -761,14 +794,13 @@ Permission requirements:
 <pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_object_grant_permission">object_grant_permission</a>&lt;T: drop, NewPermission: drop&gt;(
     self: &<b>mut</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">PermissionedGroup</a>&lt;T&gt;,
     actor_object: &UID,
-    ctx: &<b>mut</b> TxContext,
+    recipient: <b>address</b>,
 ) {
     <b>let</b> actor_address = actor_object.to_address();
-    <b>let</b> member = ctx.sender();
     // Verify actor <b>has</b> permission to grant this permission type
     self.<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_assert_can_manage_permission">assert_can_manage_permission</a>&lt;T, NewPermission&gt;(actor_address);
     // <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_internal_grant_permission">internal_grant_permission</a> handles member addition and permission granting
-    self.<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_internal_grant_permission">internal_grant_permission</a>&lt;T, NewPermission&gt;(member);
+    self.<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_internal_grant_permission">internal_grant_permission</a>&lt;T, NewPermission&gt;(recipient);
 }
 </code></pre>
 
@@ -835,7 +867,7 @@ Requires <code><a href="../permissioned_groups/permissioned_group.md#permissione
 
 ## Function `object_remove_member`
 
-Removes the transaction sender from the group via an actor object.
+Removes a member from the group via an actor object.
 Enables third-party contracts to implement custom leave logic.
 The actor object must have <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a></code> permission on the group.
 
@@ -846,7 +878,7 @@ The actor object must have <code><a href="../permissioned_groups/permissioned_gr
 
 - <code>self</code>: Mutable reference to the PermissionedGroup
 - <code>actor_object</code>: UID of the actor object with <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a></code> permission
-- <code>ctx</code>: Transaction context (sender will be removed)
+- <code>member</code>: Address of the member to remove
 
 
 <a name="@Aborts_20"></a>
@@ -854,11 +886,11 @@ The actor object must have <code><a href="../permissioned_groups/permissioned_gr
 ### Aborts
 
 - <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_ENotPermitted">ENotPermitted</a></code>: if actor_object doesn't have <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a></code> permission
-- <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_EMemberNotFound">EMemberNotFound</a></code>: if sender is not a member
+- <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_EMemberNotFound">EMemberNotFound</a></code>: if member is not a member
 - <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_ELastAdministrator">ELastAdministrator</a></code>: if removing would leave no Administrators
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_object_remove_member">object_remove_member</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;T&gt;, actor_object: &<a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_object_remove_member">object_remove_member</a>&lt;T: drop&gt;(self: &<b>mut</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;T&gt;, actor_object: &<a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, member: <b>address</b>)
 </code></pre>
 
 
@@ -870,11 +902,10 @@ The actor object must have <code><a href="../permissioned_groups/permissioned_gr
 <pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_object_remove_member">object_remove_member</a>&lt;T: drop&gt;(
     self: &<b>mut</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">PermissionedGroup</a>&lt;T&gt;,
     actor_object: &UID,
-    ctx: &<b>mut</b> TxContext,
+    member: <b>address</b>,
 ) {
     <b>let</b> actor_address = actor_object.to_address();
     <b>assert</b>!(self.<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_has_permission">has_permission</a>&lt;T, <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a>&gt;(actor_address), <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_ENotPermitted">ENotPermitted</a>);
-    <b>let</b> member = ctx.sender();
     <b>assert</b>!(self.<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_is_member">is_member</a>&lt;T&gt;(member), <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_EMemberNotFound">EMemberNotFound</a>);
     self.<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_safe_decrement_administrators_count">safe_decrement_administrators_count</a>(member);
     self.permissions.remove(member);
@@ -958,9 +989,9 @@ Permission requirements:
 
 ## Function `object_revoke_permission`
 
-Revokes a permission from the transaction sender via an actor object.
+Revokes a permission from a member via an actor object.
 Enables third-party contracts to revoke permissions with custom logic.
-If this is the sender's last permission, they are automatically removed from the group.
+If this is the member's last permission, they are automatically removed from the group.
 
 Permission requirements:
 - To revoke <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a></code>: actor must have <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a></code>
@@ -982,7 +1013,7 @@ Permission requirements:
 
 - <code>self</code>: Mutable reference to the PermissionedGroup
 - <code>actor_object</code>: UID of the actor object with appropriate manager permission
-- <code>ctx</code>: Transaction context (sender will have the permission revoked)
+- <code>member</code>: Address of the member to revoke permission from
 
 
 <a name="@Aborts_26"></a>
@@ -990,11 +1021,11 @@ Permission requirements:
 ### Aborts
 
 - <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_ENotPermitted">ENotPermitted</a></code>: if actor_object doesn't have appropriate manager permission
-- <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_EMemberNotFound">EMemberNotFound</a></code>: if sender is not a member
+- <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_EMemberNotFound">EMemberNotFound</a></code>: if member is not a member
 - <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_ELastAdministrator">ELastAdministrator</a></code>: if revoking <code><a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a></code> would leave no administrators
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_object_revoke_permission">object_revoke_permission</a>&lt;T: drop, ExistingPermission: drop&gt;(self: &<b>mut</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;T&gt;, actor_object: &<a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_object_revoke_permission">object_revoke_permission</a>&lt;T: drop, ExistingPermission: drop&gt;(self: &<b>mut</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;T&gt;, actor_object: &<a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, member: <b>address</b>)
 </code></pre>
 
 
@@ -1006,10 +1037,9 @@ Permission requirements:
 <pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_object_revoke_permission">object_revoke_permission</a>&lt;T: drop, ExistingPermission: drop&gt;(
     self: &<b>mut</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">PermissionedGroup</a>&lt;T&gt;,
     actor_object: &UID,
-    ctx: &<b>mut</b> TxContext,
+    member: <b>address</b>,
 ) {
     <b>let</b> actor_address = actor_object.to_address();
-    <b>let</b> member = ctx.sender();
     // Verify actor <b>has</b> permission to revoke this permission type
     self.<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_assert_can_manage_permission">assert_can_manage_permission</a>&lt;T, ExistingPermission&gt;(actor_address);
     <b>assert</b>!(self.permissions.contains(member), <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_EMemberNotFound">EMemberNotFound</a>);
@@ -1214,8 +1244,7 @@ Asserts that the manager has permission to manage (grant/revoke) the specified p
     manager: <b>address</b>,
 ) {
     <b>let</b> permission_type = type_name::with_defining_ids&lt;Permission&gt;();
-    <b>let</b> managing_core_manager =
-        permission_type == type_name::with_defining_ids&lt;<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a>&gt;();
+    <b>let</b> managing_core_manager = permission_type == type_name::with_defining_ids&lt;<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a>&gt;();
     <b>if</b> (managing_core_manager) {
         // Only <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a> can manage <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a>
         <b>assert</b>!(self.<a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_has_permission">has_permission</a>&lt;T, <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_Administrator">Administrator</a>&gt;(manager), <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_ENotPermitted">ENotPermitted</a>);

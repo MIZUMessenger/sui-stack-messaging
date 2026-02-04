@@ -152,7 +152,7 @@ public fun join<Token: drop>(
     rule: &mut PaidJoinRule<Token>,
     group: &mut PermissionedGroup<Messaging>,
     payment: &mut Coin<Token>,
-    ctx: &mut TxContext,
+    ctx: &TxContext,
 ) {
     assert!(payment.value() >= rule.fee, EInsufficientPayment);
     assert!(object::id(group) == rule.group_id, EGroupMismatch);
@@ -162,7 +162,7 @@ public fun join<Token: drop>(
     rule.balance.join(fee_balance);
 
     // Grant MessagingReader permission to sender via the actor object
-    group.object_grant_permission<Messaging, MessagingReader>(&rule.id, ctx);
+    group.object_grant_permission<Messaging, MessagingReader>(&rule.id, ctx.sender());
 }
 
 /// Entry version of `join` for CLI usage.
@@ -170,7 +170,7 @@ entry fun join_entry<Token: drop>(
     rule: &mut PaidJoinRule<Token>,
     group: &mut PermissionedGroup<Messaging>,
     payment: &mut Coin<Token>,
-    ctx: &mut TxContext,
+    ctx: &TxContext,
 ) {
     join(rule, group, payment, ctx);
 }

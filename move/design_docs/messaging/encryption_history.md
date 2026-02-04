@@ -11,6 +11,9 @@ Stores encrypted DEKs (Data Encryption Keys) with version tracking for key rotat
 <code><a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">EncryptionHistory</a></code> is a derived object from <code>MessagingNamespace</code>, enabling
 deterministic address derivation for Seal encryption namespacing.
 
+Uses client-provided UUIDs for derivation, enabling predictable group IDs
+for single-transaction encryption with Seal.
+
 All public entry points are in the <code><a href="../messaging/messaging.md#messaging_messaging">messaging</a></code> module:
 - <code>messaging::create_group</code> - creates group with encryption
 - <code>messaging::rotate_encryption_key</code> - rotates keys
@@ -82,6 +85,7 @@ All public entry points are in the <code><a href="../messaging/messaging.md#mess
 ## Struct `EncryptionHistoryTag`
 
 Key for deriving <code><a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">EncryptionHistory</a></code> address from <code>MessagingNamespace</code>.
+Uses client-provided UUID (String) for predictable address derivation.
 
 
 <pre><code><b>public</b> <b>struct</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistoryTag">EncryptionHistoryTag</a> <b>has</b> <b>copy</b>, drop, store
@@ -95,7 +99,7 @@ Key for deriving <code><a href="../messaging/encryption_history.md#messaging_enc
 
 <dl>
 <dt>
-<code>0: u64</code>
+<code>0: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a></code>
 </dt>
 <dd>
 </dd>
@@ -109,6 +113,7 @@ Key for deriving <code><a href="../messaging/encryption_history.md#messaging_enc
 ## Struct `PermissionedGroupTag`
 
 Key for deriving <code>PermissionsGroup&lt;Messaging&gt;</code> address from <code>MessagingNamespace</code>.
+Uses client-provided UUID (String) for predictable address derivation.
 
 
 <pre><code><b>public</b> <b>struct</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">PermissionedGroupTag</a> <b>has</b> <b>copy</b>, drop, store
@@ -122,7 +127,7 @@ Key for deriving <code>PermissionsGroup&lt;Messaging&gt;</code> address from <co
 
 <dl>
 <dt>
-<code>0: u64</code>
+<code>0: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a></code>
 </dt>
 <dd>
 </dd>
@@ -183,10 +188,10 @@ Derived object from <code>MessagingNamespace</code> with 1:1 relationship to <co
  Associated <code>PermissionsGroup&lt;Messaging&gt;</code> ID.
 </dd>
 <dt>
-<code>group_index: u64</code>
+<code>uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a></code>
 </dt>
 <dd>
- 0-based index of this group within the namespace.
+ UUID used for derivation.
 </dd>
 <dt>
 <code>encrypted_keys: <a href="../dependencies/sui/table_vec.md#sui_table_vec_TableVec">sui::table_vec::TableVec</a>&lt;vector&lt;u8&gt;&gt;</code>
@@ -230,10 +235,10 @@ Emitted when a new EncryptionHistory is created.
  ID of the associated PermissionsGroup<Messaging>.
 </dd>
 <dt>
-<code>group_index: u64</code>
+<code>uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a></code>
 </dt>
 <dd>
- 0-based index of this group within the namespace.
+ UUID used for derivation.
 </dd>
 <dt>
 <code>initial_encrypted_dek: vector&lt;u8&gt;</code>
@@ -351,7 +356,7 @@ encryptedRandomness (32 bytes)
 ## Function `new`
 
 Creates a new <code><a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">EncryptionHistory</a></code> derived from the namespace.
-Uses <code><a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistoryTag">EncryptionHistoryTag</a>(groups_created)</code> as the derivation key.
+Uses <code><a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistoryTag">EncryptionHistoryTag</a>(uuid)</code> as the derivation key.
 
 
 <a name="@Parameters_1"></a>
@@ -359,7 +364,7 @@ Uses <code><a href="../messaging/encryption_history.md#messaging_encryption_hist
 ### Parameters
 
 - <code>namespace_uid</code>: Mutable reference to the MessagingNamespace UID
-- <code>groups_created</code>: Current groups_created counter value (used as derivation key)
+- <code>uuid</code>: Client-provided UUID for deterministic address derivation
 - <code><a href="../messaging/encryption_history.md#messaging_encryption_history_group_id">group_id</a></code>: ID of the associated PermissionsGroup<Messaging>
 - <code>initial_encrypted_dek</code>: Initial Seal-encrypted DEK bytes
 - <code>ctx</code>: Transaction context
@@ -376,11 +381,11 @@ A new <code><a href="../messaging/encryption_history.md#messaging_encryption_his
 
 ### Aborts
 
-- <code><a href="../messaging/encryption_history.md#messaging_encryption_history_EEncryptionHistoryAlreadyExists">EEncryptionHistoryAlreadyExists</a></code>: if derived address is already claimed
+- <code><a href="../messaging/encryption_history.md#messaging_encryption_history_EEncryptionHistoryAlreadyExists">EEncryptionHistoryAlreadyExists</a></code>: if derived address is already claimed (duplicate UUID)
 - <code><a href="../messaging/encryption_history.md#messaging_encryption_history_EEncryptedDEKTooLarge">EEncryptedDEKTooLarge</a></code>: if the initial DEK exceeds maximum size
 
 
-<pre><code><b>public</b>(package) <b>fun</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_new">new</a>(namespace_uid: &<b>mut</b> <a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, groups_created: u64, <a href="../messaging/encryption_history.md#messaging_encryption_history_group_id">group_id</a>: <a href="../dependencies/sui/object.md#sui_object_ID">sui::object::ID</a>, initial_encrypted_dek: vector&lt;u8&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">messaging::encryption_history::EncryptionHistory</a>
+<pre><code><b>public</b>(package) <b>fun</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_new">new</a>(namespace_uid: &<b>mut</b> <a href="../dependencies/sui/object.md#sui_object_UID">sui::object::UID</a>, uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, <a href="../messaging/encryption_history.md#messaging_encryption_history_group_id">group_id</a>: <a href="../dependencies/sui/object.md#sui_object_ID">sui::object::ID</a>, initial_encrypted_dek: vector&lt;u8&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">messaging::encryption_history::EncryptionHistory</a>
 </code></pre>
 
 
@@ -391,32 +396,31 @@ A new <code><a href="../messaging/encryption_history.md#messaging_encryption_his
 
 <pre><code><b>public</b>(package) <b>fun</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_new">new</a>(
     namespace_uid: &<b>mut</b> UID,
-    groups_created: u64,
+    uuid: String,
     <a href="../messaging/encryption_history.md#messaging_encryption_history_group_id">group_id</a>: ID,
     initial_encrypted_dek: vector&lt;u8&gt;,
     ctx: &<b>mut</b> TxContext,
 ): <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">EncryptionHistory</a> {
     <b>assert</b>!(
-        !derived_object::exists(namespace_uid, <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistoryTag">EncryptionHistoryTag</a>(groups_created)),
+        !derived_object::exists(namespace_uid, <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistoryTag">EncryptionHistoryTag</a>(uuid)),
         <a href="../messaging/encryption_history.md#messaging_encryption_history_EEncryptionHistoryAlreadyExists">EEncryptionHistoryAlreadyExists</a>,
     );
     <b>assert</b>!(initial_encrypted_dek.length() &lt;= <a href="../messaging/encryption_history.md#messaging_encryption_history_MAX_ENCRYPTED_DEK_BYTES">MAX_ENCRYPTED_DEK_BYTES</a>, <a href="../messaging/encryption_history.md#messaging_encryption_history_EEncryptedDEKTooLarge">EEncryptedDEKTooLarge</a>);
     <b>let</b> <b>mut</b> encrypted_keys = table_vec::empty&lt;vector&lt;u8&gt;&gt;(ctx);
     encrypted_keys.push_back(initial_encrypted_dek);
-    <b>let</b> group_index = groups_created - 1; // keep it 0-based
     <b>let</b> <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a> = <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">EncryptionHistory</a> {
         id: derived_object::claim(
             namespace_uid,
-            <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistoryTag">EncryptionHistoryTag</a>(groups_created),
+            <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistoryTag">EncryptionHistoryTag</a>(uuid),
         ),
-        group_index,
+        uuid,
         <a href="../messaging/encryption_history.md#messaging_encryption_history_group_id">group_id</a>,
         encrypted_keys,
     };
     event::emit(<a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistoryCreated">EncryptionHistoryCreated</a> {
         encryption_history_id: object::id(&<a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>),
         <a href="../messaging/encryption_history.md#messaging_encryption_history_group_id">group_id</a>,
-        group_index,
+        uuid: <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>.uuid,
         initial_encrypted_dek,
     });
     <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>
@@ -485,17 +489,17 @@ Returns the <code>PermissionsGroupTag</code> for address derivation.
 
 ### Parameters
 
-- <code>index</code>: The group index (groups_created counter value)
+- <code>uuid</code>: Client-provided UUID for deterministic address derivation
 
 
 <a name="@Returns_7"></a>
 
 ### Returns
 
-A <code>PermissionsGroupTag</code> wrapping the index.
+A <code>PermissionsGroupTag</code> wrapping the UUID.
 
 
-<pre><code><b>public</b>(package) <b>fun</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_permissions_group_tag">permissions_group_tag</a>(index: u64): <a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">messaging::encryption_history::PermissionedGroupTag</a>
+<pre><code><b>public</b>(package) <b>fun</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_permissions_group_tag">permissions_group_tag</a>(uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>): <a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">messaging::encryption_history::PermissionedGroupTag</a>
 </code></pre>
 
 
@@ -504,8 +508,8 @@ A <code>PermissionsGroupTag</code> wrapping the index.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(package) <b>fun</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_permissions_group_tag">permissions_group_tag</a>(index: u64): <a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">PermissionedGroupTag</a> {
-    <a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">PermissionedGroupTag</a>(index)
+<pre><code><b>public</b>(package) <b>fun</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_permissions_group_tag">permissions_group_tag</a>(uuid: String): <a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">PermissionedGroupTag</a> {
+    <a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">PermissionedGroupTag</a>(uuid)
 }
 </code></pre>
 

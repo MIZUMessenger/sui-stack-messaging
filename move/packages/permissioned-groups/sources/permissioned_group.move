@@ -286,9 +286,9 @@ public fun grant_permission<T: drop, NewPermission: drop>(
     self.internal_grant_permission<T, NewPermission>(member);
 }
 
-/// Grants a permission to the transaction sender via an actor object.
+/// Grants a permission to a recipient via an actor object.
 /// Enables third-party contracts to grant permissions with custom logic.
-/// If the sender is not already a member, they are automatically added.
+/// If the recipient is not already a member, they are automatically added.
 ///
 /// Permission requirements:
 /// - To grant `Administrator`: actor must have `Administrator`
@@ -302,23 +302,22 @@ public fun grant_permission<T: drop, NewPermission: drop>(
 /// # Parameters
 /// - `self`: Mutable reference to the PermissionedGroup
 /// - `actor_object`: UID of the actor object with appropriate manager permission
-/// - `ctx`: Transaction context (sender will receive the permission)
+/// - `recipient`: Address of the member to receive the permission
 ///
 /// # Aborts
 /// - `ENotPermitted`: if actor_object doesn't have appropriate manager permission
 public fun object_grant_permission<T: drop, NewPermission: drop>(
     self: &mut PermissionedGroup<T>,
     actor_object: &UID,
-    ctx: &mut TxContext,
+    recipient: address,
 ) {
     let actor_address = actor_object.to_address();
-    let member = ctx.sender();
 
     // Verify actor has permission to grant this permission type
     self.assert_can_manage_permission<T, NewPermission>(actor_address);
 
     // internal_grant_permission handles member addition and permission granting
-    self.internal_grant_permission<T, NewPermission>(member);
+    self.internal_grant_permission<T, NewPermission>(recipient);
 }
 
 /// Removes a member from the PermissionedGroup.
@@ -349,27 +348,26 @@ public fun remove_member<T: drop>(
     });
 }
 
-/// Removes the transaction sender from the group via an actor object.
+/// Removes a member from the group via an actor object.
 /// Enables third-party contracts to implement custom leave logic.
 /// The actor object must have `Administrator` permission on the group.
 ///
 /// # Parameters
 /// - `self`: Mutable reference to the PermissionedGroup
 /// - `actor_object`: UID of the actor object with `Administrator` permission
-/// - `ctx`: Transaction context (sender will be removed)
+/// - `member`: Address of the member to remove
 ///
 /// # Aborts
 /// - `ENotPermitted`: if actor_object doesn't have `Administrator` permission
-/// - `EMemberNotFound`: if sender is not a member
+/// - `EMemberNotFound`: if member is not a member
 /// - `ELastAdministrator`: if removing would leave no Administrators
 public fun object_remove_member<T: drop>(
     self: &mut PermissionedGroup<T>,
     actor_object: &UID,
-    ctx: &mut TxContext,
+    member: address,
 ) {
     let actor_address = actor_object.to_address();
     assert!(self.has_permission<T, Administrator>(actor_address), ENotPermitted);
-    let member = ctx.sender();
     assert!(self.is_member<T>(member), EMemberNotFound);
     self.safe_decrement_administrators_count(member);
 
@@ -415,9 +413,9 @@ public fun revoke_permission<T: drop, ExistingPermission: drop>(
     self.internal_revoke_permission<T, ExistingPermission>(member);
 }
 
-/// Revokes a permission from the transaction sender via an actor object.
+/// Revokes a permission from a member via an actor object.
 /// Enables third-party contracts to revoke permissions with custom logic.
-/// If this is the sender's last permission, they are automatically removed from the group.
+/// If this is the member's last permission, they are automatically removed from the group.
 ///
 /// Permission requirements:
 /// - To revoke `Administrator`: actor must have `Administrator`
@@ -431,19 +429,18 @@ public fun revoke_permission<T: drop, ExistingPermission: drop>(
 /// # Parameters
 /// - `self`: Mutable reference to the PermissionedGroup
 /// - `actor_object`: UID of the actor object with appropriate manager permission
-/// - `ctx`: Transaction context (sender will have the permission revoked)
+/// - `member`: Address of the member to revoke permission from
 ///
 /// # Aborts
 /// - `ENotPermitted`: if actor_object doesn't have appropriate manager permission
-/// - `EMemberNotFound`: if sender is not a member
+/// - `EMemberNotFound`: if member is not a member
 /// - `ELastAdministrator`: if revoking `Administrator` would leave no administrators
 public fun object_revoke_permission<T: drop, ExistingPermission: drop>(
     self: &mut PermissionedGroup<T>,
     actor_object: &UID,
-    ctx: &mut TxContext,
+    member: address,
 ) {
     let actor_address = actor_object.to_address();
-    let member = ctx.sender();
 
     // Verify actor has permission to revoke this permission type
     self.assert_can_manage_permission<T, ExistingPermission>(actor_address);

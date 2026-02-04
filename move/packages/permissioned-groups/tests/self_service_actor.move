@@ -54,7 +54,7 @@ public fun to_address(actor: &SelfServiceActor): address {
 /// - Rate limiting (e.g., max operations per epoch)
 /// - Allowlist/blocklist checks
 /// - Any other business logic to gate access to group operations
-fun custom_logic_and_assertions(_ctx: &TxContext) {}
+fun custom_logic_and_assertions(_ctx: &TxContext) {}  // Takes immutable ref since object_* no longer need ctx
 
 // === Self-Service Wrapper Functions ===
 // Users call these to perform operations on themselves through the actor.
@@ -65,10 +65,10 @@ fun custom_logic_and_assertions(_ctx: &TxContext) {}
 public fun leave<T: drop>(
     actor: &SelfServiceActor,
     group: &mut PermissionedGroup<T>,
-    ctx: &mut TxContext,
+    ctx: &TxContext,
 ) {
     custom_logic_and_assertions(ctx);
-    group.object_remove_member<T>(&actor.id, ctx);
+    group.object_remove_member<T>(&actor.id, ctx.sender());
 }
 
 /// Self-service grant: sender grants themselves a permission.
@@ -77,10 +77,10 @@ public fun leave<T: drop>(
 public fun custom_grant_permission<T: drop, P: drop>(
     actor: &SelfServiceActor,
     group: &mut PermissionedGroup<T>,
-    ctx: &mut TxContext,
+    ctx: &TxContext,
 ) {
     custom_logic_and_assertions(ctx);
-    group.object_grant_permission<T, P>(&actor.id, ctx);
+    group.object_grant_permission<T, P>(&actor.id, ctx.sender());
 }
 
 /// Self-service revoke: sender revokes a permission from themselves.
@@ -89,10 +89,10 @@ public fun custom_grant_permission<T: drop, P: drop>(
 public fun custom_revoke_permission<T: drop, P: drop>(
     actor: &SelfServiceActor,
     group: &mut PermissionedGroup<T>,
-    ctx: &mut TxContext,
+    ctx: &TxContext,
 ) {
     custom_logic_and_assertions(ctx);
-    group.object_revoke_permission<T, P>(&actor.id, ctx);
+    group.object_revoke_permission<T, P>(&actor.id, ctx.sender());
 }
 
 // === Tests ===

@@ -122,6 +122,9 @@ importers:
 
   packages/integration-tests:
     dependencies:
+      '@mysten/messaging-groups':
+        specifier: workspace:*
+        version: link:../messaging-groups
       '@mysten/permissioned-groups':
         specifier: workspace:*
         version: link:../permissioned-groups
@@ -141,6 +144,28 @@ importers:
       vitest:
         specifier: ^4.0.16
         version: 4.0.17(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.2)
+
+  packages/messaging-groups:
+    dependencies:
+      '@mysten/bcs':
+        specifier: ^1.9.2
+        version: 1.9.2
+      '@mysten/permissioned-groups':
+        specifier: workspace:*
+        version: link:../permissioned-groups
+      '@mysten/sui':
+        specifier: ^1.45.2
+        version: 1.45.2(typescript@5.9.3)
+    devDependencies:
+      '@mysten/build-scripts':
+        specifier: workspace:*
+        version: link:../build-scripts
+      '@mysten/codegen':
+        specifier: ^0.5.13
+        version: 0.5.13
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/permissioned-groups:
     dependencies:

@@ -53,6 +53,8 @@ export interface ObjectGrantPermissionCallOptions {
 	groupId: string | TransactionArgument;
 	/** Object ID or TransactionArgument for the actor object's UID */
 	actorObjectUid: string | TransactionArgument;
+	/** Address of the recipient to receive the permission */
+	recipient: string | TransactionArgument;
 	/** The permission type to grant */
 	permissionType: string;
 }
@@ -73,6 +75,8 @@ export interface ObjectRevokePermissionCallOptions {
 	groupId: string | TransactionArgument;
 	/** Object ID or TransactionArgument for the actor object's UID */
 	actorObjectUid: string | TransactionArgument;
+	/** Address of the member to revoke permission from */
+	member: string | TransactionArgument;
 	/** The permission type to revoke */
 	permissionType: string;
 }
@@ -91,6 +95,8 @@ export interface ObjectRemoveMemberCallOptions {
 	groupId: string | TransactionArgument;
 	/** Object ID or TransactionArgument for the actor object's UID */
 	actorObjectUid: string | TransactionArgument;
+	/** Address of the member to remove */
+	member: string | TransactionArgument;
 }
 
 // === Top-level Imperative Options (add signer) ===

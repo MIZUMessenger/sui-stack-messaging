@@ -111,6 +111,7 @@ This pattern implements subscription-based access to encrypted content:
 <b>use</b> <a href="../dependencies/sui/hash.md#sui_hash">sui::hash</a>;
 <b>use</b> <a href="../dependencies/sui/hex.md#sui_hex">sui::hex</a>;
 <b>use</b> <a href="../dependencies/sui/object.md#sui_object">sui::object</a>;
+<b>use</b> <a href="../dependencies/sui/package.md#sui_package">sui::package</a>;
 <b>use</b> <a href="../dependencies/sui/party.md#sui_party">sui::party</a>;
 <b>use</b> <a href="../dependencies/sui/protocol_config.md#sui_protocol_config">sui::protocol_config</a>;
 <b>use</b> <a href="../dependencies/sui/table.md#sui_table">sui::table</a>;

@@ -5,6 +5,7 @@ use permissioned_groups::permissioned_group::{PermissionedGroup, ExtensionPermis
 use messaging::messaging::{Self, Messaging, MessagingNamespace, MessagingReader};
 use sui::vec_set;
 use example_app::paid_join_rule::{Self, PaidJoinRule, FundsManager};
+use std::string;
 use std::unit_test::{assert_eq, destroy};
 use sui::coin;
 use sui::sui::SUI;
@@ -14,6 +15,10 @@ const ALICE: address = @0xA11CE;
 const BOB: address = @0xB0B;
 const CHARLIE: address = @0xC4A1E;
 const FEE: u64 = 100;
+
+const TEST_UUID: vector<u8> = b"550e8400-e29b-41d4-a716-446655440000";
+const TEST_UUID_2: vector<u8> = b"550e8400-e29b-41d4-a716-446655440001";
+const TEST_UUID_3: vector<u8> = b"550e8400-e29b-41d4-a716-446655440002";
 
 /// Sets up a messaging group with a PaidJoinRule that has ExtensionPermissionsManager permission.
 /// Uses the real create_group flow with MessagingNamespace and EncryptionHistory.
@@ -28,6 +33,7 @@ fun setup_for_testing(ts: &mut Scenario): ID {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID),
         b"test_encrypted_dek",
         vec_set::empty(),
         ts.ctx(),
@@ -130,6 +136,7 @@ fun join_rule_not_member() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID),
         b"test_encrypted_dek",
         vec_set::empty(),
         ts.ctx(),
@@ -169,6 +176,7 @@ fun join_rule_without_manager_permission() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID),
         b"test_encrypted_dek",
         vec_set::empty(),
         ts.ctx(),
@@ -365,6 +373,7 @@ fun join_wrong_group() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (group1, encryption_history1) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID_2),
         b"test_encrypted_dek_1",
         vec_set::empty(),
         ts.ctx(),
@@ -375,6 +384,7 @@ fun join_wrong_group() {
 
     let (group2, encryption_history2) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID_3),
         b"test_encrypted_dek_2",
         vec_set::empty(),
         ts.ctx(),

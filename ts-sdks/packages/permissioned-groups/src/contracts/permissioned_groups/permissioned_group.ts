@@ -280,18 +280,23 @@ export function grantPermission(options: GrantPermissionOptions) {
 export interface ObjectGrantPermissionArguments {
 	self: RawTransactionArgument<string>;
 	actorObject: RawTransactionArgument<string>;
+	recipient: RawTransactionArgument<string>;
 }
 export interface ObjectGrantPermissionOptions {
 	package?: string;
 	arguments:
 		| ObjectGrantPermissionArguments
-		| [self: RawTransactionArgument<string>, actorObject: RawTransactionArgument<string>];
+		| [
+				self: RawTransactionArgument<string>,
+				actorObject: RawTransactionArgument<string>,
+				recipient: RawTransactionArgument<string>,
+		  ];
 	typeArguments: [string, string];
 }
 /**
- * Grants a permission to the transaction sender via an actor object. Enables
- * third-party contracts to grant permissions with custom logic. If the sender is
- * not already a member, they are automatically added.
+ * Grants a permission to a recipient via an actor object. Enables third-party
+ * contracts to grant permissions with custom logic. If the recipient is not
+ * already a member, they are automatically added.
  *
  * Permission requirements:
  *
@@ -308,7 +313,7 @@ export interface ObjectGrantPermissionOptions {
  *
  * - `self`: Mutable reference to the PermissionedGroup
  * - `actor_object`: UID of the actor object with appropriate manager permission
- * - `ctx`: Transaction context (sender will receive the permission)
+ * - `recipient`: Address of the member to receive the permission
  *
  * # Aborts
  *
@@ -319,8 +324,9 @@ export function objectGrantPermission(options: ObjectGrantPermissionOptions) {
 	const argumentsTypes = [
 		`${packageAddress}::permissioned_group::PermissionedGroup<${options.typeArguments[0]}>`,
 		'0x0000000000000000000000000000000000000000000000000000000000000002::object::UID',
+		'address',
 	] satisfies string[];
-	const parameterNames = ['self', 'actorObject'];
+	const parameterNames = ['self', 'actorObject', 'recipient'];
 	return (tx: Transaction) =>
 		tx.moveCall({
 			package: packageAddress,
@@ -376,29 +382,34 @@ export function removeMember(options: RemoveMemberOptions) {
 export interface ObjectRemoveMemberArguments {
 	self: RawTransactionArgument<string>;
 	actorObject: RawTransactionArgument<string>;
+	member: RawTransactionArgument<string>;
 }
 export interface ObjectRemoveMemberOptions {
 	package?: string;
 	arguments:
 		| ObjectRemoveMemberArguments
-		| [self: RawTransactionArgument<string>, actorObject: RawTransactionArgument<string>];
+		| [
+				self: RawTransactionArgument<string>,
+				actorObject: RawTransactionArgument<string>,
+				member: RawTransactionArgument<string>,
+		  ];
 	typeArguments: [string];
 }
 /**
- * Removes the transaction sender from the group via an actor object. Enables
- * third-party contracts to implement custom leave logic. The actor object must
- * have `Administrator` permission on the group.
+ * Removes a member from the group via an actor object. Enables third-party
+ * contracts to implement custom leave logic. The actor object must have
+ * `Administrator` permission on the group.
  *
  * # Parameters
  *
  * - `self`: Mutable reference to the PermissionedGroup
  * - `actor_object`: UID of the actor object with `Administrator` permission
- * - `ctx`: Transaction context (sender will be removed)
+ * - `member`: Address of the member to remove
  *
  * # Aborts
  *
  * - `ENotPermitted`: if actor_object doesn't have `Administrator` permission
- * - `EMemberNotFound`: if sender is not a member
+ * - `EMemberNotFound`: if member is not a member
  * - `ELastAdministrator`: if removing would leave no Administrators
  */
 export function objectRemoveMember(options: ObjectRemoveMemberOptions) {
@@ -406,8 +417,9 @@ export function objectRemoveMember(options: ObjectRemoveMemberOptions) {
 	const argumentsTypes = [
 		`${packageAddress}::permissioned_group::PermissionedGroup<${options.typeArguments[0]}>`,
 		'0x0000000000000000000000000000000000000000000000000000000000000002::object::UID',
+		'address',
 	] satisfies string[];
-	const parameterNames = ['self', 'actorObject'];
+	const parameterNames = ['self', 'actorObject', 'member'];
 	return (tx: Transaction) =>
 		tx.moveCall({
 			package: packageAddress,
@@ -476,18 +488,23 @@ export function revokePermission(options: RevokePermissionOptions) {
 export interface ObjectRevokePermissionArguments {
 	self: RawTransactionArgument<string>;
 	actorObject: RawTransactionArgument<string>;
+	member: RawTransactionArgument<string>;
 }
 export interface ObjectRevokePermissionOptions {
 	package?: string;
 	arguments:
 		| ObjectRevokePermissionArguments
-		| [self: RawTransactionArgument<string>, actorObject: RawTransactionArgument<string>];
+		| [
+				self: RawTransactionArgument<string>,
+				actorObject: RawTransactionArgument<string>,
+				member: RawTransactionArgument<string>,
+		  ];
 	typeArguments: [string, string];
 }
 /**
- * Revokes a permission from the transaction sender via an actor object. Enables
- * third-party contracts to revoke permissions with custom logic. If this is the
- * sender's last permission, they are automatically removed from the group.
+ * Revokes a permission from a member via an actor object. Enables third-party
+ * contracts to revoke permissions with custom logic. If this is the member's last
+ * permission, they are automatically removed from the group.
  *
  * Permission requirements:
  *
@@ -504,12 +521,12 @@ export interface ObjectRevokePermissionOptions {
  *
  * - `self`: Mutable reference to the PermissionedGroup
  * - `actor_object`: UID of the actor object with appropriate manager permission
- * - `ctx`: Transaction context (sender will have the permission revoked)
+ * - `member`: Address of the member to revoke permission from
  *
  * # Aborts
  *
  * - `ENotPermitted`: if actor_object doesn't have appropriate manager permission
- * - `EMemberNotFound`: if sender is not a member
+ * - `EMemberNotFound`: if member is not a member
  * - `ELastAdministrator`: if revoking `Administrator` would leave no
  *   administrators
  */
@@ -518,8 +535,9 @@ export function objectRevokePermission(options: ObjectRevokePermissionOptions) {
 	const argumentsTypes = [
 		`${packageAddress}::permissioned_group::PermissionedGroup<${options.typeArguments[0]}>`,
 		'0x0000000000000000000000000000000000000000000000000000000000000002::object::UID',
+		'address',
 	] satisfies string[];
-	const parameterNames = ['self', 'actorObject'];
+	const parameterNames = ['self', 'actorObject', 'member'];
 	return (tx: Transaction) =>
 		tx.moveCall({
 			package: packageAddress,

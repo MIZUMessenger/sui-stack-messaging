@@ -5,10 +5,6 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	test: {
-		projects: [
-			'suites/permissioned-groups',
-			'suites/messaging',
-			'suites/example-apps',
-		],
+		projects: ['suites/permissioned-groups', 'suites/messaging-groups', 'suites/example-apps'],
 	},
 });

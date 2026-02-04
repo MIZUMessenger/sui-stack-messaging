@@ -128,6 +128,7 @@ let funds = paid_join_rule::withdraw<SUI>(&mut rule, &group, amount, ctx);
 <b>use</b> <a href="../dependencies/sui/hash.md#sui_hash">sui::hash</a>;
 <b>use</b> <a href="../dependencies/sui/hex.md#sui_hex">sui::hex</a>;
 <b>use</b> <a href="../dependencies/sui/object.md#sui_object">sui::object</a>;
+<b>use</b> <a href="../dependencies/sui/package.md#sui_package">sui::package</a>;
 <b>use</b> <a href="../dependencies/sui/party.md#sui_party">sui::party</a>;
 <b>use</b> <a href="../dependencies/sui/protocol_config.md#sui_protocol_config">sui::protocol_config</a>;
 <b>use</b> <a href="../dependencies/sui/table.md#sui_table">sui::table</a>;
@@ -412,7 +413,7 @@ Fees accumulate in the rule's balance for later withdrawal.
 permission
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_join">join</a>&lt;Token: drop&gt;(rule: &<b>mut</b> <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_PaidJoinRule">example_app::paid_join_rule::PaidJoinRule</a>&lt;Token&gt;, group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../dependencies/messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, payment: &<b>mut</b> <a href="../dependencies/sui/coin.md#sui_coin_Coin">sui::coin::Coin</a>&lt;Token&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_join">join</a>&lt;Token: drop&gt;(rule: &<b>mut</b> <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_PaidJoinRule">example_app::paid_join_rule::PaidJoinRule</a>&lt;Token&gt;, group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../dependencies/messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, payment: &<b>mut</b> <a href="../dependencies/sui/coin.md#sui_coin_Coin">sui::coin::Coin</a>&lt;Token&gt;, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
 </code></pre>
 
 
@@ -425,7 +426,7 @@ permission
     rule: &<b>mut</b> <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_PaidJoinRule">PaidJoinRule</a>&lt;Token&gt;,
     group: &<b>mut</b> PermissionedGroup&lt;Messaging&gt;,
     payment: &<b>mut</b> Coin&lt;Token&gt;,
-    ctx: &<b>mut</b> TxContext,
+    ctx: &TxContext,
 ) {
     <b>assert</b>!(payment.value() &gt;= rule.<a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_fee">fee</a>, <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_EInsufficientPayment">EInsufficientPayment</a>);
     <b>assert</b>!(object::id(group) == rule.<a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_group_id">group_id</a>, <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_EGroupMismatch">EGroupMismatch</a>);
@@ -433,7 +434,7 @@ permission
     <b>let</b> fee_balance = payment.balance_mut().split(rule.<a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_fee">fee</a>);
     rule.balance.<a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_join">join</a>(fee_balance);
     // Grant MessagingReader permission to sender via the actor object
-    group.object_grant_permission&lt;Messaging, MessagingReader&gt;(&rule.id, ctx);
+    group.object_grant_permission&lt;Messaging, MessagingReader&gt;(&rule.id, ctx.sender());
 }
 </code></pre>
 
@@ -448,7 +449,7 @@ permission
 Entry version of <code><a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_join">join</a></code> for CLI usage.
 
 
-<pre><code><b>entry</b> <b>fun</b> <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_join_entry">join_entry</a>&lt;Token: drop&gt;(rule: &<b>mut</b> <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_PaidJoinRule">example_app::paid_join_rule::PaidJoinRule</a>&lt;Token&gt;, group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../dependencies/messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, payment: &<b>mut</b> <a href="../dependencies/sui/coin.md#sui_coin_Coin">sui::coin::Coin</a>&lt;Token&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+<pre><code><b>entry</b> <b>fun</b> <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_join_entry">join_entry</a>&lt;Token: drop&gt;(rule: &<b>mut</b> <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_PaidJoinRule">example_app::paid_join_rule::PaidJoinRule</a>&lt;Token&gt;, group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../dependencies/messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, payment: &<b>mut</b> <a href="../dependencies/sui/coin.md#sui_coin_Coin">sui::coin::Coin</a>&lt;Token&gt;, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
 </code></pre>
 
 
@@ -461,7 +462,7 @@ Entry version of <code><a href="../example_app/paid_join_rule.md#example_app_pai
     rule: &<b>mut</b> <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_PaidJoinRule">PaidJoinRule</a>&lt;Token&gt;,
     group: &<b>mut</b> PermissionedGroup&lt;Messaging&gt;,
     payment: &<b>mut</b> Coin&lt;Token&gt;,
-    ctx: &<b>mut</b> TxContext,
+    ctx: &TxContext,
 ) {
     <a href="../example_app/paid_join_rule.md#example_app_paid_join_rule_join">join</a>(rule, group, payment, ctx);
 }

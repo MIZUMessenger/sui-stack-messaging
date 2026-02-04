@@ -11,7 +11,7 @@ import { getNewAccount } from '../../src/utils/get-new-account.js';
 import { PACKAGES } from './config.js';
 
 export default async function setup(project: TestProject) {
-	console.log('Setting up messaging test environment...');
+	console.log('Setting up messaging-groups test environment...');
 
 	const fixture = await startSuiLocalnet({
 		packages: PACKAGES,
@@ -58,12 +58,30 @@ export default async function setup(project: TestProject) {
 		suiToolsContainerId: SUI_TOOLS_CONTAINER_ID,
 	});
 
+	// Find the MessagingNamespace shared object created during init
+	// The objectChanges from testPublish include all objects from all published packages
+	const objectChanges = publishedPackages['messaging'].objectChanges;
+	const namespaceChange = objectChanges.find(
+		(change) =>
+			change.type === 'created' &&
+			'objectType' in change &&
+			change.objectType.includes('MessagingNamespace'),
+	);
+
+	if (!namespaceChange || !('objectId' in namespaceChange)) {
+		throw new Error('MessagingNamespace not found in objectChanges');
+	}
+
+	const namespaceId = namespaceChange.objectId;
+	console.log(`Found MessagingNamespace at ${namespaceId}`);
+
 	// Provide serializable account (secret key as bech32)
 	project.provide('adminAccount', {
 		secretKey: admin.keypair.getSecretKey(),
 		address: admin.address,
 	});
 	project.provide('publishedPackages', publishedPackages);
+	project.provide('messagingNamespaceId', namespaceId);
 
-	console.log('messaging test environment is ready.');
+	console.log('messaging-groups test environment is ready.');
 }

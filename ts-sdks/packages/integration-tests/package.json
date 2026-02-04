@@ -8,7 +8,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:permissioned-groups": "vitest run --project permissioned-groups",
-    "test:messaging": "vitest run --project messaging",
+    "test:messaging-groups": "vitest run --project messaging-groups",
     "test:example-apps": "vitest run --project example-apps"
   },
   "keywords": [],
@@ -21,6 +21,7 @@
     "vitest": "^4.0.16"
   },
   "dependencies": {
+    "@mysten/messaging-groups": "workspace:*",
     "@mysten/permissioned-groups": "workspace:*",
     "@mysten/sui": "^1.45.2"
   }

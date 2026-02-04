@@ -12,6 +12,7 @@ use messaging::messaging::{
     MessagingEditor,
     MessagingDeleter
 };
+use std::string;
 use std::unit_test::{assert_eq, destroy};
 use sui::test_scenario as ts;
 use sui::vec_set;
@@ -25,6 +26,16 @@ const BOB: address = @0xB0B;
 
 const TEST_ENCRYPTED_DEK: vector<u8> = b"test_encrypted_dek";
 const TEST_ENCRYPTED_DEK_V2: vector<u8> = b"test_encrypted_dek_v2";
+const TEST_UUID: vector<u8> = b"550e8400-e29b-41d4-a716-446655440000";
+const TEST_UUID_2: vector<u8> = b"550e8400-e29b-41d4-a716-446655440001";
+const TEST_UUID_3: vector<u8> = b"550e8400-e29b-41d4-a716-446655440002";
+const TEST_UUID_4: vector<u8> = b"550e8400-e29b-41d4-a716-446655440003";
+const TEST_UUID_5: vector<u8> = b"550e8400-e29b-41d4-a716-446655440004";
+const TEST_UUID_6: vector<u8> = b"550e8400-e29b-41d4-a716-446655440005";
+const TEST_UUID_7: vector<u8> = b"550e8400-e29b-41d4-a716-446655440006";
+const TEST_UUID_8: vector<u8> = b"550e8400-e29b-41d4-a716-446655440007";
+const TEST_UUID_9: vector<u8> = b"550e8400-e29b-41d4-a716-446655440008";
+const TEST_UUID_10: vector<u8> = b"550e8400-e29b-41d4-a716-446655440009";
 
 // === create_group tests ===
 
@@ -41,6 +52,7 @@ fun create_group_creates_group_and_encryption_history() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID),
         TEST_ENCRYPTED_DEK,
         vec_set::empty(),
         ts.ctx(),
@@ -67,9 +79,6 @@ fun create_group_creates_group_and_encryption_history() {
     assert_eq!(encryption_history.current_key_version(), 0);
     assert_eq!(*encryption_history.current_encrypted_key(), TEST_ENCRYPTED_DEK);
 
-    // Verify namespace counter
-    assert_eq!(messaging::groups_created(&namespace), 1);
-
     ts::return_shared(namespace);
     destroy(group);
     destroy(encryption_history);
@@ -77,7 +86,7 @@ fun create_group_creates_group_and_encryption_history() {
 }
 
 #[test]
-fun create_group_increments_namespace_counter() {
+fun create_group_with_different_uuids() {
     let mut ts = ts::begin(ALICE);
 
     ts.next_tx(ALICE);
@@ -86,13 +95,24 @@ fun create_group_increments_namespace_counter() {
     ts.next_tx(ALICE);
     let mut namespace = ts.take_shared<MessagingNamespace>();
 
-    assert_eq!(messaging::groups_created(&namespace), 0);
+    let (group1, eh1) = messaging::create_group(
+        &mut namespace,
+        string::utf8(TEST_UUID),
+        TEST_ENCRYPTED_DEK,
+        vec_set::empty(),
+        ts.ctx(),
+    );
 
-    let (group1, eh1) = messaging::create_group(&mut namespace, TEST_ENCRYPTED_DEK, vec_set::empty(), ts.ctx());
-    assert_eq!(messaging::groups_created(&namespace), 1);
+    let (group2, eh2) = messaging::create_group(
+        &mut namespace,
+        string::utf8(TEST_UUID_2),
+        TEST_ENCRYPTED_DEK,
+        vec_set::empty(),
+        ts.ctx(),
+    );
 
-    let (group2, eh2) = messaging::create_group(&mut namespace, TEST_ENCRYPTED_DEK, vec_set::empty(), ts.ctx());
-    assert_eq!(messaging::groups_created(&namespace), 2);
+    // Verify groups have different IDs
+    assert!(object::id(&group1) != object::id(&group2));
 
     ts::return_shared(namespace);
     destroy(group1);
@@ -117,6 +137,7 @@ fun create_group_with_initial_members() {
     initial_members.insert(BOB);
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID_3),
         TEST_ENCRYPTED_DEK,
         initial_members,
         ts.ctx(),
@@ -156,6 +177,7 @@ fun create_group_with_initial_members_including_creator() {
     initial_members.insert(BOB);
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID_4),
         TEST_ENCRYPTED_DEK,
         initial_members,
         ts.ctx(),
@@ -185,7 +207,13 @@ fun create_and_share_group_creates_shared_objects() {
 
     ts.next_tx(ALICE);
     let mut namespace = ts.take_shared<MessagingNamespace>();
-    messaging::create_and_share_group(&mut namespace, TEST_ENCRYPTED_DEK, vec_set::empty(), ts.ctx());
+    messaging::create_and_share_group(
+        &mut namespace,
+        string::utf8(TEST_UUID_5),
+        TEST_ENCRYPTED_DEK,
+        vec_set::empty(),
+        ts.ctx(),
+    );
     ts::return_shared(namespace);
 
     // Verify shared objects exist
@@ -214,6 +242,7 @@ fun rotate_encryption_key_with_permission() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID_6),
         TEST_ENCRYPTED_DEK,
         vec_set::empty(),
         ts.ctx(),
@@ -257,6 +286,7 @@ fun rotate_encryption_key_without_permission_fails() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (mut group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID_7),
         TEST_ENCRYPTED_DEK,
         vec_set::empty(),
         ts.ctx(),
@@ -295,6 +325,7 @@ fun grant_all_messaging_permissions_grants_all() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (mut group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID_8),
         TEST_ENCRYPTED_DEK,
         vec_set::empty(),
         ts.ctx(),
@@ -333,6 +364,7 @@ fun grant_all_permissions_grants_base_and_messaging() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (mut group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID_9),
         TEST_ENCRYPTED_DEK,
         vec_set::empty(),
         ts.ctx(),
@@ -376,6 +408,7 @@ fun encryption_history_encrypted_key_returns_correct_version() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(TEST_UUID_10),
         TEST_ENCRYPTED_DEK,
         vec_set::empty(),
         ts.ctx(),
@@ -414,6 +447,7 @@ fun encryption_history_encrypted_key_invalid_version_fails() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (_group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(b"uuid-for-invalid-version-test"),
         TEST_ENCRYPTED_DEK,
         vec_set::empty(),
         ts.ctx(),
@@ -451,6 +485,7 @@ fun create_group_with_oversized_dek_fails() {
     // Try to create group with oversized DEK
     let (_group, _encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(b"uuid-for-oversized-dek-test"),
         make_oversized_dek(),
         vec_set::empty(),
         ts.ctx(),
@@ -470,6 +505,7 @@ fun rotate_encryption_key_with_oversized_dek_fails() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
+        string::utf8(b"uuid-for-rotate-oversized-test"),
         TEST_ENCRYPTED_DEK,
         vec_set::empty(),
         ts.ctx(),

@@ -66,7 +66,7 @@ export class PermissionedGroupsCall {
 	}
 
 	/**
-	 * Grants a permission to the transaction sender via an actor object.
+	 * Grants a permission to a recipient via an actor object.
 	 * Enables third-party contracts to grant permissions with custom logic.
 	 *
 	 * Permission requirements:
@@ -81,6 +81,7 @@ export class PermissionedGroupsCall {
 			arguments: {
 				self: options.groupId,
 				actorObject: options.actorObjectUid,
+				recipient: options.recipient,
 			},
 			typeArguments: [this.#witnessType, options.permissionType],
 		});
@@ -106,8 +107,8 @@ export class PermissionedGroupsCall {
 	}
 
 	/**
-	 * Revokes a permission from the transaction sender via an actor object.
-	 * If this is the sender's last permission, they are automatically removed.
+	 * Revokes a permission from a member via an actor object.
+	 * If this is the member's last permission, they are automatically removed.
 	 */
 	objectRevokePermission(
 		options: ObjectRevokePermissionCallOptions,
@@ -117,6 +118,7 @@ export class PermissionedGroupsCall {
 			arguments: {
 				self: options.groupId,
 				actorObject: options.actorObjectUid,
+				member: options.member,
 			},
 			typeArguments: [this.#witnessType, options.permissionType],
 		});
@@ -140,7 +142,7 @@ export class PermissionedGroupsCall {
 	}
 
 	/**
-	 * Removes the transaction sender from the group via an actor object.
+	 * Removes a member from the group via an actor object.
 	 * The actor object must have Administrator permission.
 	 */
 	objectRemoveMember(
@@ -151,6 +153,7 @@ export class PermissionedGroupsCall {
 			arguments: {
 				self: options.groupId,
 				actorObject: options.actorObjectUid,
+				member: options.member,
 			},
 			typeArguments: [this.#witnessType],
 		});

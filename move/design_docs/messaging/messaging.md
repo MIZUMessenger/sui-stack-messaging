@@ -41,6 +41,7 @@ Messaging-specific:
 
     -  [Permissions](#@Permissions_0)
     -  [Security](#@Security_1)
+-  [Struct `MESSAGING`](#messaging_messaging_MESSAGING)
 -  [Struct `Messaging`](#messaging_messaging_Messaging)
 -  [Struct `MessagingSender`](#messaging_messaging_MessagingSender)
 -  [Struct `MessagingReader`](#messaging_messaging_MessagingReader)
@@ -53,22 +54,19 @@ Messaging-specific:
     -  [Parameters](#@Parameters_3)
     -  [Returns](#@Returns_4)
     -  [Note](#@Note_5)
+    -  [Aborts](#@Aborts_6)
 -  [Function `create_and_share_group`](#messaging_messaging_create_and_share_group)
-    -  [Parameters](#@Parameters_6)
-    -  [Note](#@Note_7)
+    -  [Parameters](#@Parameters_7)
+    -  [Note](#@Note_8)
 -  [Function `rotate_encryption_key`](#messaging_messaging_rotate_encryption_key)
-    -  [Parameters](#@Parameters_8)
-    -  [Aborts](#@Aborts_9)
+    -  [Parameters](#@Parameters_9)
+    -  [Aborts](#@Aborts_10)
 -  [Function `grant_all_messaging_permissions`](#messaging_messaging_grant_all_messaging_permissions)
-    -  [Parameters](#@Parameters_10)
-    -  [Aborts](#@Aborts_11)
+    -  [Parameters](#@Parameters_11)
+    -  [Aborts](#@Aborts_12)
 -  [Function `grant_all_permissions`](#messaging_messaging_grant_all_permissions)
-    -  [Parameters](#@Parameters_12)
-    -  [Aborts](#@Aborts_13)
--  [Function `groups_created`](#messaging_messaging_groups_created)
-    -  [Parameters](#@Parameters_14)
-    -  [Returns](#@Returns_15)
--  [Function `increment_groups_created`](#messaging_messaging_increment_groups_created)
+    -  [Parameters](#@Parameters_13)
+    -  [Aborts](#@Aborts_14)
 
 
 <pre><code><b>use</b> <a href="../messaging/encryption_history.md#messaging_encryption_history">messaging::encryption_history</a>;
@@ -92,16 +90,40 @@ Messaging-specific:
 <b>use</b> <a href="../dependencies/sui/hash.md#sui_hash">sui::hash</a>;
 <b>use</b> <a href="../dependencies/sui/hex.md#sui_hex">sui::hex</a>;
 <b>use</b> <a href="../dependencies/sui/object.md#sui_object">sui::object</a>;
+<b>use</b> <a href="../dependencies/sui/package.md#sui_package">sui::package</a>;
 <b>use</b> <a href="../dependencies/sui/party.md#sui_party">sui::party</a>;
 <b>use</b> <a href="../dependencies/sui/table.md#sui_table">sui::table</a>;
 <b>use</b> <a href="../dependencies/sui/table_vec.md#sui_table_vec">sui::table_vec</a>;
 <b>use</b> <a href="../dependencies/sui/transfer.md#sui_transfer">sui::transfer</a>;
 <b>use</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context">sui::tx_context</a>;
+<b>use</b> <a href="../dependencies/sui/types.md#sui_types">sui::types</a>;
 <b>use</b> <a href="../dependencies/sui/vec_map.md#sui_vec_map">sui::vec_map</a>;
 <b>use</b> <a href="../dependencies/sui/vec_set.md#sui_vec_set">sui::vec_set</a>;
 </code></pre>
 
 
+
+<a name="messaging_messaging_MESSAGING"></a>
+
+## Struct `MESSAGING`
+
+One-Time Witness for claiming Publisher.
+
+
+<pre><code><b>public</b> <b>struct</b> <a href="../messaging/messaging.md#messaging_messaging_MESSAGING">MESSAGING</a> <b>has</b> drop
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+</dl>
+
+
+</details>
 
 <a name="messaging_messaging_Messaging"></a>
 
@@ -238,12 +260,6 @@ One per package deployment.
 </dt>
 <dd>
 </dd>
-<dt>
-<code><a href="../messaging/messaging.md#messaging_messaging_groups_created">groups_created</a>: u64</code>
-</dt>
-<dd>
- Counter for deterministic address derivation.
-</dd>
 </dl>
 
 
@@ -269,7 +285,7 @@ One per package deployment.
 
 
 
-<pre><code><b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_init">init</a>(ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+<pre><code><b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_init">init</a>(otw: <a href="../messaging/messaging.md#messaging_messaging_MESSAGING">messaging::messaging::MESSAGING</a>, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
 </code></pre>
 
 
@@ -278,10 +294,10 @@ One per package deployment.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_init">init</a>(ctx: &<b>mut</b> TxContext) {
+<pre><code><b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_init">init</a>(otw: <a href="../messaging/messaging.md#messaging_messaging_MESSAGING">MESSAGING</a>, ctx: &<b>mut</b> TxContext) {
+    package::claim_and_keep(otw, ctx);
     transfer::share_object(<a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">MessagingNamespace</a> {
         id: object::new(ctx),
-        <a href="../messaging/messaging.md#messaging_messaging_groups_created">groups_created</a>: 0,
     });
 }
 </code></pre>
@@ -303,6 +319,7 @@ The transaction sender (<code>ctx.sender()</code>) automatically becomes the cre
 ### Parameters
 
 - <code>namespace</code>: Mutable reference to the MessagingNamespace
+- <code>uuid</code>: Client-provided UUID for deterministic address derivation
 - <code>initial_encrypted_dek</code>: Initial Seal-encrypted DEK bytes
 - <code>initial_members</code>: Addresses to grant <code><a href="../messaging/messaging.md#messaging_messaging_MessagingReader">MessagingReader</a></code> permission (should not include
 creator)
@@ -325,7 +342,14 @@ This handles the common case where the creator might be mistakenly included in t
 members list.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_group">create_group</a>(namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">messaging::messaging::MessagingNamespace</a>, initial_encrypted_dek: vector&lt;u8&gt;, initial_members: <a href="../dependencies/sui/vec_set.md#sui_vec_set_VecSet">sui::vec_set::VecSet</a>&lt;<b>address</b>&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): (<a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">messaging::encryption_history::EncryptionHistory</a>)
+<a name="@Aborts_6"></a>
+
+### Aborts
+
+- If the UUID has already been used (duplicate derivation)
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_group">create_group</a>(namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">messaging::messaging::MessagingNamespace</a>, uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, initial_encrypted_dek: vector&lt;u8&gt;, initial_members: <a href="../dependencies/sui/vec_set.md#sui_vec_set_VecSet">sui::vec_set::VecSet</a>&lt;<b>address</b>&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): (<a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">messaging::encryption_history::EncryptionHistory</a>)
 </code></pre>
 
 
@@ -336,17 +360,18 @@ members list.
 
 <pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_group">create_group</a>(
     namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">MessagingNamespace</a>,
+    uuid: String,
     initial_encrypted_dek: vector&lt;u8&gt;,
     initial_members: VecSet&lt;<b>address</b>&gt;,
     ctx: &<b>mut</b> TxContext,
 ): (PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;, EncryptionHistory) {
-    <b>let</b> <a href="../messaging/messaging.md#messaging_messaging_groups_created">groups_created</a> = namespace.<a href="../messaging/messaging.md#messaging_messaging_increment_groups_created">increment_groups_created</a>();
     <b>let</b> <b>mut</b> group: PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt; = permissioned_group::new_derived&lt;
         <a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>,
         <a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">encryption_history::PermissionedGroupTag</a>,
     &gt;(
+        <a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>(),
         &<b>mut</b> namespace.id,
-        <a href="../messaging/encryption_history.md#messaging_encryption_history_permissions_group_tag">encryption_history::permissions_group_tag</a>(<a href="../messaging/messaging.md#messaging_messaging_groups_created">groups_created</a>),
+        <a href="../messaging/encryption_history.md#messaging_encryption_history_permissions_group_tag">encryption_history::permissions_group_tag</a>(uuid),
         ctx,
     );
     <b>let</b> creator = ctx.sender();
@@ -359,7 +384,7 @@ members list.
     });
     <b>let</b> <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a> = <a href="../messaging/encryption_history.md#messaging_encryption_history_new">encryption_history::new</a>(
         &<b>mut</b> namespace.id,
-        <a href="../messaging/messaging.md#messaging_messaging_groups_created">groups_created</a>,
+        uuid,
         object::id(&group),
         initial_encrypted_dek,
         ctx,
@@ -379,24 +404,25 @@ members list.
 Creates a new messaging group and shares both objects.
 
 
-<a name="@Parameters_6"></a>
+<a name="@Parameters_7"></a>
 
 ### Parameters
 
 - <code>namespace</code>: Mutable reference to the MessagingNamespace
+- <code>uuid</code>: Client-provided UUID for deterministic address derivation
 - <code>initial_encrypted_dek</code>: Initial Seal-encrypted DEK bytes
 - <code>initial_members</code>: Set of addresses to grant <code><a href="../messaging/messaging.md#messaging_messaging_MessagingReader">MessagingReader</a></code> permission
 - <code>ctx</code>: Transaction context
 
 
-<a name="@Note_7"></a>
+<a name="@Note_8"></a>
 
 ### Note
 
 See <code><a href="../messaging/messaging.md#messaging_messaging_create_group">create_group</a></code> for details on creator permissions and initial member handling.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_and_share_group">create_and_share_group</a>(namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">messaging::messaging::MessagingNamespace</a>, initial_encrypted_dek: vector&lt;u8&gt;, initial_members: <a href="../dependencies/sui/vec_set.md#sui_vec_set_VecSet">sui::vec_set::VecSet</a>&lt;<b>address</b>&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_and_share_group">create_and_share_group</a>(namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">messaging::messaging::MessagingNamespace</a>, uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, initial_encrypted_dek: vector&lt;u8&gt;, initial_members: <a href="../dependencies/sui/vec_set.md#sui_vec_set_VecSet">sui::vec_set::VecSet</a>&lt;<b>address</b>&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
 </code></pre>
 
 
@@ -407,12 +433,14 @@ See <code><a href="../messaging/messaging.md#messaging_messaging_create_group">c
 
 <pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_and_share_group">create_and_share_group</a>(
     namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">MessagingNamespace</a>,
+    uuid: String,
     initial_encrypted_dek: vector&lt;u8&gt;,
     initial_members: VecSet&lt;<b>address</b>&gt;,
     ctx: &<b>mut</b> TxContext,
 ) {
     <b>let</b> (group, <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>) = <a href="../messaging/messaging.md#messaging_messaging_create_group">create_group</a>(
         namespace,
+        uuid,
         initial_encrypted_dek,
         initial_members,
         ctx,
@@ -433,7 +461,7 @@ See <code><a href="../messaging/messaging.md#messaging_messaging_create_group">c
 Rotates the encryption key for a group.
 
 
-<a name="@Parameters_8"></a>
+<a name="@Parameters_9"></a>
 
 ### Parameters
 
@@ -443,7 +471,7 @@ Rotates the encryption key for a group.
 - <code>ctx</code>: Transaction context
 
 
-<a name="@Aborts_9"></a>
+<a name="@Aborts_10"></a>
 
 ### Aborts
 
@@ -483,7 +511,7 @@ Includes: <code><a href="../messaging/messaging.md#messaging_messaging_Messaging
 <code><a href="../messaging/messaging.md#messaging_messaging_MessagingDeleter">MessagingDeleter</a></code>, <code>EncryptionKeyRotator</code>.
 
 
-<a name="@Parameters_10"></a>
+<a name="@Parameters_11"></a>
 
 ### Parameters
 
@@ -492,7 +520,7 @@ Includes: <code><a href="../messaging/messaging.md#messaging_messaging_Messaging
 - <code>ctx</code>: Transaction context
 
 
-<a name="@Aborts_11"></a>
+<a name="@Aborts_12"></a>
 
 ### Aborts
 
@@ -534,7 +562,7 @@ Grants all permissions (Administrator, ExtensionPermissionsManager + messaging) 
 making them an admin.
 
 
-<a name="@Parameters_12"></a>
+<a name="@Parameters_13"></a>
 
 ### Parameters
 
@@ -543,7 +571,7 @@ making them an admin.
 - <code>ctx</code>: Transaction context
 
 
-<a name="@Aborts_13"></a>
+<a name="@Aborts_14"></a>
 
 ### Aborts
 
@@ -567,72 +595,6 @@ making them an admin.
     group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, Administrator&gt;(member, ctx);
     group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, ExtensionPermissionsManager&gt;(member, ctx);
     <a href="../messaging/messaging.md#messaging_messaging_grant_all_messaging_permissions">grant_all_messaging_permissions</a>(group, member, ctx);
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="messaging_messaging_groups_created"></a>
-
-## Function `groups_created`
-
-Returns the number of groups created via this namespace.
-
-
-<a name="@Parameters_14"></a>
-
-### Parameters
-
-- <code>namespace</code>: Reference to the MessagingNamespace
-
-
-<a name="@Returns_15"></a>
-
-### Returns
-
-The total count of groups created.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_groups_created">groups_created</a>(namespace: &<a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">messaging::messaging::MessagingNamespace</a>): u64
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_groups_created">groups_created</a>(namespace: &<a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">MessagingNamespace</a>): u64 {
-    namespace.<a href="../messaging/messaging.md#messaging_messaging_groups_created">groups_created</a>
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="messaging_messaging_increment_groups_created"></a>
-
-## Function `increment_groups_created`
-
-Increments and returns the groups_created counter.
-
-
-<pre><code><b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_increment_groups_created">increment_groups_created</a>(self: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">messaging::messaging::MessagingNamespace</a>): u64
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_increment_groups_created">increment_groups_created</a>(self: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">MessagingNamespace</a>): u64 {
-    <b>let</b> current = self.<a href="../messaging/messaging.md#messaging_messaging_groups_created">groups_created</a>;
-    self.<a href="../messaging/messaging.md#messaging_messaging_groups_created">groups_created</a> = current + 1;
-    self.<a href="../messaging/messaging.md#messaging_messaging_groups_created">groups_created</a>
 }
 </code></pre>
 
