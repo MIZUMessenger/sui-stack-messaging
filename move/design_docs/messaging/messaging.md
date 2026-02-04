@@ -71,6 +71,7 @@ Messaging-specific:
 
 <pre><code><b>use</b> <a href="../messaging/encryption_history.md#messaging_encryption_history">messaging::encryption_history</a>;
 <b>use</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group">permissioned_groups::permissioned_group</a>;
+<b>use</b> <a href="../dependencies/permissioned_groups/permissions_table.md#permissioned_groups_permissions_table">permissioned_groups::permissions_table</a>;
 <b>use</b> <a href="../dependencies/std/address.md#std_address">std::address</a>;
 <b>use</b> <a href="../dependencies/std/ascii.md#std_ascii">std::ascii</a>;
 <b>use</b> <a href="../dependencies/std/bcs.md#std_bcs">std::bcs</a>;
@@ -272,6 +273,7 @@ One per package deployment.
 
 <a name="messaging_messaging_ENotPermitted"></a>
 
+Caller lacks the required permission for the operation.
 
 
 <pre><code><b>const</b> <a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a>: u64 = 0;
@@ -524,7 +526,7 @@ Includes: <code><a href="../messaging/messaging.md#messaging_messaging_Messaging
 
 ### Aborts
 
-- <code><a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a></code> (from <code>permissions_group</code>): if caller doesn't have <code>CorePermissionsManager</code>
+- <code><a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a></code> (from <code>permissioned_group</code>): if caller doesn't have <code>Administrator</code>
 or <code>ExtensionPermissionsManager</code> permission
 
 

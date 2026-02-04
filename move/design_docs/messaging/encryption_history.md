@@ -112,7 +112,7 @@ Uses client-provided UUID (String) for predictable address derivation.
 
 ## Struct `PermissionedGroupTag`
 
-Key for deriving <code>PermissionsGroup&lt;Messaging&gt;</code> address from <code>MessagingNamespace</code>.
+Key for deriving <code>PermissionedGroup&lt;Messaging&gt;</code> address from <code>MessagingNamespace</code>.
 Uses client-provided UUID (String) for predictable address derivation.
 
 
@@ -163,7 +163,7 @@ Permission to rotate encryption keys. Auto-granted to group creator.
 ## Struct `EncryptionHistory`
 
 Encrypted key history for a messaging group.
-Derived object from <code>MessagingNamespace</code> with 1:1 relationship to <code>PermissionsGroup&lt;Messaging&gt;</code>.
+Derived object from <code>MessagingNamespace</code> with 1:1 relationship to <code>PermissionedGroup&lt;Messaging&gt;</code>.
 
 
 <pre><code><b>public</b> <b>struct</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">EncryptionHistory</a> <b>has</b> key, store
@@ -185,7 +185,7 @@ Derived object from <code>MessagingNamespace</code> with 1:1 relationship to <co
 <code><a href="../messaging/encryption_history.md#messaging_encryption_history_group_id">group_id</a>: <a href="../dependencies/sui/object.md#sui_object_ID">sui::object::ID</a></code>
 </dt>
 <dd>
- Associated <code>PermissionsGroup&lt;Messaging&gt;</code> ID.
+ Associated <code>PermissionedGroup&lt;Messaging&gt;</code> ID.
 </dd>
 <dt>
 <code>uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a></code>
@@ -232,7 +232,7 @@ Emitted when a new EncryptionHistory is created.
 <code><a href="../messaging/encryption_history.md#messaging_encryption_history_group_id">group_id</a>: <a href="../dependencies/sui/object.md#sui_object_ID">sui::object::ID</a></code>
 </dt>
 <dd>
- ID of the associated PermissionsGroup<Messaging>.
+ ID of the associated PermissionedGroup<Messaging>.
 </dd>
 <dt>
 <code>uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a></code>
@@ -278,7 +278,7 @@ Emitted when an encryption key is rotated.
 <code><a href="../messaging/encryption_history.md#messaging_encryption_history_group_id">group_id</a>: <a href="../dependencies/sui/object.md#sui_object_ID">sui::object::ID</a></code>
 </dt>
 <dd>
- ID of the associated PermissionsGroup<Messaging>.
+ ID of the associated PermissionedGroup<Messaging>.
 </dd>
 <dt>
 <code>new_key_version: u64</code>
@@ -365,7 +365,7 @@ Uses <code><a href="../messaging/encryption_history.md#messaging_encryption_hist
 
 - <code>namespace_uid</code>: Mutable reference to the MessagingNamespace UID
 - <code>uuid</code>: Client-provided UUID for deterministic address derivation
-- <code><a href="../messaging/encryption_history.md#messaging_encryption_history_group_id">group_id</a></code>: ID of the associated PermissionsGroup<Messaging>
+- <code><a href="../messaging/encryption_history.md#messaging_encryption_history_group_id">group_id</a></code>: ID of the associated PermissionedGroup<Messaging>
 - <code>initial_encrypted_dek</code>: Initial Seal-encrypted DEK bytes
 - <code>ctx</code>: Transaction context
 
@@ -482,7 +482,7 @@ Appends a new encrypted DEK. Caller must verify permissions.
 
 ## Function `permissions_group_tag`
 
-Returns the <code>PermissionsGroupTag</code> for address derivation.
+Returns the <code><a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">PermissionedGroupTag</a></code> for address derivation.
 
 
 <a name="@Parameters_6"></a>
@@ -496,7 +496,7 @@ Returns the <code>PermissionsGroupTag</code> for address derivation.
 
 ### Returns
 
-A <code>PermissionsGroupTag</code> wrapping the UUID.
+A <code><a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">PermissionedGroupTag</a></code> wrapping the UUID.
 
 
 <pre><code><b>public</b>(package) <b>fun</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_permissions_group_tag">permissions_group_tag</a>(uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>): <a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">messaging::encryption_history::PermissionedGroupTag</a>
@@ -521,7 +521,7 @@ A <code>PermissionsGroupTag</code> wrapping the UUID.
 
 ## Function `group_id`
 
-Returns the associated <code>PermissionsGroup&lt;Messaging&gt;</code> ID.
+Returns the associated <code>PermissionedGroup&lt;Messaging&gt;</code> ID.
 
 
 <a name="@Parameters_8"></a>

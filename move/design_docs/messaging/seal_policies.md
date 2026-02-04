@@ -45,6 +45,7 @@ Apps can implement custom <code>seal_approve</code> with different logic:
 <pre><code><b>use</b> <a href="../messaging/encryption_history.md#messaging_encryption_history">messaging::encryption_history</a>;
 <b>use</b> <a href="../messaging/messaging.md#messaging_messaging">messaging::messaging</a>;
 <b>use</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group">permissioned_groups::permissioned_group</a>;
+<b>use</b> <a href="../dependencies/permissioned_groups/permissions_table.md#permissioned_groups_permissions_table">permissioned_groups::permissions_table</a>;
 <b>use</b> <a href="../dependencies/std/address.md#std_address">std::address</a>;
 <b>use</b> <a href="../dependencies/std/ascii.md#std_ascii">std::ascii</a>;
 <b>use</b> <a href="../dependencies/std/bcs.md#std_bcs">std::bcs</a>;
@@ -84,6 +85,7 @@ Apps can implement custom <code>seal_approve</code> with different logic:
 
 <a name="messaging_seal_policies_EInvalidIdentity"></a>
 
+Identity bytes are malformed (wrong length or mismatched group ID).
 
 
 <pre><code><b>const</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidIdentity">EInvalidIdentity</a>: u64 = 0;
@@ -93,6 +95,7 @@ Apps can implement custom <code>seal_approve</code> with different logic:
 
 <a name="messaging_seal_policies_ENotPermitted"></a>
 
+Caller lacks the required <code>MessagingReader</code> permission.
 
 
 <pre><code><b>const</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_ENotPermitted">ENotPermitted</a>: u64 = 1;
@@ -102,6 +105,7 @@ Apps can implement custom <code>seal_approve</code> with different logic:
 
 <a name="messaging_seal_policies_EInvalidKeyVersion"></a>
 
+Requested key version does not exist in the encryption history.
 
 
 <pre><code><b>const</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_EInvalidKeyVersion">EInvalidKeyVersion</a>: u64 = 2;
@@ -111,6 +115,7 @@ Apps can implement custom <code>seal_approve</code> with different logic:
 
 <a name="messaging_seal_policies_EEncryptionHistoryMismatch"></a>
 
+The provided <code>EncryptionHistory</code> does not belong to the given group.
 
 
 <pre><code><b>const</b> <a href="../messaging/seal_policies.md#messaging_seal_policies_EEncryptionHistoryMismatch">EEncryptionHistoryMismatch</a>: u64 = 3;
