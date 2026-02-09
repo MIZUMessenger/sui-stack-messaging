@@ -87,12 +87,18 @@ importers:
       '@mysten/permissioned-groups':
         specifier: workspace:*
         version: link:../permissioned-groups
+      '@mysten/seal':
+        specifier: ^1.0.0
+        version: 1.0.0(@mysten/sui@2.3.1(typescript@5.9.3))
       '@mysten/sui':
         specifier: ^2.3.1
         version: 2.3.1(typescript@5.9.3)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.0.16
+        version: 4.0.17(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/permissioned-groups:
     devDependencies:
@@ -524,6 +530,11 @@ packages:
   '@mysten/codegen@0.8.0':
     resolution: {integrity: sha512-gFuLxsH130w9WFvy97JBZeDd/xLy6k3orVqVCTFD+QDwqLitussRSsMf5Qvr5SLydDq2M1c2TU2E1n8YbpKFBA==}
     hasBin: true
+
+  '@mysten/seal@1.0.0':
+    resolution: {integrity: sha512-shpCjeeK+hvZRl1d87DwAgbbjMe+ImY/aPBznNsaMZP/5Z+WEs2XXSsZ+YyryoGQqUqMd+TdTR4SA2zzKtGCYQ==}
+    peerDependencies:
+      '@mysten/sui': ^2.0.0
 
   '@mysten/sui@2.2.0':
     resolution: {integrity: sha512-HlhxdDKTPIECO+I1L2Eu42rLA4xnSCgEhOtq7ku07RbUcagq6yB0kVr/TdayRZXvM+v7uiI//unQBF6Oifi0Mg==}
@@ -2792,6 +2803,13 @@ snapshots:
     transitivePeerDependencies:
       - '@gql.tada/svelte-support'
       - '@gql.tada/vue-support'
+
+  '@mysten/seal@1.0.0(@mysten/sui@2.3.1(typescript@5.9.3))':
+    dependencies:
+      '@mysten/bcs': 2.0.1
+      '@mysten/sui': 2.3.1(typescript@5.9.3)
+      '@noble/curves': 2.0.1
+      '@noble/hashes': 2.0.1
 
   '@mysten/sui@2.2.0(typescript@5.9.3)':
     dependencies:

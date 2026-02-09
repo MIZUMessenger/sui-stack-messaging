@@ -10,12 +10,14 @@ import {
 	TESTNET_MESSAGING_GROUPS_PACKAGE_CONFIG,
 	MAINNET_MESSAGING_GROUPS_PACKAGE_CONFIG,
 } from './constants.js';
+import { EnvelopeEncryption } from './encryption/envelope-encryption.js';
 import type {
 	CreateGroupOptions,
 	GrantAllMessagingPermissionsOptions,
 	GrantAllPermissionsOptions,
 	MessagingGroupsClientOptions,
 	MessagingGroupsCompatibleClient,
+	MessagingGroupsEncryptionOptions,
 	MessagingGroupsPackageConfig,
 	RotateEncryptionKeyOptions,
 } from './types.js';
@@ -43,9 +45,11 @@ import { MessagingGroupsView } from './view.js';
 export function messagingGroups<const Name = 'messaging'>({
 	name = 'messaging' as Name,
 	packageConfig,
+	encryption,
 }: {
 	name?: Name;
 	packageConfig?: MessagingGroupsPackageConfig;
+	encryption?: MessagingGroupsEncryptionOptions;
 } = {}) {
 	return {
 		name,
@@ -56,6 +60,7 @@ export function messagingGroups<const Name = 'messaging'>({
 			return new MessagingGroupsClient({
 				client: client as MessagingGroupsCompatibleClient,
 				packageConfig,
+				encryption,
 			});
 		},
 	};
@@ -106,6 +111,7 @@ export class MessagingGroupsClient {
 	view: MessagingGroupsView;
 	bcs: MessagingGroupsBCS;
 	derive: MessagingGroupsDerive;
+	encryption: EnvelopeEncryption;
 
 	constructor(options: MessagingGroupsClientOptions) {
 		if (!options.client) {
@@ -145,6 +151,13 @@ export class MessagingGroupsClient {
 			client: this.#client,
 			derive: this.derive,
 			bcs: this.bcs,
+		});
+		this.encryption = new EnvelopeEncryption({
+			sealClient: this.#client.seal,
+			suiClient: this.#client,
+			view: this.view,
+			packageId: this.#packageConfig.packageId,
+			...options.encryption,
 		});
 	}
 

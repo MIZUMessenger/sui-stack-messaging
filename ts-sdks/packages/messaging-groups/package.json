@@ -36,6 +36,10 @@
 		"prettier:fix": "prettier -w --ignore-unknown .",
 		"oxlint:check": "oxlint .",
 		"oxlint:fix": "oxlint --fix .",
+		"vitest": "vitest",
+		"test": "pnpm test:typecheck && pnpm test:unit",
+		"test:typecheck": "tsc -p ./test",
+		"test:unit": "vitest run unit",
 		"lint": "pnpm run oxlint:check && pnpm run prettier:check",
 		"lint:fix": "pnpm run oxlint:fix && pnpm run prettier:fix"
 	},
@@ -43,12 +47,15 @@
 		"@mysten/bcs": "^2.0.1",
 		"@mysten/codegen": "^0.8.0",
 		"@mysten/permissioned-groups": "workspace:*",
+		"@mysten/seal": "^1.0.0",
 		"@mysten/sui": "^2.3.1",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.16"
 	},
 	"peerDependencies": {
 		"@mysten/bcs": "^2.0.1",
 		"@mysten/permissioned-groups": "*",
+		"@mysten/seal": "^1.0.0",
 		"@mysten/sui": "^2.3.1"
 	}
 }

@@ -9,6 +9,7 @@ export { MessagingGroupsDerive } from './derive.js';
 export { MessagingGroupsBCS } from './bcs.js';
 export { MessagingGroupsClientError } from './error.js';
 export * from './types.js';
+export * from './encryption/index.js';
 export type {
 	ParsedMessagingNamespace,
 	ParsedMessaging,

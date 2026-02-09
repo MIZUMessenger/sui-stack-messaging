@@ -91,6 +91,17 @@ export class MessagingGroupsView {
 	}
 
 	/**
+	 * Returns the current (latest) key version for an EncryptionHistory.
+	 *
+	 * Makes one RPC call to fetch the EncryptionHistory object.
+	 */
+	async getCurrentKeyVersion(options: EncryptionHistoryRef): Promise<bigint> {
+		const encryptionHistoryId = this.#resolveEncryptionHistoryId(options);
+		const { size } = await this.#fetchEncryptionHistory(encryptionHistoryId);
+		return size - 1n;
+	}
+
+	/**
 	 * Returns the encrypted DEK for the current (latest) key version.
 	 *
 	 * Always makes at least two RPC calls: one to fetch the EncryptionHistory

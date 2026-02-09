@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { PermissionedGroupsClient } from '@mysten/permissioned-groups';
+import type { SealClient } from '@mysten/seal';
 import type { Signer } from '@mysten/sui/cryptography';
 import type { ClientWithCoreApi } from '@mysten/sui/client';
 import type { TransactionArgument } from '@mysten/sui/transactions';
+
+import type { CryptoPrimitives } from './encryption/crypto-primitives.js';
 
 // === Package Configuration ===
 
@@ -20,13 +23,22 @@ export type MessagingGroupsPackageConfig = {
 };
 
 /**
- * A client that has been extended with the PermissionedGroupsClient.
- * The messaging client requires this extension to be present.
+ * A client that has been extended with the PermissionedGroupsClient and SealClient.
+ * The messaging client requires both extensions to be present.
  */
 export interface MessagingGroupsCompatibleClient extends ClientWithCoreApi {
 	/** The permissioned-groups extension (required) */
 	groups: PermissionedGroupsClient;
-	// Future: seal?: SealClient;
+	/** The Seal extension (required for encryption) */
+	seal: SealClient;
+}
+
+/** Encryption-specific options for the messaging groups client. */
+export interface MessagingGroupsEncryptionOptions {
+	/** Custom crypto primitives (default: Web Crypto). */
+	cryptoPrimitives?: CryptoPrimitives;
+	/** Default Seal threshold (default: 2). */
+	defaultThreshold?: number;
 }
 
 export interface MessagingGroupsClientOptions {
@@ -36,6 +48,8 @@ export interface MessagingGroupsClientOptions {
 	 * When not provided, the config is auto-detected from the client's network.
 	 */
 	packageConfig?: MessagingGroupsPackageConfig;
+	/** Encryption configuration. */
+	encryption?: MessagingGroupsEncryptionOptions;
 }
 
 // === Call/Tx Options (no signer) ===
