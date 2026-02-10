@@ -59,9 +59,12 @@ importers:
       '@mysten/permissioned-groups':
         specifier: workspace:*
         version: link:../permissioned-groups
+      '@mysten/seal':
+        specifier: ^1.0.0
+        version: 1.0.0(@mysten/sui@2.3.1(typescript@5.9.3))
       '@mysten/sui':
-        specifier: ^2.2.0
-        version: 2.2.0(typescript@5.9.3)
+        specifier: ^2.3.1
+        version: 2.3.1(typescript@5.9.3)
     devDependencies:
       '@types/node':
         specifier: ^25.0.3
@@ -535,10 +538,6 @@ packages:
     resolution: {integrity: sha512-shpCjeeK+hvZRl1d87DwAgbbjMe+ImY/aPBznNsaMZP/5Z+WEs2XXSsZ+YyryoGQqUqMd+TdTR4SA2zzKtGCYQ==}
     peerDependencies:
       '@mysten/sui': ^2.0.0
-
-  '@mysten/sui@2.2.0':
-    resolution: {integrity: sha512-HlhxdDKTPIECO+I1L2Eu42rLA4xnSCgEhOtq7ku07RbUcagq6yB0kVr/TdayRZXvM+v7uiI//unQBF6Oifi0Mg==}
-    engines: {node: '>=22'}
 
   '@mysten/sui@2.3.1':
     resolution: {integrity: sha512-EEDK/tvdhBn88ss7beqYtDPaWmE5wgvzcMAsKIPxCMjMpWgjJEUqd6mCAA5qz6WEAEtferSYYhQ2IybF3doskA==}
@@ -2810,28 +2809,6 @@ snapshots:
       '@mysten/sui': 2.3.1(typescript@5.9.3)
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
-
-  '@mysten/sui@2.2.0(typescript@5.9.3)':
-    dependencies:
-      '@graphql-typed-document-node/core': 3.2.0(graphql@16.12.0)
-      '@mysten/bcs': 2.0.1
-      '@mysten/utils': 0.3.0
-      '@noble/curves': 2.0.1
-      '@noble/hashes': 2.0.1
-      '@protobuf-ts/grpcweb-transport': 2.11.1
-      '@protobuf-ts/runtime': 2.11.1
-      '@protobuf-ts/runtime-rpc': 2.11.1
-      '@scure/base': 2.0.0
-      '@scure/bip32': 2.0.1
-      '@scure/bip39': 2.0.1
-      gql.tada: 1.9.0(graphql@16.12.0)(typescript@5.9.3)
-      graphql: 16.12.0
-      poseidon-lite: 0.2.1
-      valibot: 1.2.0(typescript@5.9.3)
-    transitivePeerDependencies:
-      - '@gql.tada/svelte-support'
-      - '@gql.tada/vue-support'
-      - typescript
 
   '@mysten/sui@2.3.1(typescript@5.9.3)':
     dependencies:

@@ -4,5 +4,5 @@
 		"noEmit": true,
 		"types": ["vitest/globals", "node"]
 	},
-	"include": ["src", "suites"]
+	"include": ["src", "suites", "../../../publish/src"]
 }

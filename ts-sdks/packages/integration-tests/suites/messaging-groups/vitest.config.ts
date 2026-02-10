@@ -17,5 +17,6 @@ export default defineProject({
 		include: ['./**/*.test.ts'],
 		testTimeout: 120_000,
 		hookTimeout: 120_000,
+		fileParallelism: false,
 	},
 });

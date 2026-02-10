@@ -23,6 +23,7 @@
   "dependencies": {
     "@mysten/messaging-groups": "workspace:*",
     "@mysten/permissioned-groups": "workspace:*",
-    "@mysten/sui": "^2.2.0"
+    "@mysten/seal": "^1.0.0",
+    "@mysten/sui": "^2.3.1"
   }
 }
