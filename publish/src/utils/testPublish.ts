@@ -1,4 +1,4 @@
-import type { SuiObjectChange } from "@mysten/sui/client";
+import type { SuiObjectChange } from "@mysten/sui/jsonRpc";
 
 export type BuildEnv = "localnet" | "devnet" | "testnet" | "mainnet";
 

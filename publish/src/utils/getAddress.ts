@@ -1,4 +1,4 @@
-import { getSigner } from "./getSigner";
+import { getSigner } from "./getSigner.js";
 
 /**
  * Returns the Sui address associated with the provided base64-encoded secret key.

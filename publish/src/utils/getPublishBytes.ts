@@ -1,4 +1,4 @@
-import { SuiClient } from "@mysten/sui/client";
+import { BaseClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
 import { resolve } from "node:path";
 
@@ -6,7 +6,7 @@ import { resolve } from "node:path";
  * Builds and returns the unsigned bytes for the transaction of publishing the Move package located at `packagePath`.
  *
  * @param packagePath - The relative file system path to the Move package to be published.
- * @param suiClient - An instance of SuiClient to interact with the Sui network.
+ * @param suiClient - An instance of BaseClient to interact with the Sui network.
  * @param sender - The Sui address of the sender who will publish the package.
  * @param exec - A function to execute shell commands, used to run `sui move build`. Provides flexibility for testing in custom execution environments (eg TestContainers).
  * @returns A Promise that resolves to a base64-encoded string representing the unsigned transaction bytes.
@@ -18,7 +18,7 @@ export const getPublishBytes = async ({
   exec,
 }: {
   packagePath: string;
-  suiClient: SuiClient;
+  suiClient: BaseClient;
   sender: string;
   exec: (command: string) => Promise<string>;
 }): Promise<string> => {

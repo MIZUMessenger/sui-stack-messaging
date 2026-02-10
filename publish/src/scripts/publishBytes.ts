@@ -1,6 +1,6 @@
-import { SuiClient } from "@mysten/sui/client";
-import { ENV } from "../env";
-import { getPublishBytes } from "../utils/getPublishBytes";
+import { SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
+import { ENV } from "../env.js";
+import { getPublishBytes } from "../utils/getPublishBytes.js";
 import { execSync } from "node:child_process";
 import * as fs from "fs";
 import path from "node:path";
@@ -16,9 +16,12 @@ export const publishBytes = async () => {
   if (!ENV.ADMIN_ADDRESS) {
     throw new Error("ADMIN_ADDRESS is not defined in the .env");
   }
-  const suiClient = new SuiClient({
+
+  const suiClient = new SuiJsonRpcClient({
     url: ENV.SUI_FULLNODE_URL,
+    network: ENV.SUI_NETWORK,
   });
+
   const unsignedBytes = await getPublishBytes({
     packagePath: ENV.MOVE_PACKAGE_PATH,
     suiClient,
