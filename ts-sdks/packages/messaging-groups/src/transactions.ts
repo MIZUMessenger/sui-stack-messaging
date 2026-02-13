@@ -8,7 +8,6 @@ import type {
 	CreateGroupCallOptions,
 	GrantAllMessagingPermissionsCallOptions,
 	GrantAllPermissionsCallOptions,
-	RemoveMemberCallOptions,
 	RotateEncryptionKeyCallOptions,
 } from './types.js';
 
@@ -20,7 +19,7 @@ export interface MessagingGroupsTransactionsOptions {
  * Transaction factory methods for messaging groups.
  *
  * Each method returns a complete Transaction object ready for signing.
- * Async thunks (from group creation, key rotation, member removal) are
+ * Async thunks (from group creation, key rotation) are
  * resolved at transaction `build()` time.
  *
  * @example
@@ -68,17 +67,6 @@ export class MessagingGroupsTransactions {
 	rotateEncryptionKey(options: RotateEncryptionKeyCallOptions): Transaction {
 		const tx = new Transaction();
 		tx.add(this.#call.rotateEncryptionKey(options));
-		return tx;
-	}
-
-	// === Member Management Functions ===
-
-	/**
-	 * Creates a Transaction that removes a member and rotates the encryption key.
-	 */
-	removeMember(options: RemoveMemberCallOptions): Transaction {
-		const tx = new Transaction();
-		tx.add(this.#call.removeMember(options));
 		return tx;
 	}
 

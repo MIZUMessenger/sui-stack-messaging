@@ -1,7 +1,6 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import type { PermissionedGroupsCall } from '@mysten/permissioned-groups';
 import type { Transaction, TransactionResult } from '@mysten/sui/transactions';
 
 import type { EnvelopeEncryption } from './encryption/envelope-encryption.js';
@@ -11,7 +10,6 @@ import type {
 	GrantAllMessagingPermissionsCallOptions,
 	GrantAllPermissionsCallOptions,
 	MessagingGroupsPackageConfig,
-	RemoveMemberCallOptions,
 	RotateEncryptionKeyCallOptions,
 } from './types.js';
 
@@ -19,13 +17,12 @@ export interface MessagingGroupsCallOptions {
 	packageConfig: MessagingGroupsPackageConfig;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Call only uses context-independent methods (generateGroupDEK, generateRotationDEK)
 	encryption: EnvelopeEncryption<any>;
-	groupsCall: PermissionedGroupsCall;
 }
 
 /**
  * Transaction building methods for messaging groups.
  *
- * Methods that involve encryption (group creation, key rotation, member removal)
+ * Methods that involve encryption (group creation, key rotation)
  * return async thunks that are resolved at transaction `build()` time.
  *
  * @example
@@ -40,12 +37,10 @@ export class MessagingGroupsCall {
 	#packageConfig: MessagingGroupsPackageConfig;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Call only uses context-independent methods (generateGroupDEK, generateRotationDEK)
 	#encryption: EnvelopeEncryption<any>;
-	#groupsCall: PermissionedGroupsCall;
 
 	constructor(options: MessagingGroupsCallOptions) {
 		this.#packageConfig = options.packageConfig;
 		this.#encryption = options.encryption;
-		this.#groupsCall = options.groupsCall;
 	}
 
 	// === Group Creation Functions ===
@@ -122,49 +117,6 @@ export class MessagingGroupsCall {
 				await this.#encryption.generateRotationDEK(options);
 
 			return tx.add(
-				messaging.rotateEncryptionKey({
-					package: this.#packageConfig.packageId,
-					arguments: {
-						encryptionHistory: encryptionHistoryId,
-						group: groupId,
-						newEncryptedDek: Array.from(encryptedDek),
-					},
-				}),
-			);
-		};
-	}
-
-	// === Member Management Functions ===
-
-	/**
-	 * Removes a member from the group and automatically rotates the encryption key.
-	 *
-	 * This is a composite operation:
-	 * 1. Removes the member via `permissioned_group::remove_member` (requires Administrator)
-	 * 2. Rotates the encryption key to prevent the removed member from decrypting future messages
-	 *
-	 * Messages encrypted with previous key versions remain accessible to anyone who
-	 * previously held the DEK — this is inherent to symmetric encryption.
-	 *
-	 * For manual control, use `client.groups.removeMember()` and
-	 * `client.messaging.call.rotateEncryptionKey()` separately.
-	 *
-	 * Accepts either explicit `groupId` + `encryptionHistoryId`, or a `uuid`
-	 * (which derives both IDs internally).
-	 */
-	removeMember(options: RemoveMemberCallOptions) {
-		return async (tx: Transaction) => {
-			const { encryptedDek, groupId, encryptionHistoryId } =
-				await this.#encryption.generateRotationDEK(options);
-
-			tx.add(
-				this.#groupsCall.removeMember({
-					groupId,
-					member: options.member,
-				}),
-			);
-
-			tx.add(
 				messaging.rotateEncryptionKey({
 					package: this.#packageConfig.packageId,
 					arguments: {

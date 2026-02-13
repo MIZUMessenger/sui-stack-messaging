@@ -157,7 +157,7 @@ export class EnvelopeEncryption<TApproveContext = void> {
 	 * Fetch the current key version, generate a new DEK for the next version,
 	 * and Seal-encrypt it.
 	 *
-	 * Used by `rotateEncryptionKey` and `removeMember`.
+	 * Used by `rotateEncryptionKey`.
 	 *
 	 * Accepts either explicit `groupId` + `encryptionHistoryId`, or a `uuid`
 	 * (which derives both IDs internally).

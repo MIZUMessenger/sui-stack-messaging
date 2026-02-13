@@ -382,7 +382,7 @@ describe('Full Flows', () => {
 	});
 
 	describe('member removal', () => {
-		it('should auto-rotate key on member removal and deny removed member', async () => {
+		it('should remove member via groups extension and deny removed member on current key', async () => {
 			const uuid = crypto.randomUUID();
 
 			await adminClient.messaging.createAndShareGroup({
@@ -420,24 +420,20 @@ describe('Full Flows', () => {
 			});
 			expect(preRemovalEnvelope.keyVersion).toBe(0n);
 
-			const versionBefore = await adminClient.messaging.view.getCurrentKeyVersion({
-				uuid,
-			});
-			expect(versionBefore).toBe(0n);
-
-			// Remove member (auto-rotates to v1)
-			await adminClient.messaging.removeMember({
+			// Remove member via the groups extension (no automatic key rotation)
+			await adminClient.groups.removeMember({
 				signer: adminKeypair,
-				uuid,
+				groupId,
 				member: memberAddress,
 			});
 
+			// Key version should remain at 0 (no automatic rotation)
 			const versionAfter = await adminClient.messaging.view.getCurrentKeyVersion({
 				uuid,
 			});
-			expect(versionAfter).toBe(1n);
+			expect(versionAfter).toBe(0n);
 
-			// Removed member should be denied on v1
+			// Removed member should be denied on v0 (seal_approve checks membership)
 			const removedMemberClient = createMessagingGroupsClient({
 				...clientConfig,
 				url: clientConfig.suiClientUrl,
@@ -449,16 +445,16 @@ describe('Full Flows', () => {
 				removedMemberClient.messaging.encryption.encrypt({
 					groupId,
 					encryptionHistoryId,
-					keyVersion: 1n,
+					keyVersion: 0n,
 					data: new TextEncoder().encode('should fail'),
 				}),
 			).rejects.toThrow(/seal_approve/);
 
-			// Admin should still succeed on v1
+			// Admin should still succeed on v0
 			const postRemovalEnvelope = await adminClient.messaging.encryption.encrypt({
 				groupId,
 				encryptionHistoryId,
-				keyVersion: 1n,
+				keyVersion: 0n,
 				data: new TextEncoder().encode('after removal'),
 			});
 

@@ -1,7 +1,6 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import type { PermissionedGroupsClient } from '@mysten/permissioned-groups';
 import type { SealClient } from '@mysten/seal';
 import type { Signer } from '@mysten/sui/cryptography';
 import type { ClientWithCoreApi } from '@mysten/sui/client';
@@ -21,7 +20,6 @@ import type {
 	MessagingGroupsCompatibleClient,
 	MessagingGroupsEncryptionOptions,
 	MessagingGroupsPackageConfig,
-	RemoveMemberOptions,
 	RotateEncryptionKeyOptions,
 } from './types.js';
 import { MessagingGroupsCall } from './call.js';
@@ -103,15 +101,7 @@ export function messagingGroups<
  *   uuid: 'my-group-uuid',
  * });
  *
- * // Remove member + auto-rotate encryption key
- * await client.messaging.removeMember({
- *   signer,
- *   groupId: '0x...',
- *   encryptionHistoryId: '0x...',
- *   member: '0x...',
- * });
- *
- * // For fine-grained permissions, use the groups extension:
+ * // For member removal and fine-grained permissions, use the groups extension:
  * await client.groups.grantPermission({
  *   signer,
  *   groupId: '0x...',
@@ -157,7 +147,6 @@ export class MessagingGroupsClient<TApproveContext = void> {
 		}
 
 		// Resolve extension dependencies by their registered names
-		const groupsExt = options.client[options.groupsName] as PermissionedGroupsClient;
 		const sealExt = options.client[options.sealName] as SealClient;
 
 		// Build order matters: bcs → derive → view → encryption → call → tx
@@ -180,7 +169,6 @@ export class MessagingGroupsClient<TApproveContext = void> {
 		this.call = new MessagingGroupsCall({
 			packageConfig: this.#packageConfig,
 			encryption: this.encryption,
-			groupsCall: groupsExt.call,
 		});
 		this.tx = new MessagingGroupsTransactions({
 			call: this.call,
@@ -248,22 +236,6 @@ export class MessagingGroupsClient<TApproveContext = void> {
 		const { signer, ...callOptions } = options;
 		const transaction = this.tx.rotateEncryptionKey(callOptions);
 		return this.#executeTransaction(transaction, signer, 'rotate encryption key');
-	}
-
-	/**
-	 * Removes a member and automatically rotates the encryption key.
-	 *
-	 * This ensures the removed member cannot decrypt messages sent after removal.
-	 * Messages encrypted with previous key versions remain accessible to anyone
-	 * who previously held the DEK.
-	 *
-	 * For manual control over these steps, use `client.groups.removeMember()` and
-	 * `client.messaging.call.rotateEncryptionKey()` separately.
-	 */
-	async removeMember(options: RemoveMemberOptions) {
-		const { signer, ...callOptions } = options;
-		const transaction = this.tx.removeMember(callOptions);
-		return this.#executeTransaction(transaction, signer, 'remove member');
 	}
 
 	/**

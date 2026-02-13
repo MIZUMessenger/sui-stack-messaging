@@ -140,28 +140,6 @@ export interface CreateGroupCallOptions {
  */
 export type RotateEncryptionKeyCallOptions = GroupRef;
 
-/**
- * Options for removing a member from an encrypted messaging group.
- *
- * This is a composite operation that:
- * 1. Removes the member from the PermissionedGroup (revoking all permissions)
- * 2. Automatically rotates the encryption key
- *
- * The key rotation ensures the removed member cannot decrypt messages sent after removal.
- * Messages encrypted with previous key versions remain accessible to anyone who previously
- * held the DEK (this is inherent — the removed member may have cached it locally).
- *
- * For manual control over these steps, use `client.groups.removeMember()` and
- * `client.messaging.call.rotateEncryptionKey()` separately.
- *
- * Accepts either explicit `groupId` + `encryptionHistoryId`, or a `uuid`
- * (which derives both IDs internally).
- */
-export type RemoveMemberCallOptions = GroupRef & {
-	/** Address of the member to remove. */
-	member: string;
-};
-
 /** Options for granting all messaging permissions to a member */
 export interface GrantAllMessagingPermissionsCallOptions {
 	/** Object ID or TransactionArgument for the PermissionedGroup<Messaging> */
@@ -203,12 +181,6 @@ export interface GrantAllPermissionsOptions extends GrantAllPermissionsCallOptio
 	/** Signer to execute the transaction */
 	signer: Signer;
 }
-
-/** Options for removing a member (imperative) */
-export type RemoveMemberOptions = RemoveMemberCallOptions & {
-	/** Signer to execute the transaction */
-	signer: Signer;
-};
 
 // === Shared Reference Types ===
 
