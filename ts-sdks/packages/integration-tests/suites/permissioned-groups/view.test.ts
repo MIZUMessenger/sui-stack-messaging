@@ -4,6 +4,7 @@
 import { describe, it, expect, inject, beforeAll } from 'vitest';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { requestSuiFromFaucetV2 } from '@mysten/sui/faucet';
+import { permissionTypes } from '@mysten/permissioned-groups';
 
 import { createPermissionedGroupsClient } from '../../src/helpers/index.js';
 
@@ -92,25 +93,21 @@ describe('PermissionedGroupsView', () => {
 	});
 
 	describe('hasPermission', () => {
-		it('should return true for Administrator permission on creator', async () => {
-			const administratorType = `${packageId}::permissioned_group::Administrator`;
-
+		it('should return true for PermissionsAdmin permission on creator', async () => {
 			const result = await suiClient.groups.view.hasPermission({
 				groupId,
 				member: adminAddress,
-				permissionType: administratorType,
+				permissionType: permissionTypes(packageId).PermissionsAdmin,
 			});
 
 			expect(result).toBe(true);
 		});
 
-		it('should return true for ExtensionPermissionsManager permission on creator', async () => {
-			const extensionPermissionsManagerType = `${packageId}::permissioned_group::ExtensionPermissionsManager`;
-
+		it('should return true for ExtensionPermissionsAdmin permission on creator', async () => {
 			const result = await suiClient.groups.view.hasPermission({
 				groupId,
 				member: adminAddress,
-				permissionType: extensionPermissionsManagerType,
+				permissionType: permissionTypes(packageId).ExtensionPermissionsAdmin,
 			});
 
 			expect(result).toBe(true);
@@ -132,12 +129,11 @@ describe('PermissionedGroupsView', () => {
 		it('should return false for a non-member address', async () => {
 			const randomKeypair = new Ed25519Keypair();
 			const randomAddress = randomKeypair.getPublicKey().toSuiAddress();
-			const administratorType = `${packageId}::permissioned_group::Administrator`;
 
 			const result = await suiClient.groups.view.hasPermission({
 				groupId,
 				member: randomAddress,
-				permissionType: administratorType,
+				permissionType: permissionTypes(packageId).PermissionsAdmin,
 			});
 
 			expect(result).toBe(false);
@@ -160,11 +156,11 @@ describe('PermissionedGroupsView', () => {
 				recipient: newMemberAddress,
 			});
 
-			// Grant Administrator permission to the new member using the client
+			// Grant PermissionsAdmin permission to the new member using the client
 			await suiClient.groups.grantPermission({
 				groupId,
 				member: newMemberAddress,
-				permissionType: `${packageId}::permissioned_group::Administrator`,
+				permissionType: permissionTypes(packageId).PermissionsAdmin,
 				signer: adminKeypair,
 			});
 		});
@@ -179,25 +175,21 @@ describe('PermissionedGroupsView', () => {
 		});
 
 		it('should return true for hasPermission on granted permission', async () => {
-			const administratorType = `${packageId}::permissioned_group::Administrator`;
-
 			const result = await suiClient.groups.view.hasPermission({
 				groupId,
 				member: newMemberAddress,
-				permissionType: administratorType,
+				permissionType: permissionTypes(packageId).PermissionsAdmin,
 			});
 
 			expect(result).toBe(true);
 		});
 
 		it('should return false for hasPermission on non-granted permission', async () => {
-			// The new member has Administrator but not ExtensionPermissionsManager
-			const extensionPermissionsManagerType = `${packageId}::permissioned_group::ExtensionPermissionsManager`;
-
+			// The new member has PermissionsAdmin but not ExtensionPermissionsAdmin
 			const result = await suiClient.groups.view.hasPermission({
 				groupId,
 				member: newMemberAddress,
-				permissionType: extensionPermissionsManagerType,
+				permissionType: permissionTypes(packageId).ExtensionPermissionsAdmin,
 			});
 
 			expect(result).toBe(false);

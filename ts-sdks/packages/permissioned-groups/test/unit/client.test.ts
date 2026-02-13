@@ -145,7 +145,7 @@ describe('PermissionedGroupsClient', () => {
 				packageConfig: customConfig,
 			});
 
-			expect(client.bcs.Administrator.name).toContain(customConfig.packageId);
+			expect(client.bcs.PermissionsAdmin.name).toContain(customConfig.packageId);
 		});
 	});
 });
@@ -188,7 +188,7 @@ describe('permissionedGroups factory + $extend', () => {
 			}),
 		);
 
-		expect(client.groups.bcs.Administrator.name).toContain(MOCK_PACKAGE_CONFIG.packageId);
+		expect(client.groups.bcs.PermissionsAdmin.name).toContain(MOCK_PACKAGE_CONFIG.packageId);
 		expect(client.groups.bcs.PermissionedGroup.name).toContain(VALID_WITNESS_TYPE);
 	});
 });

@@ -4,6 +4,7 @@
 import { describe, it, expect, inject, beforeAll } from 'vitest';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { requestSuiFromFaucetV2 } from '@mysten/sui/faucet';
+import { permissionTypes } from '@mysten/permissioned-groups';
 
 import { createPermissionedGroupsClient } from '../../src/helpers/index.js';
 
@@ -82,9 +83,10 @@ describe('Full Flows', () => {
 			const memberAddress = memberKeypair.getPublicKey().toSuiAddress();
 			await requestSuiFromFaucetV2({ host: faucetUrl, recipient: memberAddress });
 
-			const permissionType = client.groups.bcs.Administrator.name;
+			const packageId = inject('publishedPackages')['permissioned-groups'].packageId;
+			const permissionType = permissionTypes(packageId).PermissionsAdmin;
 
-			// Grant Administrator to the new member
+			// Grant PermissionsAdmin to the new member
 			await client.groups.grantPermission({
 				groupId,
 				member: memberAddress,
@@ -124,7 +126,8 @@ describe('Full Flows', () => {
 			const memberAddress = memberKeypair.getPublicKey().toSuiAddress();
 			await requestSuiFromFaucetV2({ host: faucetUrl, recipient: memberAddress });
 
-			const permissionType = client.groups.bcs.Administrator.name;
+			const packageId = inject('publishedPackages')['permissioned-groups'].packageId;
+			const permissionType = permissionTypes(packageId).PermissionsAdmin;
 
 			await client.groups.grantPermission({
 				groupId,
@@ -133,9 +136,7 @@ describe('Full Flows', () => {
 				signer: adminKeypair,
 			});
 
-			expect(
-				await client.groups.view.isMember({ groupId, member: memberAddress }),
-			).toBe(true);
+			expect(await client.groups.view.isMember({ groupId, member: memberAddress })).toBe(true);
 
 			// Revoke the only permission — member should be auto-removed
 			await client.groups.revokePermission({
@@ -145,9 +146,40 @@ describe('Full Flows', () => {
 				signer: adminKeypair,
 			});
 
-			expect(
-				await client.groups.view.isMember({ groupId, member: memberAddress }),
-			).toBe(false);
+			expect(await client.groups.view.isMember({ groupId, member: memberAddress })).toBe(false);
+		});
+	});
+
+	describe('self leave', () => {
+		it('should allow a member with SelfLeave permission to leave the group', async () => {
+			const groupId = await createAndShareGroup();
+
+			const memberKeypair = new Ed25519Keypair();
+			const memberAddress = memberKeypair.getPublicKey().toSuiAddress();
+			await requestSuiFromFaucetV2({ host: faucetUrl, recipient: memberAddress });
+
+			const packageId = inject('publishedPackages')['permissioned-groups'].packageId;
+
+			// Grant SelfLeave + PermissionsAdmin so the member is in the group
+			await client.groups.grantPermissions({
+				groupId,
+				member: memberAddress,
+				permissionTypes: [
+					permissionTypes(packageId).SelfLeave,
+					permissionTypes(packageId).PermissionsAdmin,
+				],
+				signer: adminKeypair,
+			});
+
+			expect(await client.groups.view.isMember({ groupId, member: memberAddress })).toBe(true);
+
+			// Member leaves the group using their own signer
+			await client.groups.leave({
+				groupId,
+				signer: memberKeypair,
+			});
+
+			expect(await client.groups.view.isMember({ groupId, member: memberAddress })).toBe(false);
 		});
 	});
 
@@ -159,16 +191,15 @@ describe('Full Flows', () => {
 			const memberAddress = memberKeypair.getPublicKey().toSuiAddress();
 			await requestSuiFromFaucetV2({ host: faucetUrl, recipient: memberAddress });
 
+			const packageId = inject('publishedPackages')['permissioned-groups'].packageId;
 			await client.groups.grantPermission({
 				groupId,
 				member: memberAddress,
-				permissionType: client.groups.bcs.Administrator.name,
+				permissionType: permissionTypes(packageId).PermissionsAdmin,
 				signer: adminKeypair,
 			});
 
-			expect(
-				await client.groups.view.isMember({ groupId, member: memberAddress }),
-			).toBe(true);
+			expect(await client.groups.view.isMember({ groupId, member: memberAddress })).toBe(true);
 
 			await client.groups.removeMember({
 				groupId,
@@ -176,9 +207,7 @@ describe('Full Flows', () => {
 				signer: adminKeypair,
 			});
 
-			expect(
-				await client.groups.view.isMember({ groupId, member: memberAddress }),
-			).toBe(false);
+			expect(await client.groups.view.isMember({ groupId, member: memberAddress })).toBe(false);
 		});
 	});
 });

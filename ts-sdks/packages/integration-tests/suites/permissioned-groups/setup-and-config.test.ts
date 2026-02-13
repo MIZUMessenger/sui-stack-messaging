@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, it, expect, inject } from 'vitest';
+import { permissionTypes } from '@mysten/permissioned-groups';
 
-import {
-	createSuiClient,
-	createPermissionedGroupsClient,
-} from '../../src/helpers/index.js';
+import { createSuiClient, createPermissionedGroupsClient } from '../../src/helpers/index.js';
 
 describe('permissioned-groups: Setup & Configuration', () => {
 	it('should have published the packages', () => {
@@ -80,8 +78,8 @@ describe('permissioned-groups: Setup & Configuration', () => {
 		expect(client.groups.bcs.PermissionedGroup.name).toBe(
 			`${packageId}::permissioned_group::PermissionedGroup<${witnessType}>`,
 		);
-		expect(client.groups.bcs.Administrator.name).toBe(
-			`${packageId}::permissioned_group::Administrator`,
+		expect(client.groups.bcs.PermissionsAdmin.name).toBe(
+			permissionTypes(packageId).PermissionsAdmin,
 		);
 		expect(client.groups.bcs.MemberAdded.name).toBe(
 			`${packageId}::permissioned_group::MemberAdded<${witnessType}>`,

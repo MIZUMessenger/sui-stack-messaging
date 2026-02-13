@@ -19,16 +19,28 @@ function createBCS() {
 
 describe('PermissionedGroupsBCS', () => {
 	describe('type name scoping', () => {
-		it('should scope Administrator type name with package ID', () => {
+		it('should scope PermissionsAdmin type name with package ID', () => {
 			const bcsTypes = createBCS();
-			expect(bcsTypes.Administrator.name).toContain(MOCK_PACKAGE_ID);
-			expect(bcsTypes.Administrator.name).not.toContain(LOCAL_PACKAGE_ALIAS);
+			expect(bcsTypes.PermissionsAdmin.name).toContain(MOCK_PACKAGE_ID);
+			expect(bcsTypes.PermissionsAdmin.name).not.toContain(LOCAL_PACKAGE_ALIAS);
 		});
 
-		it('should scope ExtensionPermissionsManager type name with package ID', () => {
+		it('should scope ExtensionPermissionsAdmin type name with package ID', () => {
 			const bcsTypes = createBCS();
-			expect(bcsTypes.ExtensionPermissionsManager.name).toContain(MOCK_PACKAGE_ID);
-			expect(bcsTypes.ExtensionPermissionsManager.name).not.toContain(LOCAL_PACKAGE_ALIAS);
+			expect(bcsTypes.ExtensionPermissionsAdmin.name).toContain(MOCK_PACKAGE_ID);
+			expect(bcsTypes.ExtensionPermissionsAdmin.name).not.toContain(LOCAL_PACKAGE_ALIAS);
+		});
+
+		it('should scope UIDAccessor type name with package ID', () => {
+			const bcsTypes = createBCS();
+			expect(bcsTypes.UIDAccessor.name).toContain(MOCK_PACKAGE_ID);
+			expect(bcsTypes.UIDAccessor.name).not.toContain(LOCAL_PACKAGE_ALIAS);
+		});
+
+		it('should scope SelfLeave type name with package ID', () => {
+			const bcsTypes = createBCS();
+			expect(bcsTypes.SelfLeave.name).toContain(MOCK_PACKAGE_ID);
+			expect(bcsTypes.SelfLeave.name).not.toContain(LOCAL_PACKAGE_ALIAS);
 		});
 
 		it('should scope PermissionedGroup type name with package ID and witness type', () => {
@@ -57,8 +69,10 @@ describe('PermissionedGroupsBCS', () => {
 			const bcsTypes = createBCS();
 
 			const allTypes = [
-				bcsTypes.Administrator,
-				bcsTypes.ExtensionPermissionsManager,
+				bcsTypes.PermissionsAdmin,
+				bcsTypes.ExtensionPermissionsAdmin,
+				bcsTypes.UIDAccessor,
+				bcsTypes.SelfLeave,
 				bcsTypes.PermissionedGroup,
 				bcsTypes.GroupCreated,
 				bcsTypes.MemberAdded,

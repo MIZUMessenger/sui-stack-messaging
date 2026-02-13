@@ -34,8 +34,6 @@ const TEST_UUID_5: vector<u8> = b"550e8400-e29b-41d4-a716-446655440004";
 const TEST_UUID_6: vector<u8> = b"550e8400-e29b-41d4-a716-446655440005";
 const TEST_UUID_7: vector<u8> = b"550e8400-e29b-41d4-a716-446655440006";
 const TEST_UUID_8: vector<u8> = b"550e8400-e29b-41d4-a716-446655440007";
-const TEST_UUID_9: vector<u8> = b"550e8400-e29b-41d4-a716-446655440008";
-const TEST_UUID_10: vector<u8> = b"550e8400-e29b-41d4-a716-446655440009";
 
 // === create_group tests ===
 
@@ -211,7 +209,7 @@ fun create_and_share_group_creates_shared_objects() {
         &mut namespace,
         string::utf8(TEST_UUID_5),
         TEST_ENCRYPTED_DEK,
-        vec_set::empty(),
+        vector[],
         ts.ctx(),
     );
     ts::return_shared(namespace);
@@ -312,89 +310,6 @@ fun rotate_encryption_key_without_permission_fails() {
     abort
 }
 
-// === grant_all_messaging_permissions tests ===
-
-#[test]
-fun grant_all_messaging_permissions_grants_all() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    messaging::init_for_testing(ts.ctx());
-
-    ts.next_tx(ALICE);
-    let mut namespace = ts.take_shared<MessagingNamespace>();
-    let (mut group, encryption_history) = messaging::create_group(
-        &mut namespace,
-        string::utf8(TEST_UUID_8),
-        TEST_ENCRYPTED_DEK,
-        vec_set::empty(),
-        ts.ctx(),
-    );
-
-    // Grant Bob all messaging permissions
-    messaging::grant_all_messaging_permissions(&mut group, BOB, ts.ctx());
-
-    // Verify Bob has all messaging permissions
-    assert!(group.has_permission<Messaging, MessagingSender>(BOB));
-    assert!(group.has_permission<Messaging, MessagingReader>(BOB));
-    assert!(group.has_permission<Messaging, MessagingEditor>(BOB));
-    assert!(group.has_permission<Messaging, MessagingDeleter>(BOB));
-    assert!(group.has_permission<Messaging, EncryptionKeyRotator>(BOB));
-
-    // Verify Bob does NOT have core permissions
-    assert!(!group.has_permission<Messaging, PermissionsAdmin>(BOB));
-    assert!(!group.has_permission<Messaging, ExtensionPermissionsAdmin>(BOB));
-
-    ts::return_shared(namespace);
-    destroy(group);
-    destroy(encryption_history);
-    ts.end();
-}
-
-// === grant_all_permissions tests ===
-
-#[test]
-fun grant_all_permissions_grants_base_and_messaging() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    messaging::init_for_testing(ts.ctx());
-
-    ts.next_tx(ALICE);
-    let mut namespace = ts.take_shared<MessagingNamespace>();
-    let (mut group, encryption_history) = messaging::create_group(
-        &mut namespace,
-        string::utf8(TEST_UUID_9),
-        TEST_ENCRYPTED_DEK,
-        vec_set::empty(),
-        ts.ctx(),
-    );
-
-    assert_eq!(group.permissions_admin_count<Messaging>(), 1);
-
-    // Grant Bob all permissions (admin)
-    messaging::grant_all_permissions(&mut group, BOB, ts.ctx());
-
-    // Verify Bob has all messaging permissions
-    assert!(group.has_permission<Messaging, MessagingSender>(BOB));
-    assert!(group.has_permission<Messaging, MessagingReader>(BOB));
-    assert!(group.has_permission<Messaging, MessagingEditor>(BOB));
-    assert!(group.has_permission<Messaging, MessagingDeleter>(BOB));
-    assert!(group.has_permission<Messaging, EncryptionKeyRotator>(BOB));
-
-    // Verify Bob has core permissions
-    assert!(group.has_permission<Messaging, PermissionsAdmin>(BOB));
-    assert!(group.has_permission<Messaging, ExtensionPermissionsAdmin>(BOB));
-
-    // Verify administrators count incremented
-    assert_eq!(group.permissions_admin_count<Messaging>(), 2);
-
-    ts::return_shared(namespace);
-    destroy(group);
-    destroy(encryption_history);
-    ts.end();
-}
-
 // === EncryptionHistory getters tests ===
 
 #[test]
@@ -408,7 +323,7 @@ fun encryption_history_encrypted_key_returns_correct_version() {
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let (group, encryption_history) = messaging::create_group(
         &mut namespace,
-        string::utf8(TEST_UUID_10),
+        string::utf8(TEST_UUID_8),
         TEST_ENCRYPTED_DEK,
         vec_set::empty(),
         ts.ctx(),

@@ -335,6 +335,20 @@ public fun object_remove_member<T: drop>(
     });
 }
 
+/// Allows the sender to leave the group. Requires `SelfLeave` permission.
+/// Removes all permissions atomically. Prevented if sender is the last PermissionsAdmin.
+public fun leave<T: drop>(self: &mut PermissionedGroup<T>, ctx: &TxContext) {
+    let member = ctx.sender();
+    assert!(self.has_permission<T, SelfLeave>(member), ENotPermitted);
+    self.safe_decrement_permissions_admin_count(member);
+    self.permissions.remove_member(member);
+
+    event::emit(MemberRemoved<T> {
+        group_id: object::id(self),
+        member,
+    });
+}
+
 /// Revokes a permission from a member.
 /// If this is the member's last permission, they are automatically removed from the group.
 /// Emits `PermissionsRevoked` and potentially `MemberRemoved` events.
@@ -478,22 +492,6 @@ public fun object_uid_mut<T: drop>(self: &mut PermissionedGroup<T>, actor_object
     &mut self.id
 }
 
-// === Leave Function ===
-
-/// Allows the sender to leave the group. Requires `SelfLeave` permission.
-/// Removes all permissions atomically. Prevented if sender is the last PermissionsAdmin.
-public fun leave<T: drop>(self: &mut PermissionedGroup<T>, ctx: &TxContext) {
-    let member = ctx.sender();
-    assert!(self.has_permission<T, SelfLeave>(member), ENotPermitted);
-    self.safe_decrement_permissions_admin_count(member);
-    self.permissions.remove_member(member);
-
-    event::emit(MemberRemoved<T> {
-        group_id: object::id(self),
-        member,
-    });
-}
-
 /// Returns the number of `PermissionsAdmin`s in the PermissionedGroup.
 ///
 /// # Parameters
@@ -531,8 +529,13 @@ fun assert_can_manage_permission<T: drop, Permission: drop>(
 /// Decrements permissions_admin_count if member has `PermissionsAdmin`.
 /// Used when revoking `PermissionsAdmin` permission or removing a member.
 /// Aborts if this would leave no PermissionsAdmins.
-fun safe_decrement_permissions_admin_count<T: drop>(self: &mut PermissionedGroup<T>, member: address) {
-    if (self.permissions.has_permission(member, &type_name::with_defining_ids<PermissionsAdmin>())) {
+fun safe_decrement_permissions_admin_count<T: drop>(
+    self: &mut PermissionedGroup<T>,
+    member: address,
+) {
+    if (
+        self.permissions.has_permission(member, &type_name::with_defining_ids<PermissionsAdmin>())
+    ) {
         assert!(self.permissions_admin_count > 1, ELastPermissionsAdmin);
         self.permissions_admin_count = self.permissions_admin_count - 1;
     };

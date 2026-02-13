@@ -68,11 +68,7 @@ describe('DefaultSealPolicy', () => {
 		it('should return a Transaction thunk', () => {
 			const policy = new DefaultSealPolicy(MOCK_PACKAGE_ID);
 			const identityBytes = DefaultSealPolicy.encodeIdentity(MOCK_GROUP_ID, 0n);
-			const thunk = policy.sealApproveThunk(
-				identityBytes,
-				MOCK_GROUP_ID,
-				'0x' + 'ee'.repeat(32),
-			);
+			const thunk = policy.sealApproveThunk(identityBytes, MOCK_GROUP_ID, '0x' + 'ee'.repeat(32));
 
 			const tx = new Transaction();
 			const result = tx.add(thunk);

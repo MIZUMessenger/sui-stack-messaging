@@ -185,9 +185,7 @@ export async function publishPackages({
 
 	// Match each config to the correct dependency using its moduleName field.
 	for (const depConfig of dependencyConfigs) {
-		const match = depInfos.find((info) =>
-			info.modules.some((m) => m === depConfig.moduleName),
-		);
+		const match = depInfos.find((info) => info.modules.some((m) => m === depConfig.moduleName));
 
 		if (!match) {
 			console.warn(

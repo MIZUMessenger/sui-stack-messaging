@@ -5,7 +5,7 @@ import { describe, it, expect, inject, beforeAll } from 'vitest';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { requestSuiFromFaucetV2 } from '@mysten/sui/faucet';
 import { Transaction } from '@mysten/sui/transactions';
-import type { SealPolicy } from '@mysten/messaging-groups';
+import { messagingPermissionTypes, type SealPolicy } from '@mysten/messaging-groups';
 
 import {
 	createMessagingGroupsClient,
@@ -141,9 +141,7 @@ describe('Custom SealPolicy — Subscription-Gated Encryption', () => {
 		const createServiceTxResult =
 			createServiceResult.Transaction ?? createServiceResult.FailedTransaction;
 		if (!createServiceTxResult?.status.success) {
-			throw new Error(
-				`Failed to create service: ${JSON.stringify(createServiceTxResult?.status)}`,
-			);
+			throw new Error(`Failed to create service: ${JSON.stringify(createServiceTxResult?.status)}`);
 		}
 
 		await defaultAdminClient.core.waitForTransaction({ result: createServiceResult });
@@ -166,10 +164,11 @@ describe('Custom SealPolicy — Subscription-Gated Encryption', () => {
 		const subscriberKeypair = await fundNewKeypair(faucetUrl);
 		const subscriberAddress = subscriberKeypair.getPublicKey().toSuiAddress();
 
-		await defaultAdminClient.messaging.grantAllMessagingPermissions({
+		await defaultAdminClient.groups.grantPermissions({
 			signer: adminKeypair,
 			groupId,
 			member: subscriberAddress,
+			permissionTypes: Object.values(messagingPermissionTypes(clientConfig.messagingPackageId)),
 		});
 
 		// Subscribe using entry function (creates + transfers to sender in one call)
@@ -193,12 +192,9 @@ describe('Custom SealPolicy — Subscription-Gated Encryption', () => {
 			include: { effects: true, objectTypes: true },
 		});
 
-		const subscribeTxResult =
-			subscribeResult.Transaction ?? subscribeResult.FailedTransaction;
+		const subscribeTxResult = subscribeResult.Transaction ?? subscribeResult.FailedTransaction;
 		if (!subscribeTxResult?.status.success) {
-			throw new Error(
-				`Failed to subscribe: ${JSON.stringify(subscribeTxResult?.status)}`,
-			);
+			throw new Error(`Failed to subscribe: ${JSON.stringify(subscribeTxResult?.status)}`);
 		}
 
 		await defaultAdminClient.core.waitForTransaction({ result: subscribeResult });
@@ -260,10 +256,11 @@ describe('Custom SealPolicy — Subscription-Gated Encryption', () => {
 		const outsiderKeypair = await fundNewKeypair(faucetUrl);
 		const outsiderAddress = outsiderKeypair.getPublicKey().toSuiAddress();
 
-		await defaultAdminClient.messaging.grantAllMessagingPermissions({
+		await defaultAdminClient.groups.grantPermissions({
 			signer: adminKeypair,
 			groupId,
 			member: outsiderAddress,
+			permissionTypes: Object.values(messagingPermissionTypes(clientConfig.messagingPackageId)),
 		});
 
 		const sealPolicy = createSubscriptionSealPolicy(exampleAppPackageId);
@@ -317,12 +314,9 @@ describe('Custom SealPolicy — Subscription-Gated Encryption', () => {
 			include: { effects: true, objectTypes: true },
 		});
 
-		const subscribeTxResult =
-			subscribeResult.Transaction ?? subscribeResult.FailedTransaction;
+		const subscribeTxResult = subscribeResult.Transaction ?? subscribeResult.FailedTransaction;
 		if (!subscribeTxResult?.status.success) {
-			throw new Error(
-				`Failed to subscribe outsider: ${JSON.stringify(subscribeTxResult?.status)}`,
-			);
+			throw new Error(`Failed to subscribe outsider: ${JSON.stringify(subscribeTxResult?.status)}`);
 		}
 
 		await defaultAdminClient.core.waitForTransaction({ result: subscribeResult });

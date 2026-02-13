@@ -298,28 +298,25 @@ export class EnvelopeEncryption<TApproveContext = void> {
 	// === Private: DEK Resolution ===
 
 	async #resolveDEK(options: DEKResolutionOptions<TApproveContext>): Promise<Uint8Array> {
-		return this.#dekCache.read(
-			[options.groupId, options.keyVersion.toString()],
-			async () => {
-				const encryptedDek = await this.#view.encryptedKey({
-					encryptionHistoryId: options.encryptionHistoryId,
-					version: options.keyVersion,
-				});
+		return this.#dekCache.read([options.groupId, options.keyVersion.toString()], async () => {
+			const encryptedDek = await this.#view.encryptedKey({
+				encryptionHistoryId: options.encryptionHistoryId,
+				version: options.keyVersion,
+			});
 
-				const txBytes = await this.#buildSealApproveBytes({
-					encryptedDek,
-					groupId: options.groupId,
-					encryptionHistoryId: options.encryptionHistoryId,
-					sealApproveContext: options.sealApproveContext,
-				});
+			const txBytes = await this.#buildSealApproveBytes({
+				encryptedDek,
+				groupId: options.groupId,
+				encryptionHistoryId: options.encryptionHistoryId,
+				sealApproveContext: options.sealApproveContext,
+			});
 
-				return this.#dekManager.decryptDEK({
-					encryptedDek,
-					sessionKey: options.sessionKey,
-					txBytes,
-				});
-			},
-		);
+			return this.#dekManager.decryptDEK({
+				encryptedDek,
+				sessionKey: options.sessionKey,
+				txBytes,
+			});
+		});
 	}
 
 	#putDEK(groupId: string, keyVersion: bigint, dek: Uint8Array): void {

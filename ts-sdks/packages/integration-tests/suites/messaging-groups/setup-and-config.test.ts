@@ -76,9 +76,7 @@ describe('messaging-groups: Setup & Configuration', () => {
 			keypair: new Ed25519Keypair(),
 		});
 
-		expect(client.messaging.bcs.Messaging.name).toBe(
-			`${messagingPackageId}::messaging::Messaging`,
-		);
+		expect(client.messaging.bcs.Messaging.name).toBe(`${messagingPackageId}::messaging::Messaging`);
 		expect(client.messaging.bcs.MessagingNamespace.name).toBe(
 			`${messagingPackageId}::messaging::MessagingNamespace`,
 		);

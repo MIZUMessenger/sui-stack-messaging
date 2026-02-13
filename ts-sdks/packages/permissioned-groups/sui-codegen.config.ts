@@ -5,7 +5,7 @@ import type { SuiCodegenConfig } from '@mysten/codegen';
 
 const config: SuiCodegenConfig = {
 	output: './src/contracts',
-	generateSummaries: false,
+	generateSummaries: true,
 	prune: true,
 	includePhantomTypeParameters: true,
 	packages: [

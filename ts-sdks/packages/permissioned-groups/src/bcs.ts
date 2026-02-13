@@ -6,8 +6,10 @@ import { bcs, type BcsType } from '@mysten/sui/bcs';
 import type { PermissionedGroupsPackageConfig } from './types.js';
 
 import {
-	Administrator,
-	ExtensionPermissionsManager,
+	PermissionsAdmin,
+	ExtensionPermissionsAdmin,
+	UIDAccessor,
+	SelfLeave,
 	GroupCreated,
 	GroupDerived,
 	MemberAdded,
@@ -18,8 +20,10 @@ import {
 } from './contracts/permissioned_groups/permissioned_group.js';
 
 export type ParsedPermissionedGroup = ReturnType<typeof PermissionedGroup>['$inferType'];
-export type ParsedAdministrator = (typeof Administrator)['$inferType'];
-export type ParsedExtensionPermissionsManager = (typeof ExtensionPermissionsManager)['$inferType'];
+export type ParsedPermissionsAdmin = (typeof PermissionsAdmin)['$inferType'];
+export type ParsedExtensionPermissionsAdmin = (typeof ExtensionPermissionsAdmin)['$inferType'];
+export type ParsedUIDAccessor = (typeof UIDAccessor)['$inferType'];
+export type ParsedSelfLeave = (typeof SelfLeave)['$inferType'];
 export type ParsedGroupCreated = ReturnType<typeof GroupCreated>['$inferType'];
 export type ParsedGroupDerived<DerivationKey = unknown> = {
 	group_id: string;
@@ -56,10 +60,14 @@ export interface PermissionedGroupsBCSOptions {
  * ```
  */
 export class PermissionedGroupsBCS {
-	/** Core permission type: super-admin role */
-	readonly Administrator: BcsType<ParsedAdministrator, unknown>;
-	/** Core permission type: can manage extension permissions */
-	readonly ExtensionPermissionsManager: BcsType<ParsedExtensionPermissionsManager, unknown>;
+	/** Core permission: manages core permissions from this package */
+	readonly PermissionsAdmin: BcsType<ParsedPermissionsAdmin, unknown>;
+	/** Core permission: manages extension permissions from other packages */
+	readonly ExtensionPermissionsAdmin: BcsType<ParsedExtensionPermissionsAdmin, unknown>;
+	/** Core permission: grants UID access (&UID and &mut UID) */
+	readonly UIDAccessor: BcsType<ParsedUIDAccessor, unknown>;
+	/** Core permission: grants ability to self-remove via leave() */
+	readonly SelfLeave: BcsType<ParsedSelfLeave, unknown>;
 	/** Main group struct containing membership and permission data */
 	readonly PermissionedGroup: BcsType<ParsedPermissionedGroup, unknown>;
 	/** Event emitted when a group is created */
@@ -83,8 +91,10 @@ export class PermissionedGroupsBCS {
 		// Phantom types don't affect serialization, so the underlying type is irrelevant.
 		this.#phantomWitnessBcs = bcs.bool().transform({ name: options.witnessType });
 
-		this.Administrator = this.#withPackageId(Administrator);
-		this.ExtensionPermissionsManager = this.#withPackageId(ExtensionPermissionsManager);
+		this.PermissionsAdmin = this.#withPackageId(PermissionsAdmin);
+		this.ExtensionPermissionsAdmin = this.#withPackageId(ExtensionPermissionsAdmin);
+		this.UIDAccessor = this.#withPackageId(UIDAccessor);
+		this.SelfLeave = this.#withPackageId(SelfLeave);
 		this.PermissionedGroup = this.#withPackageId(PermissionedGroup(this.#phantomWitnessBcs));
 		this.GroupCreated = this.#withPackageId(GroupCreated(this.#phantomWitnessBcs));
 		this.MemberAdded = this.#withPackageId(MemberAdded(this.#phantomWitnessBcs));

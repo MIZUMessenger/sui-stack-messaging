@@ -27,11 +27,11 @@
 ///
 module messaging::messaging;
 
-use std::string::String;
-use permissioned_groups::permissioned_group::{Self, PermissionedGroup, PermissionsAdmin, ExtensionPermissionsAdmin};
 use messaging::encryption_history::{Self, EncryptionHistory, EncryptionKeyRotator};
+use permissioned_groups::permissioned_group::{Self, PermissionedGroup};
+use std::string::String;
 use sui::package;
-use sui::vec_set::VecSet;
+use sui::vec_set::{Self, VecSet};
 
 // === Error Codes ===
 
@@ -151,18 +151,18 @@ public fun create_group(
 /// # Note
 /// See `create_group` for details on creator permissions and initial member handling.
 #[allow(lint(share_owned))]
-public fun create_and_share_group(
+entry fun create_and_share_group(
     namespace: &mut MessagingNamespace,
     uuid: String,
     initial_encrypted_dek: vector<u8>,
-    initial_members: VecSet<address>,
+    initial_members: vector<address>,
     ctx: &mut TxContext,
 ) {
     let (group, encryption_history) = create_group(
         namespace,
         uuid,
         initial_encrypted_dek,
-        initial_members,
+        vec_set::from_keys(initial_members),
         ctx,
     );
     transfer::public_share_object(group);
@@ -199,12 +199,13 @@ public fun rotate_encryption_key(
 /// - `ctx`: Transaction context
 ///
 /// # Aborts
-/// - `ENotPermitted` (from `permissioned_group`): if caller doesn't have `ExtensionPermissionsAdmin`
+/// - `ENotPermitted` (from `permissioned_group`): if caller doesn't have
+/// `ExtensionPermissionsAdmin`
 /// permission
-public fun grant_all_messaging_permissions(
+fun grant_all_messaging_permissions(
     group: &mut PermissionedGroup<Messaging>,
     member: address,
-    ctx: &mut TxContext,
+    ctx: &TxContext,
 ) {
     group.grant_permission<Messaging, MessagingSender>(member, ctx);
     group.grant_permission<Messaging, MessagingReader>(member, ctx);
@@ -212,27 +213,6 @@ public fun grant_all_messaging_permissions(
     group.grant_permission<Messaging, MessagingDeleter>(member, ctx);
     group.grant_permission<Messaging, EncryptionKeyRotator>(member, ctx);
 }
-
-/// Grants all permissions (PermissionsAdmin, ExtensionPermissionsAdmin + messaging) to a member,
-/// making them an admin.
-///
-/// # Parameters
-/// - `group`: Mutable reference to the PermissionedGroup<Messaging>
-/// - `member`: Address to grant permissions to
-/// - `ctx`: Transaction context
-///
-/// # Aborts
-/// - `ENotPermitted` (from `permissioned_group`): if caller doesn't have `PermissionsAdmin` permission
-public fun grant_all_permissions(
-    group: &mut PermissionedGroup<Messaging>,
-    member: address,
-    ctx: &mut TxContext,
-) {
-    group.grant_permission<Messaging, PermissionsAdmin>(member, ctx);
-    group.grant_permission<Messaging, ExtensionPermissionsAdmin>(member, ctx);
-    grant_all_messaging_permissions(group, member, ctx);
-}
-
 
 // === Test Helpers ===
 

@@ -137,6 +137,68 @@ export interface ObjectRemoveMemberOptions extends ObjectRemoveMemberCallOptions
 	signer: Signer;
 }
 
+// === Batch/Convenience Call Options ===
+
+/** Options for granting multiple permissions to a member in a single transaction */
+export interface GrantPermissionsCallOptions {
+	/** Object ID or TransactionArgument for the PermissionedGroup */
+	groupId: string | TransactionArgument;
+	/** Address of the member */
+	member: string | TransactionArgument;
+	/** The permission types to grant (e.g., ['0xabc::my_app::Editor', '0xabc::my_app::Viewer']) */
+	permissionTypes: string[];
+}
+
+/** Options for revoking multiple permissions from a member in a single transaction */
+export interface RevokePermissionsCallOptions {
+	/** Object ID or TransactionArgument for the PermissionedGroup */
+	groupId: string | TransactionArgument;
+	/** Address of the member */
+	member: string | TransactionArgument;
+	/** The permission types to revoke */
+	permissionTypes: string[];
+}
+
+/** Options for granting all core permissions to a member */
+export interface GrantAllPermissionsCallOptions {
+	/** Object ID or TransactionArgument for the PermissionedGroup */
+	groupId: string | TransactionArgument;
+	/** Address of the member */
+	member: string | TransactionArgument;
+}
+
+/** Options for a member to leave a group */
+export interface LeaveCallOptions {
+	/** Object ID or TransactionArgument for the PermissionedGroup */
+	groupId: string | TransactionArgument;
+}
+
+// === Batch/Convenience Imperative Options ===
+
+/** Options for granting multiple permissions (imperative) */
+export interface GrantPermissionsOptions extends GrantPermissionsCallOptions {
+	/** Signer to execute the transaction */
+	signer: Signer;
+}
+
+/** Options for revoking multiple permissions (imperative) */
+export interface RevokePermissionsOptions extends RevokePermissionsCallOptions {
+	/** Signer to execute the transaction */
+	signer: Signer;
+}
+
+/** Options for granting all core permissions (imperative) */
+export interface GrantAllPermissionsOptions extends GrantAllPermissionsCallOptions {
+	/** Signer to execute the transaction */
+	signer: Signer;
+}
+
+/** Options for leaving a group (imperative) */
+export interface LeaveOptions extends LeaveCallOptions {
+	/** Signer to execute the transaction */
+	signer: Signer;
+}
+
 // === View Options (use string IDs for devInspect) ===
 
 /** Options for checking if a member has a specific permission */

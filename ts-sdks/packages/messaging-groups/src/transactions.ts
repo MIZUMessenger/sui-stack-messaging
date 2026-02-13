@@ -4,12 +4,7 @@
 import { Transaction } from '@mysten/sui/transactions';
 
 import type { MessagingGroupsCall } from './call.js';
-import type {
-	CreateGroupCallOptions,
-	GrantAllMessagingPermissionsCallOptions,
-	GrantAllPermissionsCallOptions,
-	RotateEncryptionKeyCallOptions,
-} from './types.js';
+import type { CreateGroupCallOptions, RotateEncryptionKeyCallOptions } from './types.js';
 
 export interface MessagingGroupsTransactionsOptions {
 	call: MessagingGroupsCall;
@@ -67,26 +62,6 @@ export class MessagingGroupsTransactions {
 	rotateEncryptionKey(options: RotateEncryptionKeyCallOptions): Transaction {
 		const tx = new Transaction();
 		tx.add(this.#call.rotateEncryptionKey(options));
-		return tx;
-	}
-
-	// === Permission Functions ===
-
-	/**
-	 * Creates a Transaction that grants all messaging permissions to a member.
-	 */
-	grantAllMessagingPermissions(options: GrantAllMessagingPermissionsCallOptions): Transaction {
-		const tx = new Transaction();
-		tx.add(this.#call.grantAllMessagingPermissions(options));
-		return tx;
-	}
-
-	/**
-	 * Creates a Transaction that grants all permissions (admin + messaging) to a member.
-	 */
-	grantAllPermissions(options: GrantAllPermissionsCallOptions): Transaction {
-		const tx = new Transaction();
-		tx.add(this.#call.grantAllPermissions(options));
 		return tx;
 	}
 }

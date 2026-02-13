@@ -57,11 +57,10 @@ export class WebCryptoPrimitives implements CryptoPrimitives {
 	}
 
 	async generateAesKey(): Promise<Uint8Array> {
-		const key = await this.#crypto.subtle.generateKey(
-			{ name: 'AES-GCM', length: 256 },
-			true,
-			['encrypt', 'decrypt'],
-		);
+		const key = await this.#crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, [
+			'encrypt',
+			'decrypt',
+		]);
 		const raw = await this.#crypto.subtle.exportKey('raw', key);
 		return new Uint8Array(raw);
 	}

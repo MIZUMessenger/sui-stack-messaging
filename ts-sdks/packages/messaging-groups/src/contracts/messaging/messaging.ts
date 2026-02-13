@@ -15,8 +15,10 @@
  *
  * From groups (auto-granted to creator):
  *
- * - `Administrator`: Super-admin role that can grant/revoke all permissions
- * - `ExtensionPermissionsManager`: Can grant/revoke extension permissions
+ * - `PermissionsAdmin`: Manages core permissions (from permissioned_groups
+ *   package)
+ * - `ExtensionPermissionsAdmin`: Manages extension permissions (from other
+ *   packages)
  *
  * Messaging-specific:
  *
@@ -129,7 +131,7 @@ export interface CreateAndShareGroupArguments {
 	namespace: RawTransactionArgument<string>;
 	uuid: RawTransactionArgument<string>;
 	initialEncryptedDek: RawTransactionArgument<number[]>;
-	initialMembers: RawTransactionArgument<string>;
+	initialMembers: RawTransactionArgument<string[]>;
 }
 export interface CreateAndShareGroupOptions {
 	package?: string;
@@ -139,7 +141,7 @@ export interface CreateAndShareGroupOptions {
 				namespace: RawTransactionArgument<string>,
 				uuid: RawTransactionArgument<string>,
 				initialEncryptedDek: RawTransactionArgument<number[]>,
-				initialMembers: RawTransactionArgument<string>,
+				initialMembers: RawTransactionArgument<string[]>,
 		  ];
 }
 /**
@@ -160,7 +162,7 @@ export interface CreateAndShareGroupOptions {
  */
 export function createAndShareGroup(options: CreateAndShareGroupOptions) {
 	const packageAddress = options.package ?? '@local-pkg/messaging';
-	const argumentsTypes = [null, '0x1::string::String', 'vector<u8>', null] satisfies (
+	const argumentsTypes = [null, '0x1::string::String', 'vector<u8>', 'vector<address>'] satisfies (
 		| string
 		| null
 	)[];
@@ -211,81 +213,6 @@ export function rotateEncryptionKey(options: RotateEncryptionKeyOptions) {
 			package: packageAddress,
 			module: 'messaging',
 			function: 'rotate_encryption_key',
-			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
-		});
-}
-export interface GrantAllMessagingPermissionsArguments {
-	group: RawTransactionArgument<string>;
-	member: RawTransactionArgument<string>;
-}
-export interface GrantAllMessagingPermissionsOptions {
-	package?: string;
-	arguments:
-		| GrantAllMessagingPermissionsArguments
-		| [group: RawTransactionArgument<string>, member: RawTransactionArgument<string>];
-}
-/**
- * Grants all messaging permissions to a member. Includes: `MessagingSender`,
- * `MessagingReader`, `MessagingEditor`, `MessagingDeleter`,
- * `EncryptionKeyRotator`.
- *
- * # Parameters
- *
- * - `group`: Mutable reference to the PermissionedGroup<Messaging>
- * - `member`: Address to grant permissions to
- * - `ctx`: Transaction context
- *
- * # Aborts
- *
- * - `ENotPermitted` (from `permissioned_group`): if caller doesn't have
- *   `Administrator` or `ExtensionPermissionsManager` permission
- */
-export function grantAllMessagingPermissions(options: GrantAllMessagingPermissionsOptions) {
-	const packageAddress = options.package ?? '@local-pkg/messaging';
-	const argumentsTypes = [null, 'address'] satisfies (string | null)[];
-	const parameterNames = ['group', 'member'];
-	return (tx: Transaction) =>
-		tx.moveCall({
-			package: packageAddress,
-			module: 'messaging',
-			function: 'grant_all_messaging_permissions',
-			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
-		});
-}
-export interface GrantAllPermissionsArguments {
-	group: RawTransactionArgument<string>;
-	member: RawTransactionArgument<string>;
-}
-export interface GrantAllPermissionsOptions {
-	package?: string;
-	arguments:
-		| GrantAllPermissionsArguments
-		| [group: RawTransactionArgument<string>, member: RawTransactionArgument<string>];
-}
-/**
- * Grants all permissions (Administrator, ExtensionPermissionsManager + messaging)
- * to a member, making them an admin.
- *
- * # Parameters
- *
- * - `group`: Mutable reference to the PermissionedGroup<Messaging>
- * - `member`: Address to grant permissions to
- * - `ctx`: Transaction context
- *
- * # Aborts
- *
- * - `ENotPermitted` (from `permissions_group`): if caller doesn't have
- *   `Administrator` permission
- */
-export function grantAllPermissions(options: GrantAllPermissionsOptions) {
-	const packageAddress = options.package ?? '@local-pkg/messaging';
-	const argumentsTypes = [null, 'address'] satisfies (string | null)[];
-	const parameterNames = ['group', 'member'];
-	return (tx: Transaction) =>
-		tx.moveCall({
-			package: packageAddress,
-			module: 'messaging',
-			function: 'grant_all_permissions',
 			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
 		});
 }

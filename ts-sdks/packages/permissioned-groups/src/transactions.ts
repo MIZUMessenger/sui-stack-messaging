@@ -5,12 +5,16 @@ import { Transaction } from '@mysten/sui/transactions';
 
 import type { PermissionedGroupsCall } from './call.js';
 import type {
+	GrantAllPermissionsCallOptions,
 	GrantPermissionCallOptions,
+	GrantPermissionsCallOptions,
+	LeaveCallOptions,
 	ObjectGrantPermissionCallOptions,
 	ObjectRemoveMemberCallOptions,
 	ObjectRevokePermissionCallOptions,
 	RemoveMemberCallOptions,
 	RevokePermissionCallOptions,
+	RevokePermissionsCallOptions,
 } from './types.js';
 
 export interface PermissionedGroupsTransactionsOptions {
@@ -76,6 +80,44 @@ export class PermissionedGroupsTransactions {
 	objectRevokePermission(options: ObjectRevokePermissionCallOptions): Transaction {
 		const tx = new Transaction();
 		tx.add(this.#call.objectRevokePermission(options));
+		return tx;
+	}
+
+	// === Batch/Convenience Functions ===
+
+	/**
+	 * Creates a Transaction that grants multiple permissions to a member.
+	 */
+	grantPermissions(options: GrantPermissionsCallOptions): Transaction {
+		const tx = new Transaction();
+		tx.add(this.#call.grantPermissions(options));
+		return tx;
+	}
+
+	/**
+	 * Creates a Transaction that revokes multiple permissions from a member.
+	 */
+	revokePermissions(options: RevokePermissionsCallOptions): Transaction {
+		const tx = new Transaction();
+		tx.add(this.#call.revokePermissions(options));
+		return tx;
+	}
+
+	/**
+	 * Creates a Transaction that grants all 4 core permissions to a member.
+	 */
+	grantAllPermissions(options: GrantAllPermissionsCallOptions): Transaction {
+		const tx = new Transaction();
+		tx.add(this.#call.grantAllPermissions(options));
+		return tx;
+	}
+
+	/**
+	 * Creates a Transaction that allows the sender to leave the group.
+	 */
+	leave(options: LeaveCallOptions): Transaction {
+		const tx = new Transaction();
+		tx.add(this.#call.leave(options));
 		return tx;
 	}
 

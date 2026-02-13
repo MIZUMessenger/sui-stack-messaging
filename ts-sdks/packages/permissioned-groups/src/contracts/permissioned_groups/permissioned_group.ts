@@ -9,10 +9,21 @@
  *
  * ## Permissions
  *
- * - `Administrator`: Super-admin role that can grant/revoke all permissions and
- *   remove members
- * - `ExtensionPermissionsManager`: Can grant/revoke extension permissions
- *   (permissions defined in third-party packages)
+ * Core permissions (defined in this package):
+ *
+ * - `PermissionsAdmin`: Manages core permissions. Can grant/revoke
+ *   PermissionsAdmin, ExtensionPermissionsAdmin, UIDAccessor, SelfLeave. Can
+ *   remove members.
+ * - `ExtensionPermissionsAdmin`: Manages extension permissions defined in
+ *   third-party packages.
+ * - `UIDAccessor`: Grants access to the group's UID (&UID and &mut UID).
+ * - `SelfLeave`: Grants ability to self-remove via `leave()`.
+ *
+ * ## Permission Scoping
+ *
+ * - `PermissionsAdmin` can ONLY manage core permissions (from this package)
+ * - `ExtensionPermissionsAdmin` can ONLY manage extension permissions (from other
+ *   packages)
  *
  * ## Key Concepts
  *
@@ -22,13 +33,10 @@
  *   member if they don't exist
  * - **Revoking may remove**: Revoking the last permission automatically removes
  *   the member from the group
- * - **Permission hierarchy**: Only `Administrator` can grant/revoke
- *   `Administrator`; all other permissions can be managed by either
- *   `Administrator` or `ExtensionPermissionsManager`
  *
  * ## Invariants
  *
- * - At least one `Administrator` must always exist
+ * - At least one `PermissionsAdmin` must always exist
  * - Members always have at least one permission (empty permission sets are not
  *   allowed)
  */
@@ -44,14 +52,19 @@ import { type Transaction } from '@mysten/sui/transactions';
 import * as permissions_table from './permissions_table.js';
 import * as type_name from './deps/std/type_name.js';
 const $moduleName = '@local-pkg/permissioned-groups::permissioned_group';
-export const Administrator = new MoveTuple({
-	name: `${$moduleName}::Administrator`,
+export const PermissionsAdmin = new MoveTuple({
+	name: `${$moduleName}::PermissionsAdmin`,
 	fields: [bcs.bool()],
 });
-export const ExtensionPermissionsManager = new MoveTuple({
-	name: `${$moduleName}::ExtensionPermissionsManager`,
+export const ExtensionPermissionsAdmin = new MoveTuple({
+	name: `${$moduleName}::ExtensionPermissionsAdmin`,
 	fields: [bcs.bool()],
 });
+export const UIDAccessor = new MoveTuple({
+	name: `${$moduleName}::UIDAccessor`,
+	fields: [bcs.bool()],
+});
+export const SelfLeave = new MoveTuple({ name: `${$moduleName}::SelfLeave`, fields: [bcs.bool()] });
 /**
  * Group state mapping addresses to their granted permissions. Parameterized by `T`
  * to scope permissions to a specific package.
@@ -66,8 +79,8 @@ export function PermissionedGroup<T extends BcsType<any>>(...typeParameters: [T]
 			 * enable `object_*` functions for third-party "actor" contracts.
 			 */
 			permissions: permissions_table.PermissionsTable,
-			/** Tracks `Administrator` count to enforce at-least-one invariant. */
-			administrators_count: bcs.u64(),
+			/** Tracks `PermissionsAdmin` count to enforce at-least-one invariant. */
+			permissions_admin_count: bcs.u64(),
 			/** Original creator's address */
 			creator: bcs.Address,
 		},
@@ -165,7 +178,7 @@ export interface NewOptions<T extends BcsType<any>> {
 }
 /**
  * Creates a new PermissionedGroup with the sender as initial admin. Grants
- * `Administrator` and `ExtensionPermissionsManager` to creator.
+ * `PermissionsAdmin` and `ExtensionPermissionsAdmin` to creator.
  *
  * # Type Parameters
  *
@@ -178,8 +191,8 @@ export interface NewOptions<T extends BcsType<any>> {
  *
  * # Returns
  *
- * A new `PermissionedGroup<T>` with sender having `Administrator` and
- * `ExtensionPermissionsManager`.
+ * A new `PermissionedGroup<T>` with sender having `PermissionsAdmin` and
+ * `ExtensionPermissionsAdmin`.
  */
 export function _new<T extends BcsType<any>>(options: NewOptions<T>) {
 	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
@@ -212,7 +225,7 @@ export interface NewDerivedOptions<T extends BcsType<any>, DerivationKey extends
 }
 /**
  * Creates a new derived PermissionedGroup with deterministic address. Grants
- * `Administrator` and `ExtensionPermissionsManager` to creator.
+ * `PermissionsAdmin` and `ExtensionPermissionsAdmin` to creator.
  *
  * # Type Parameters
  *
@@ -271,9 +284,8 @@ export interface GrantPermissionOptions {
  *
  * Permission requirements:
  *
- * - To grant `Administrator`: caller must have `Administrator`
- * - To grant any other permission: caller must have `Administrator` OR
- *   `ExtensionPermissionsManager`
+ * - Core permissions: caller must have `PermissionsAdmin`
+ * - Extension permissions: caller must have `ExtensionPermissionsAdmin`
  *
  * # Type Parameters
  *
@@ -326,9 +338,8 @@ export interface ObjectGrantPermissionOptions {
  *
  * Permission requirements:
  *
- * - To grant `Administrator`: actor must have `Administrator`
- * - To grant any other permission: actor must have `Administrator` OR
- *   `ExtensionPermissionsManager`
+ * - Core permissions: actor must have `PermissionsAdmin`
+ * - Extension permissions: actor must have `ExtensionPermissionsAdmin`
  *
  * # Type Parameters
  *
@@ -370,8 +381,8 @@ export interface RemoveMemberOptions {
 	typeArguments: [string];
 }
 /**
- * Removes a member from the PermissionedGroup. Requires `Administrator` permission
- * as this is a powerful admin operation.
+ * Removes a member from the PermissionedGroup. Requires `PermissionsAdmin`
+ * permission as this is a powerful admin operation.
  *
  * # Parameters
  *
@@ -381,9 +392,9 @@ export interface RemoveMemberOptions {
  *
  * # Aborts
  *
- * - `ENotPermitted`: if caller doesn't have `Administrator` permission
+ * - `ENotPermitted`: if caller doesn't have `PermissionsAdmin` permission
  * - `EMemberNotFound`: if member doesn't exist
- * - `ELastAdministrator`: if removing would leave no Administrators
+ * - `ELastPermissionsAdmin`: if removing would leave no PermissionsAdmins
  */
 export function removeMember(options: RemoveMemberOptions) {
 	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
@@ -417,19 +428,19 @@ export interface ObjectRemoveMemberOptions {
 /**
  * Removes a member from the group via an actor object. Enables third-party
  * contracts to implement custom leave logic. The actor object must have
- * `Administrator` permission on the group.
+ * `PermissionsAdmin` permission on the group.
  *
  * # Parameters
  *
  * - `self`: Mutable reference to the PermissionedGroup
- * - `actor_object`: UID of the actor object with `Administrator` permission
+ * - `actor_object`: UID of the actor object with `PermissionsAdmin` permission
  * - `member`: Address of the member to remove
  *
  * # Aborts
  *
- * - `ENotPermitted`: if actor_object doesn't have `Administrator` permission
+ * - `ENotPermitted`: if actor_object doesn't have `PermissionsAdmin` permission
  * - `EMemberNotFound`: if member is not a member
- * - `ELastAdministrator`: if removing would leave no Administrators
+ * - `ELastPermissionsAdmin`: if removing would leave no PermissionsAdmins
  */
 export function objectRemoveMember(options: ObjectRemoveMemberOptions) {
 	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
@@ -440,6 +451,31 @@ export function objectRemoveMember(options: ObjectRemoveMemberOptions) {
 			package: packageAddress,
 			module: 'permissioned_group',
 			function: 'object_remove_member',
+			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
+			typeArguments: options.typeArguments,
+		});
+}
+export interface LeaveArguments {
+	self: RawTransactionArgument<string>;
+}
+export interface LeaveOptions {
+	package?: string;
+	arguments: LeaveArguments | [self: RawTransactionArgument<string>];
+	typeArguments: [string];
+}
+/**
+ * Allows the sender to leave the group. Requires `SelfLeave` permission. Removes
+ * all permissions atomically. Prevented if sender is the last PermissionsAdmin.
+ */
+export function leave(options: LeaveOptions) {
+	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
+	const argumentsTypes = [null] satisfies (string | null)[];
+	const parameterNames = ['self'];
+	return (tx: Transaction) =>
+		tx.moveCall({
+			package: packageAddress,
+			module: 'permissioned_group',
+			function: 'leave',
 			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
 			typeArguments: options.typeArguments,
 		});
@@ -462,9 +498,8 @@ export interface RevokePermissionOptions {
  *
  * Permission requirements:
  *
- * - To revoke `Administrator`: caller must have `Administrator`
- * - To revoke any other permission: caller must have `Administrator` OR
- *   `ExtensionPermissionsManager`
+ * - Core permissions: caller must have `PermissionsAdmin`
+ * - Extension permissions: caller must have `ExtensionPermissionsAdmin`
  *
  * # Type Parameters
  *
@@ -481,8 +516,7 @@ export interface RevokePermissionOptions {
  *
  * - `ENotPermitted`: if caller doesn't have appropriate manager permission
  * - `EMemberNotFound`: if member doesn't exist
- * - `ELastAdministrator`: if revoking `Administrator` would leave no
- *   administrators
+ * - `ELastPermissionsAdmin`: if revoking `PermissionsAdmin` would leave no admins
  */
 export function revokePermission(options: RevokePermissionOptions) {
 	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
@@ -520,9 +554,8 @@ export interface ObjectRevokePermissionOptions {
  *
  * Permission requirements:
  *
- * - To revoke `Administrator`: actor must have `Administrator`
- * - To revoke any other permission: actor must have `Administrator` OR
- *   `ExtensionPermissionsManager`
+ * - Core permissions: actor must have `PermissionsAdmin`
+ * - Extension permissions: actor must have `ExtensionPermissionsAdmin`
  *
  * # Type Parameters
  *
@@ -539,8 +572,7 @@ export interface ObjectRevokePermissionOptions {
  *
  * - `ENotPermitted`: if actor_object doesn't have appropriate manager permission
  * - `EMemberNotFound`: if member is not a member
- * - `ELastAdministrator`: if revoking `Administrator` would leave no
- *   administrators
+ * - `ELastPermissionsAdmin`: if revoking `PermissionsAdmin` would leave no admins
  */
 export function objectRevokePermission(options: ObjectRevokePermissionOptions) {
 	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
@@ -668,26 +700,16 @@ export function creator(options: CreatorOptions) {
 			typeArguments: options.typeArguments,
 		});
 }
-export interface AdministratorsCountArguments {
+export interface UidArguments {
 	self: RawTransactionArgument<string>;
 }
-export interface AdministratorsCountOptions {
+export interface UidOptions {
 	package?: string;
-	arguments: AdministratorsCountArguments | [self: RawTransactionArgument<string>];
+	arguments: UidArguments | [self: RawTransactionArgument<string>];
 	typeArguments: [string];
 }
-/**
- * Returns the number of `Administrator`s in the PermissionedGroup.
- *
- * # Parameters
- *
- * - `self`: Reference to the PermissionedGroup
- *
- * # Returns
- *
- * The count of `Administrator`s.
- */
-export function administratorsCount(options: AdministratorsCountOptions) {
+/** Returns a reference to the group's UID. Requires `UIDAccessor` permission. */
+export function uid(options: UidOptions) {
 	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
 	const argumentsTypes = [null] satisfies (string | null)[];
 	const parameterNames = ['self'];
@@ -695,7 +717,117 @@ export function administratorsCount(options: AdministratorsCountOptions) {
 		tx.moveCall({
 			package: packageAddress,
 			module: 'permissioned_group',
-			function: 'administrators_count',
+			function: 'uid',
+			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
+			typeArguments: options.typeArguments,
+		});
+}
+export interface UidMutArguments {
+	self: RawTransactionArgument<string>;
+}
+export interface UidMutOptions {
+	package?: string;
+	arguments: UidMutArguments | [self: RawTransactionArgument<string>];
+	typeArguments: [string];
+}
+/**
+ * Returns a mutable reference to the group's UID. Requires `UIDAccessor`
+ * permission.
+ */
+export function uidMut(options: UidMutOptions) {
+	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
+	const argumentsTypes = [null] satisfies (string | null)[];
+	const parameterNames = ['self'];
+	return (tx: Transaction) =>
+		tx.moveCall({
+			package: packageAddress,
+			module: 'permissioned_group',
+			function: 'uid_mut',
+			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
+			typeArguments: options.typeArguments,
+		});
+}
+export interface ObjectUidArguments {
+	self: RawTransactionArgument<string>;
+	actorObject: RawTransactionArgument<string>;
+}
+export interface ObjectUidOptions {
+	package?: string;
+	arguments:
+		| ObjectUidArguments
+		| [self: RawTransactionArgument<string>, actorObject: RawTransactionArgument<string>];
+	typeArguments: [string];
+}
+/** Object-actor variant of `uid()`. Requires `UIDAccessor` permission on the actor. */
+export function objectUid(options: ObjectUidOptions) {
+	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
+	const argumentsTypes = [null, '0x2::object::ID'] satisfies (string | null)[];
+	const parameterNames = ['self', 'actorObject'];
+	return (tx: Transaction) =>
+		tx.moveCall({
+			package: packageAddress,
+			module: 'permissioned_group',
+			function: 'object_uid',
+			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
+			typeArguments: options.typeArguments,
+		});
+}
+export interface ObjectUidMutArguments {
+	self: RawTransactionArgument<string>;
+	actorObject: RawTransactionArgument<string>;
+}
+export interface ObjectUidMutOptions {
+	package?: string;
+	arguments:
+		| ObjectUidMutArguments
+		| [self: RawTransactionArgument<string>, actorObject: RawTransactionArgument<string>];
+	typeArguments: [string];
+}
+/**
+ * Object-actor variant of `uid_mut()`. Requires `UIDAccessor` permission on the
+ * actor.
+ */
+export function objectUidMut(options: ObjectUidMutOptions) {
+	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
+	const argumentsTypes = [null, '0x2::object::ID'] satisfies (string | null)[];
+	const parameterNames = ['self', 'actorObject'];
+	return (tx: Transaction) =>
+		tx.moveCall({
+			package: packageAddress,
+			module: 'permissioned_group',
+			function: 'object_uid_mut',
+			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
+			typeArguments: options.typeArguments,
+		});
+}
+export interface PermissionsAdminCountArguments {
+	self: RawTransactionArgument<string>;
+}
+export interface PermissionsAdminCountOptions {
+	package?: string;
+	arguments: PermissionsAdminCountArguments | [self: RawTransactionArgument<string>];
+	typeArguments: [string];
+}
+/**
+ * Returns the number of `PermissionsAdmin`s in the PermissionedGroup.
+ *
+ * # Parameters
+ *
+ * - `self`: Reference to the PermissionedGroup
+ *
+ * # Returns
+ *
+ * The count of `PermissionsAdmin`s.
+ */
+export function permissionsAdminCount(options: PermissionsAdminCountOptions) {
+	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
+	const argumentsTypes = [null] satisfies (string | null)[];
+	const parameterNames = ['self'];
+	return (tx: Transaction) =>
+		tx.moveCall({
+			package: packageAddress,
+			module: 'permissioned_group',
+			function: 'permissions_admin_count',
 			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
 			typeArguments: options.typeArguments,
 		});

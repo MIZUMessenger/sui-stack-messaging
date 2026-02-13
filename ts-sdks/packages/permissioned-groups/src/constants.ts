@@ -16,3 +16,36 @@ export const MAINNET_PERMISSIONED_GROUPS_PACKAGE_CONFIG = {
  * Must match the Move constant `PERMISSIONS_TABLE_DERIVATION_KEY_BYTES` in `permissioned_group.move`.
  */
 export const PERMISSIONS_TABLE_DERIVATION_KEY = 'permissions_table';
+
+/**
+ * Returns full Move type paths for all core permissions defined in the permissioned-groups package.
+ *
+ * @example
+ * ```ts
+ * const perms = permissionTypes('0xabc...');
+ * // perms.PermissionsAdmin === '0xabc...::permissioned_group::PermissionsAdmin'
+ *
+ * await client.groups.grantPermission({
+ *   groupId, member, signer,
+ *   permissionType: perms.PermissionsAdmin,
+ * });
+ * ```
+ */
+export function permissionTypes(packageId: string) {
+	return {
+		PermissionsAdmin: `${packageId}::permissioned_group::PermissionsAdmin`,
+		ExtensionPermissionsAdmin: `${packageId}::permissioned_group::ExtensionPermissionsAdmin`,
+		UIDAccessor: `${packageId}::permissioned_group::UIDAccessor`,
+		SelfLeave: `${packageId}::permissioned_group::SelfLeave`,
+	} as const;
+}
+
+/**
+ * Returns the full Move type name for `PermissionedGroup<T>`.
+ *
+ * @param packageId - The permissioned-groups package ID
+ * @param witnessType - The witness type parameter (e.g., `0xdef::messaging::Messaging`)
+ */
+export function permissionedGroupType(packageId: string, witnessType: string): string {
+	return `${packageId}::permissioned_group::PermissionedGroup<${witnessType}>`;
+}

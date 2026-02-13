@@ -37,7 +37,7 @@ export interface PermissionedGroupsViewOptions {
  * These methods query on-chain state by fetching objects directly,
  * without requiring a signature or spending gas.
  *
- * Note: Fields like `creator` and `administrators_count` are available
+ * Note: Fields like `creator` and `permissions_admin_count` are available
  * directly on the PermissionedGroup object when fetched via getObject.
  *
  * @example
