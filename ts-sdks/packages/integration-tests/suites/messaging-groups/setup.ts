@@ -72,6 +72,18 @@ export default async function setup(project: TestProject) {
 	const namespaceId = (namespaceChange as any).objectId;
 	console.log(`Found MessagingNamespace at ${namespaceId}`);
 
+	// Find the Version shared object created during messaging's init
+	const versionChange = objectChanges.find(
+		(change: any) => change.objectType?.includes('::version::Version'),
+	);
+
+	if (!versionChange || !('objectId' in versionChange)) {
+		throw new Error('Version shared object not found in objectChanges');
+	}
+
+	const versionId = versionChange.objectId;
+	console.log(`Found Version at ${versionId}`);
+
 	// Provide serializable account (secret key as bech32)
 	project.provide('adminAccount', {
 		secretKey: admin.keypair.getSecretKey(),
@@ -79,6 +91,7 @@ export default async function setup(project: TestProject) {
 	});
 	project.provide('publishedPackages', publishedPackages);
 	project.provide('messagingNamespaceId', namespaceId);
+	project.provide('messagingVersionId', versionId);
 
 	console.log('messaging-groups test environment is ready.');
 }

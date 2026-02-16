@@ -81,7 +81,7 @@ export class PermissionedGroupsBCS {
 	readonly #packageId: string;
 
 	constructor(options: PermissionedGroupsBCSOptions) {
-		this.#packageId = options.packageConfig.packageId;
+		this.#packageId = options.packageConfig.originalPackageId;
 
 		// Phantom BcsType that carries the witness type name for codegen functions.
 		// Phantom types don't affect serialization, so the underlying type is irrelevant.

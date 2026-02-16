@@ -92,8 +92,8 @@ export class MessagingGroupsBCS {
 	readonly PermissionedGroupTag: BcsType<ParsedPermissionedGroupTag, unknown>;
 
 	constructor(options: MessagingGroupsBCSOptions) {
-		const messagingModule = `${options.packageConfig.packageId}::messaging`;
-		const encryptionHistoryModule = `${options.packageConfig.packageId}::encryption_history`;
+		const messagingModule = `${options.packageConfig.originalPackageId}::messaging`;
+		const encryptionHistoryModule = `${options.packageConfig.originalPackageId}::encryption_history`;
 
 		// Messaging module types
 		this.Messaging = Messaging.transform({

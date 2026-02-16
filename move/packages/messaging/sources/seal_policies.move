@@ -22,6 +22,7 @@ module messaging::seal_policies;
 use permissioned_groups::permissioned_group::PermissionedGroup;
 use messaging::messaging::{MessagingReader, Messaging};
 use messaging::encryption_history::EncryptionHistory;
+use messaging::version::Version;
 use sui::bcs;
 
 // === Error Codes ===
@@ -102,10 +103,12 @@ public fun validate_identity(
 /// - `ENotPermitted`: if caller doesn't have `MessagingReader` permission
 entry fun seal_approve_reader(
     id: vector<u8>,
+    version: &Version,
     group: &PermissionedGroup<Messaging>,
     encryption_history: &EncryptionHistory,
     ctx: &TxContext,
 ) {
+    version.validate_version();
     validate_identity(group, encryption_history, id);
     assert!(group.has_permission<Messaging, MessagingReader>(ctx.sender()), ENotPermitted);
 }

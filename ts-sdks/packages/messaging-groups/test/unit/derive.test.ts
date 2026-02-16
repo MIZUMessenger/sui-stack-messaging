@@ -7,10 +7,16 @@ import { MessagingGroupsDerive } from '../../src/derive.js';
 
 const MOCK_PACKAGE_ID = '0x' + 'ab'.repeat(32);
 const MOCK_NAMESPACE_ID = '0x' + '99'.repeat(32);
+const MOCK_VERSION_ID = '0x' + '11'.repeat(32);
 
 function createDerive() {
 	return new MessagingGroupsDerive({
-		packageConfig: { packageId: MOCK_PACKAGE_ID, namespaceId: MOCK_NAMESPACE_ID },
+		packageConfig: {
+			originalPackageId: MOCK_PACKAGE_ID,
+			latestPackageId: MOCK_PACKAGE_ID,
+			namespaceId: MOCK_NAMESPACE_ID,
+			versionId: MOCK_VERSION_ID,
+		},
 	});
 }
 

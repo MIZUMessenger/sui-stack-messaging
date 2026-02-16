@@ -12,7 +12,7 @@ const LOCAL_PACKAGE_ALIAS = '@local-pkg/permissioned-groups';
 
 function createBCS() {
 	return new PermissionedGroupsBCS({
-		packageConfig: { packageId: MOCK_PACKAGE_ID },
+		packageConfig: { originalPackageId: MOCK_PACKAGE_ID, latestPackageId: MOCK_PACKAGE_ID },
 		witnessType: MOCK_WITNESS_TYPE,
 	});
 }

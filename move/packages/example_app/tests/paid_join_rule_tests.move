@@ -3,6 +3,7 @@ module example_app::paid_join_rule_tests;
 
 use permissioned_groups::permissioned_group::{PermissionedGroup, ExtensionPermissionsAdmin};
 use messaging::messaging::{Self, Messaging, MessagingNamespace, MessagingReader};
+use messaging::version::{Self, Version};
 use sui::vec_set;
 use example_app::paid_join_rule::{Self, PaidJoinRule, FundsManager};
 use std::string;
@@ -27,11 +28,14 @@ fun setup_for_testing(ts: &mut Scenario): ID {
     // Initialize the messaging module (creates MessagingNamespace)
     ts.next_tx(ALICE);
     messaging::init_for_testing(ts.ctx());
+    version::init_for_testing(ts.ctx());
 
     // Alice creates group using the real flow
     ts.next_tx(ALICE);
     let mut namespace = ts.take_shared<MessagingNamespace>();
+    let version = ts.take_shared<Version>();
     let (group, encryption_history) = messaging::create_group(
+        &version,
         &mut namespace,
         string::utf8(TEST_UUID),
         b"test_encrypted_dek",
@@ -41,6 +45,7 @@ fun setup_for_testing(ts: &mut Scenario): ID {
     let group_id = object::id(&group);
     transfer::public_share_object(group);
     transfer::public_share_object(encryption_history);
+    ts::return_shared(version);
     ts::return_shared(namespace);
 
     // Alice creates rule and shares it
@@ -130,11 +135,14 @@ fun join_rule_not_member() {
     // Initialize messaging module
     ts.next_tx(ALICE);
     messaging::init_for_testing(ts.ctx());
+    version::init_for_testing(ts.ctx());
 
     // Create group without setting up the rule with permissions
     ts.next_tx(ALICE);
     let mut namespace = ts.take_shared<MessagingNamespace>();
+    let version = ts.take_shared<Version>();
     let (group, encryption_history) = messaging::create_group(
+        &version,
         &mut namespace,
         string::utf8(TEST_UUID),
         b"test_encrypted_dek",
@@ -144,6 +152,7 @@ fun join_rule_not_member() {
     let group_id = object::id(&group);
     transfer::public_share_object(group);
     transfer::public_share_object(encryption_history);
+    ts::return_shared(version);
     ts::return_shared(namespace);
 
     // Create rule but DON'T add it as a member at all
@@ -157,7 +166,7 @@ fun join_rule_not_member() {
     let mut rule = ts.take_shared<PaidJoinRule<SUI>>();
     let mut payment = coin::mint_for_testing<SUI>(FEE, ts.ctx());
 
-    // This call aborts because rule is not in the group's permissions table
+    // Rule is not a member — has_permission aborts at the dynamic field lookup level
     paid_join_rule::join(&mut rule, &mut group, &mut payment, ts.ctx());
 
     abort
@@ -170,11 +179,14 @@ fun join_rule_without_manager_permission() {
     // Initialize messaging module
     ts.next_tx(ALICE);
     messaging::init_for_testing(ts.ctx());
+    version::init_for_testing(ts.ctx());
 
     // Create group
     ts.next_tx(ALICE);
     let mut namespace = ts.take_shared<MessagingNamespace>();
+    let version = ts.take_shared<Version>();
     let (group, encryption_history) = messaging::create_group(
+        &version,
         &mut namespace,
         string::utf8(TEST_UUID),
         b"test_encrypted_dek",
@@ -184,6 +196,7 @@ fun join_rule_without_manager_permission() {
     let group_id = object::id(&group);
     transfer::public_share_object(group);
     transfer::public_share_object(encryption_history);
+    ts::return_shared(version);
     ts::return_shared(namespace);
 
     // Create rule
@@ -367,11 +380,14 @@ fun join_wrong_group() {
     // Initialize messaging module
     ts.next_tx(ALICE);
     messaging::init_for_testing(ts.ctx());
+    version::init_for_testing(ts.ctx());
 
     // Create two groups
     ts.next_tx(ALICE);
     let mut namespace = ts.take_shared<MessagingNamespace>();
+    let version = ts.take_shared<Version>();
     let (group1, encryption_history1) = messaging::create_group(
+        &version,
         &mut namespace,
         string::utf8(TEST_UUID_2),
         b"test_encrypted_dek_1",
@@ -383,6 +399,7 @@ fun join_wrong_group() {
     transfer::public_share_object(encryption_history1);
 
     let (group2, encryption_history2) = messaging::create_group(
+        &version,
         &mut namespace,
         string::utf8(TEST_UUID_3),
         b"test_encrypted_dek_2",
@@ -392,6 +409,7 @@ fun join_wrong_group() {
     let group2_id = object::id(&group2);
     transfer::public_share_object(group2);
     transfer::public_share_object(encryption_history2);
+    ts::return_shared(version);
     ts::return_shared(namespace);
 
     // Create rule for group1

@@ -18,6 +18,12 @@ describe('Setup & Configuration', () => {
 		expect(namespaceId).toMatch(/^0x[0-9a-f]+$/);
 	});
 
+	it('should have found the Version shared object', () => {
+		const versionId = inject('messagingVersionId');
+		expect(versionId).toBeDefined();
+		expect(versionId).toMatch(/^0x[0-9a-f]+$/);
+	});
+
 	it('should have a working sui client', async () => {
 		const suiClientUrl = inject('suiClientUrl');
 		const adminAccount = inject('adminAccount');

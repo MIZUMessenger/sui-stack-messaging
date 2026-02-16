@@ -4,6 +4,7 @@ module example_app::custom_seal_policy_tests;
 use permissioned_groups::permissioned_group::PermissionedGroup;
 use messaging::messaging::{Self, Messaging, MessagingNamespace};
 use messaging::encryption_history::EncryptionHistory;
+use messaging::version::{Self, Version};
 use sui::vec_set;
 use example_app::custom_seal_policy;
 use sui::clock;
@@ -25,12 +26,7 @@ const TEST_UUID_3: vector<u8> = b"550e8400-e29b-41d4-a716-446655440002";
 /// Builds standard identity bytes: [group_id (32 bytes)][key_version (8 bytes LE u64)]
 fun build_identity_bytes(group_id: ID, key_version: u64): vector<u8> {
     let mut bytes = group_id.to_bytes();
-    let version_bytes = bcs::to_bytes(&key_version);
-    let mut i = 0;
-    while (i < version_bytes.length()) {
-        bytes.push_back(version_bytes[i]);
-        i = i + 1;
-    };
+    bytes.append(bcs::to_bytes(&key_version));
     bytes
 }
 
@@ -40,11 +36,14 @@ fun setup_group(ts: &mut Scenario): (ID, ID) {
     // Initialize the messaging module (creates MessagingNamespace)
     ts.next_tx(ALICE);
     messaging::init_for_testing(ts.ctx());
+    version::init_for_testing(ts.ctx());
 
     // Alice creates group using the real flow
     ts.next_tx(ALICE);
     let mut namespace = ts.take_shared<MessagingNamespace>();
+    let version = ts.take_shared<Version>();
     let (group, encryption_history) = messaging::create_group(
+        &version,
         &mut namespace,
         string::utf8(TEST_UUID),
         b"test_encrypted_dek",
@@ -55,6 +54,7 @@ fun setup_group(ts: &mut Scenario): (ID, ID) {
     let encryption_history_id = object::id(&encryption_history);
     transfer::public_share_object(group);
     transfer::public_share_object(encryption_history);
+    ts::return_shared(version);
     ts::return_shared(namespace);
 
     (group_id, encryption_history_id)
@@ -177,11 +177,14 @@ fun seal_approve_wrong_group() {
     // Initialize messaging
     ts.next_tx(ALICE);
     messaging::init_for_testing(ts.ctx());
+    version::init_for_testing(ts.ctx());
 
     // Create two groups
     ts.next_tx(ALICE);
     let mut namespace = ts.take_shared<MessagingNamespace>();
+    let version = ts.take_shared<Version>();
     let (group1, encryption_history1) = messaging::create_group(
+        &version,
         &mut namespace,
         string::utf8(TEST_UUID_2),
         b"test_encrypted_dek_1",
@@ -193,6 +196,7 @@ fun seal_approve_wrong_group() {
     transfer::public_share_object(encryption_history1);
 
     let (group2, encryption_history2) = messaging::create_group(
+        &version,
         &mut namespace,
         string::utf8(TEST_UUID_3),
         b"test_encrypted_dek_2",
@@ -203,6 +207,7 @@ fun seal_approve_wrong_group() {
     let enc_history2_id = object::id(&encryption_history2);
     transfer::public_share_object(group2);
     transfer::public_share_object(encryption_history2);
+    ts::return_shared(version);
     ts::return_shared(namespace);
 
     // Service is linked to group1

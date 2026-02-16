@@ -8,10 +8,11 @@ import { DefaultSealPolicy } from '../../src/encryption/seal-policy.js';
 import { createMockSealClient } from './helpers/mock-seal-client.js';
 
 const MOCK_PACKAGE_ID = '0x' + 'ab'.repeat(32);
+const MOCK_VERSION_ID = '0x' + '11'.repeat(32);
 const MOCK_GROUP_ID = '0x' + 'cd'.repeat(32);
 
 describe('DEKManager', () => {
-	const sealPolicy = new DefaultSealPolicy(MOCK_PACKAGE_ID);
+	const sealPolicy = new DefaultSealPolicy(MOCK_PACKAGE_ID, MOCK_PACKAGE_ID, MOCK_VERSION_ID);
 
 	describe('generateDEK', () => {
 		it('should generate a 32-byte DEK', async () => {

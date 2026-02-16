@@ -85,6 +85,7 @@ public(package) fun remove_permission(
 }
 
 /// Returns whether a member has the specified permission.
+/// Aborts if the address is not a member — callers should check `is_member()` first.
 public(package) fun has_permission(
     self: &PermissionsTable,
     member: address,
@@ -104,4 +105,5 @@ public(package) fun length(self: &PermissionsTable): u64 {
     self.length
 }
 
-// TODO: destroy/drop functions ?
+// Note: No destroy/drop functions. PermissionsTable is always owned by a PermissionedGroup
+// which is typically shared. Shared objects cannot be destroyed on Sui.

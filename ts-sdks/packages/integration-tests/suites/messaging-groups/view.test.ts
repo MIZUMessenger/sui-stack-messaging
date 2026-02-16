@@ -21,6 +21,7 @@ describe('MessagingGroupsView', () => {
 		const suiClientUrl = inject('suiClientUrl');
 		const publishedPackages = inject('publishedPackages');
 		const namespaceId = inject('messagingNamespaceId');
+		const versionId = inject('messagingVersionId');
 		const adminAccount = inject('adminAccount');
 
 		adminKeypair = Ed25519Keypair.fromSecretKey(adminAccount.secretKey);
@@ -31,6 +32,7 @@ describe('MessagingGroupsView', () => {
 			permissionedGroupsPackageId: publishedPackages['permissioned-groups'].packageId,
 			messagingPackageId: publishedPackages['messaging'].packageId,
 			namespaceId: namespaceId!,
+			versionId: versionId!,
 			keypair: adminKeypair,
 		});
 	});

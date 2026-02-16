@@ -10,7 +10,11 @@ import { PermissionedGroupsClientError } from '../../src/error.js';
 const VALID_ADDRESS = '0x' + 'ab'.repeat(32);
 const VALID_WITNESS_TYPE = `${VALID_ADDRESS}::my_module::MyWitness`;
 
-const MOCK_PACKAGE_CONFIG = { packageId: '0x' + 'ff'.repeat(32) };
+const MOCK_PACKAGE_ID = '0x' + 'ff'.repeat(32);
+const MOCK_PACKAGE_CONFIG = {
+	originalPackageId: MOCK_PACKAGE_ID,
+	latestPackageId: MOCK_PACKAGE_ID,
+};
 
 function createSuiClient(network: string = 'localnet') {
 	return new SuiJsonRpcClient({ url: 'http://127.0.0.1:9000', network });
@@ -138,14 +142,18 @@ describe('PermissionedGroupsClient', () => {
 		});
 
 		it('should use provided packageConfig', () => {
-			const customConfig = { packageId: '0x' + '11'.repeat(32) };
+			const customOriginalId = '0x' + '11'.repeat(32);
+			const customConfig = {
+				originalPackageId: customOriginalId,
+				latestPackageId: customOriginalId,
+			};
 			const client = new PermissionedGroupsClient({
 				client: createSuiClient(),
 				witnessType: VALID_WITNESS_TYPE,
 				packageConfig: customConfig,
 			});
 
-			expect(client.bcs.PermissionsAdmin.name).toContain(customConfig.packageId);
+			expect(client.bcs.PermissionsAdmin.name).toContain(customConfig.originalPackageId);
 		});
 	});
 });
@@ -188,7 +196,9 @@ describe('permissionedGroups factory + $extend', () => {
 			}),
 		);
 
-		expect(client.groups.bcs.PermissionsAdmin.name).toContain(MOCK_PACKAGE_CONFIG.packageId);
+		expect(client.groups.bcs.PermissionsAdmin.name).toContain(
+			MOCK_PACKAGE_CONFIG.originalPackageId,
+		);
 		expect(client.groups.bcs.PermissionedGroup.name).toContain(VALID_WITNESS_TYPE);
 	});
 });

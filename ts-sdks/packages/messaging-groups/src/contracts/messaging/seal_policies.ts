@@ -76,6 +76,7 @@ export function validateIdentity(options: ValidateIdentityOptions) {
 }
 export interface SealApproveReaderArguments {
 	id: RawTransactionArgument<number[]>;
+	version: RawTransactionArgument<string>;
 	group: RawTransactionArgument<string>;
 	encryptionHistory: RawTransactionArgument<string>;
 }
@@ -85,6 +86,7 @@ export interface SealApproveReaderOptions {
 		| SealApproveReaderArguments
 		| [
 				id: RawTransactionArgument<number[]>,
+				version: RawTransactionArgument<string>,
 				group: RawTransactionArgument<string>,
 				encryptionHistory: RawTransactionArgument<string>,
 		  ];
@@ -110,8 +112,8 @@ export interface SealApproveReaderOptions {
  */
 export function sealApproveReader(options: SealApproveReaderOptions) {
 	const packageAddress = options.package ?? '@local-pkg/messaging';
-	const argumentsTypes = ['vector<u8>', null, null] satisfies (string | null)[];
-	const parameterNames = ['id', 'group', 'encryptionHistory'];
+	const argumentsTypes = ['vector<u8>', null, null, null] satisfies (string | null)[];
+	const parameterNames = ['id', 'version', 'group', 'encryptionHistory'];
 	return (tx: Transaction) =>
 		tx.moveCall({
 			package: packageAddress,

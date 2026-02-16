@@ -51,7 +51,7 @@ import { sealApproveReader } from '../contracts/messaging/seal_policies.js';
  * ```
  */
 export interface SealPolicy<TApproveContext = void> {
-	/** Package ID passed to `seal.encrypt()`. Must contain the `seal_approve_*` function(s). */
+	/** Original (V1) package ID passed to `seal.encrypt()` as the encryption namespace. */
 	readonly packageId: string;
 
 	/**
@@ -98,9 +98,13 @@ const DefaultIdentityBcs = bcs.struct('DefaultSealIdentity', {
  */
 export class DefaultSealPolicy implements SealPolicy<void> {
 	readonly packageId: string;
+	readonly #latestPackageId: string;
+	readonly #versionId: string;
 
-	constructor(packageId: string) {
-		this.packageId = packageId;
+	constructor(originalPackageId: string, latestPackageId: string, versionId: string) {
+		this.packageId = originalPackageId;
+		this.#latestPackageId = latestPackageId;
+		this.#versionId = versionId;
 	}
 
 	/**
@@ -140,9 +144,10 @@ export class DefaultSealPolicy implements SealPolicy<void> {
 		encryptionHistoryId: string,
 	): (tx: Transaction) => TransactionResult {
 		return sealApproveReader({
-			package: this.packageId,
+			package: this.#latestPackageId,
 			arguments: {
 				id: Array.from(identityBytes),
+				version: this.#versionId,
 				group: groupId,
 				encryptionHistory: encryptionHistoryId,
 			},

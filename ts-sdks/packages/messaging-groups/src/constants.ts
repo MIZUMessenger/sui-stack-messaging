@@ -4,13 +4,17 @@
 import type { MessagingGroupsPackageConfig } from './types.js';
 
 export const TESTNET_MESSAGING_GROUPS_PACKAGE_CONFIG = {
-	packageId: '0xTBD',
+	originalPackageId: '0xTBD',
+	latestPackageId: '0xTBD',
 	namespaceId: '0xTBD',
+	versionId: '0xTBD',
 } satisfies MessagingGroupsPackageConfig;
 
 export const MAINNET_MESSAGING_GROUPS_PACKAGE_CONFIG = {
-	packageId: '0xTBD',
+	originalPackageId: '0xTBD',
+	latestPackageId: '0xTBD',
 	namespaceId: '0xTBD',
+	versionId: '0xTBD',
 } satisfies MessagingGroupsPackageConfig;
 
 /**
@@ -54,6 +58,9 @@ export const MAINNET_SUINS_CONFIG = {
 
 /**
  * Returns full Move type paths for all messaging-specific permissions.
+ *
+ * @param packageId - The **original (V1)** package ID. The TypeNames stored in the
+ *   PermissionsTable always use V1 addresses (via `type_name::with_original_ids`).
  *
  * @example
  * ```ts

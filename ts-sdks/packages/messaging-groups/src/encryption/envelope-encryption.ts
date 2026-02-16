@@ -80,8 +80,12 @@ export interface EnvelopeEncryptionConfig<TApproveContext = void> {
 	view: MessagingGroupsView;
 	/** Derive layer for deterministic ID derivation. */
 	derive: MessagingGroupsDerive;
-	/** Move package ID for the messaging module. */
-	packageId: string;
+	/** Original (V1) package ID for Seal encryption namespace and SessionKey creation. */
+	originalPackageId: string;
+	/** Latest (current) package ID for seal_approve moveCall target. */
+	latestPackageId: string;
+	/** Version shared object ID (for seal_approve transactions). */
+	versionId: string;
 	/** Encryption options (session key config, crypto, threshold, seal policy). */
 	encryption: MessagingGroupsEncryptionOptions<TApproveContext>;
 }
@@ -119,7 +123,11 @@ export class EnvelopeEncryption<TApproveContext = void> {
 		this.#view = config.view;
 		this.#derive = config.derive;
 		this.#sealPolicy = (config.encryption.sealPolicy ??
-			new DefaultSealPolicy(config.packageId)) as SealPolicy<TApproveContext>;
+			new DefaultSealPolicy(
+				config.originalPackageId,
+				config.latestPackageId,
+				config.versionId,
+			)) as SealPolicy<TApproveContext>;
 		this.#crypto = config.encryption.cryptoPrimitives ?? getDefaultCryptoPrimitives();
 		this.#dekCache = config.suiClient.cache.scope('dek');
 		this.#dekManager = new DEKManager({
@@ -130,7 +138,7 @@ export class EnvelopeEncryption<TApproveContext = void> {
 		});
 		this.#sessionKeyManager = new SessionKeyManager({
 			sessionKeyConfig: config.encryption.sessionKey,
-			packageId: config.packageId,
+			packageId: config.originalPackageId,
 			suiClient: config.suiClient,
 		});
 	}

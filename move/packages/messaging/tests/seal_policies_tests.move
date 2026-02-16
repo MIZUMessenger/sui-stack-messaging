@@ -5,6 +5,7 @@ use permissioned_groups::permissioned_group::PermissionedGroup;
 use messaging::encryption_history::EncryptionHistory;
 use messaging::messaging::{Self, Messaging, MessagingNamespace, MessagingReader, MessagingSender};
 use messaging::seal_policies;
+use messaging::version::{Self, Version};
 use std::string;
 use sui::bcs;
 use sui::test_scenario as ts;
@@ -34,10 +35,13 @@ fun build_identity(group_id: ID, key_version: u64): vector<u8> {
 fun setup_group(ts: &mut ts::Scenario): ID {
     ts.next_tx(ALICE);
     messaging::init_for_testing(ts.ctx());
+    version::init_for_testing(ts.ctx());
 
     ts.next_tx(ALICE);
     let mut namespace = ts.take_shared<MessagingNamespace>();
+    let version = ts.take_shared<Version>();
     let (group, encryption_history) = messaging::create_group(
+        &version,
         &mut namespace,
         string::utf8(TEST_UUID),
         TEST_ENCRYPTED_DEK,
@@ -47,6 +51,7 @@ fun setup_group(ts: &mut ts::Scenario): ID {
     let group_id = object::id(&group);
     transfer::public_share_object(group);
     transfer::public_share_object(encryption_history);
+    ts::return_shared(version);
     ts::return_shared(namespace);
 
     group_id
@@ -60,6 +65,7 @@ fun seal_approve_reader_valid_identity_and_permission() {
     let group_id = setup_group(&mut ts);
 
     ts.next_tx(ALICE);
+    let version = ts.take_shared<Version>();
     let group = ts.take_shared<PermissionedGroup<Messaging>>();
     let encryption_history = ts.take_shared<EncryptionHistory>();
 
@@ -67,8 +73,9 @@ fun seal_approve_reader_valid_identity_and_permission() {
     let id = build_identity(group_id, 0);
 
     // Alice has MessagingReader permission (granted on group creation)
-    seal_policies::seal_approve_reader(id, &group, &encryption_history, ts.ctx());
+    seal_policies::seal_approve_reader(id, &version, &group, &encryption_history, ts.ctx());
 
+    ts::return_shared(version);
     ts::return_shared(group);
     ts::return_shared(encryption_history);
     ts.end();
@@ -81,20 +88,24 @@ fun seal_approve_reader_with_rotated_key_version() {
 
     // Rotate the key
     ts.next_tx(ALICE);
+    let version = ts.take_shared<Version>();
     let group = ts.take_shared<PermissionedGroup<Messaging>>();
     let mut encryption_history = ts.take_shared<EncryptionHistory>();
-    messaging::rotate_encryption_key(&mut encryption_history, &group, b"new_dek", ts.ctx());
+    messaging::rotate_encryption_key(&version, &mut encryption_history, &group, b"new_dek", ts.ctx());
+    ts::return_shared(version);
     ts::return_shared(group);
     ts::return_shared(encryption_history);
 
     ts.next_tx(ALICE);
+    let version = ts.take_shared<Version>();
     let group = ts.take_shared<PermissionedGroup<Messaging>>();
     let encryption_history = ts.take_shared<EncryptionHistory>();
 
     // Both key versions should work
-    seal_policies::seal_approve_reader(build_identity(group_id, 0), &group, &encryption_history, ts.ctx());
-    seal_policies::seal_approve_reader(build_identity(group_id, 1), &group, &encryption_history, ts.ctx());
+    seal_policies::seal_approve_reader(build_identity(group_id, 0), &version, &group, &encryption_history, ts.ctx());
+    seal_policies::seal_approve_reader(build_identity(group_id, 1), &version, &group, &encryption_history, ts.ctx());
 
+    ts::return_shared(version);
     ts::return_shared(group);
     ts::return_shared(encryption_history);
     ts.end();
@@ -113,11 +124,13 @@ fun seal_approve_reader_member_with_reader_permission() {
 
     // Bob should be able to approve
     ts.next_tx(BOB);
+    let version = ts.take_shared<Version>();
     let group = ts.take_shared<PermissionedGroup<Messaging>>();
     let encryption_history = ts.take_shared<EncryptionHistory>();
     let id = build_identity(group_id, 0);
-    seal_policies::seal_approve_reader(id, &group, &encryption_history, ts.ctx());
+    seal_policies::seal_approve_reader(id, &version, &group, &encryption_history, ts.ctx());
 
+    ts::return_shared(version);
     ts::return_shared(group);
     ts::return_shared(encryption_history);
     ts.end();
@@ -129,6 +142,7 @@ fun seal_approve_reader_invalid_group_id_fails() {
     setup_group(&mut ts);
 
     ts.next_tx(ALICE);
+    let version = ts.take_shared<Version>();
     let group = ts.take_shared<PermissionedGroup<Messaging>>();
     let encryption_history = ts.take_shared<EncryptionHistory>();
 
@@ -136,7 +150,7 @@ fun seal_approve_reader_invalid_group_id_fails() {
     let wrong_group_id = object::id_from_address(@0xDEADBEEF);
     let id = build_identity(wrong_group_id, 0);
 
-    seal_policies::seal_approve_reader(id, &group, &encryption_history, ts.ctx());
+    seal_policies::seal_approve_reader(id, &version, &group, &encryption_history, ts.ctx());
 
     abort
 }
@@ -147,13 +161,14 @@ fun seal_approve_reader_short_id_fails() {
     setup_group(&mut ts);
 
     ts.next_tx(ALICE);
+    let version = ts.take_shared<Version>();
     let group = ts.take_shared<PermissionedGroup<Messaging>>();
     let encryption_history = ts.take_shared<EncryptionHistory>();
 
     // ID shorter than 40 bytes
     let short_id = vector[1, 2, 3, 4];
 
-    seal_policies::seal_approve_reader(short_id, &group, &encryption_history, ts.ctx());
+    seal_policies::seal_approve_reader(short_id, &version, &group, &encryption_history, ts.ctx());
 
     abort
 }
@@ -164,13 +179,14 @@ fun seal_approve_reader_future_key_version_fails() {
     let group_id = setup_group(&mut ts);
 
     ts.next_tx(ALICE);
+    let version = ts.take_shared<Version>();
     let group = ts.take_shared<PermissionedGroup<Messaging>>();
     let encryption_history = ts.take_shared<EncryptionHistory>();
 
     // Try to use key_version 1 when only version 0 exists
     let id = build_identity(group_id, 1);
 
-    seal_policies::seal_approve_reader(id, &group, &encryption_history, ts.ctx());
+    seal_policies::seal_approve_reader(id, &version, &group, &encryption_history, ts.ctx());
 
     abort
 }
@@ -188,28 +204,29 @@ fun seal_approve_reader_without_permission_fails() {
 
     // Bob tries to approve but doesn't have MessagingReader
     ts.next_tx(BOB);
+    let version = ts.take_shared<Version>();
     let group = ts.take_shared<PermissionedGroup<Messaging>>();
     let encryption_history = ts.take_shared<EncryptionHistory>();
     let id = build_identity(group_id, 0);
 
-    seal_policies::seal_approve_reader(id, &group, &encryption_history, ts.ctx());
+    seal_policies::seal_approve_reader(id, &version, &group, &encryption_history, ts.ctx());
 
     abort
 }
 
-#[test, expected_failure]
+#[test, expected_failure(abort_code = sui::dynamic_field::EFieldDoesNotExist)]
 fun seal_approve_reader_non_member_fails() {
     let mut ts = ts::begin(ALICE);
     let group_id = setup_group(&mut ts);
 
-    // Bob is not a member at all - this fails at the table lookup level
-    // when has_permission tries to borrow from the permissions table
+    // Bob is not a member — has_permission aborts at the dynamic field lookup level
     ts.next_tx(BOB);
+    let version = ts.take_shared<Version>();
     let group = ts.take_shared<PermissionedGroup<Messaging>>();
     let encryption_history = ts.take_shared<EncryptionHistory>();
     let id = build_identity(group_id, 0);
 
-    seal_policies::seal_approve_reader(id, &group, &encryption_history, ts.ctx());
+    seal_policies::seal_approve_reader(id, &version, &group, &encryption_history, ts.ctx());
 
     abort
 }
@@ -221,10 +238,13 @@ fun seal_approve_reader_mismatched_encryption_history_fails() {
     // Create first group
     ts.next_tx(ALICE);
     messaging::init_for_testing(ts.ctx());
+    version::init_for_testing(ts.ctx());
 
     ts.next_tx(ALICE);
     let mut namespace = ts.take_shared<MessagingNamespace>();
+    let version = ts.take_shared<Version>();
     let (group1, encryption_history1) = messaging::create_group(
+        &version,
         &mut namespace,
         string::utf8(TEST_UUID_2),
         TEST_ENCRYPTED_DEK,
@@ -238,6 +258,7 @@ fun seal_approve_reader_mismatched_encryption_history_fails() {
 
     // Create second group
     let (group2, encryption_history2) = messaging::create_group(
+        &version,
         &mut namespace,
         string::utf8(TEST_UUID_3),
         TEST_ENCRYPTED_DEK,
@@ -247,10 +268,12 @@ fun seal_approve_reader_mismatched_encryption_history_fails() {
     let encryption_history2_id = object::id(&encryption_history2);
     transfer::public_share_object(group2);
     transfer::public_share_object(encryption_history2);
+    ts::return_shared(version);
     ts::return_shared(namespace);
 
     // Try to use group1 with encryption_history2
     ts.next_tx(ALICE);
+    let version = ts.take_shared<Version>();
     let group1 = ts.take_shared_by_id<PermissionedGroup<Messaging>>(group1_id);
     // Take encryption_history2 (wrong one for group1)
     let encryption_history2 = ts.take_shared_by_id<EncryptionHistory>(encryption_history2_id);
@@ -258,9 +281,10 @@ fun seal_approve_reader_mismatched_encryption_history_fails() {
     let encryption_history1 = ts.take_shared_by_id<EncryptionHistory>(encryption_history1_id);
 
     let id = build_identity(group1_id, 0);
-    seal_policies::seal_approve_reader(id, &group1, &encryption_history2, ts.ctx());
+    seal_policies::seal_approve_reader(id, &version, &group1, &encryption_history2, ts.ctx());
 
     // These won't be reached due to abort, but needed for type checking
+    ts::return_shared(version);
     ts::return_shared(group1);
     ts::return_shared(encryption_history1);
     ts::return_shared(encryption_history2);

@@ -4,11 +4,13 @@
 import type { PermissionedGroupsPackageConfig } from './types.js';
 
 export const TESTNET_PERMISSIONED_GROUPS_PACKAGE_CONFIG = {
-	packageId: '0xTBD',
+	originalPackageId: '0xTBD',
+	latestPackageId: '0xTBD',
 } satisfies PermissionedGroupsPackageConfig;
 
 export const MAINNET_PERMISSIONED_GROUPS_PACKAGE_CONFIG = {
-	packageId: '0xTBD',
+	originalPackageId: '0xTBD',
+	latestPackageId: '0xTBD',
 } satisfies PermissionedGroupsPackageConfig;
 
 /**
@@ -19,6 +21,9 @@ export const PERMISSIONS_TABLE_DERIVATION_KEY = 'permissions_table';
 
 /**
  * Returns full Move type paths for all core permissions defined in the permissioned-groups package.
+ *
+ * @param packageId - The **original (V1)** package ID. The TypeNames stored in the
+ *   PermissionsTable always use V1 addresses (via `type_name::with_original_ids`).
  *
  * @example
  * ```ts
@@ -42,7 +47,8 @@ export function permissionTypes(packageId: string) {
 /**
  * Returns the full Move type name for `PermissionedGroup<T>`.
  *
- * @param packageId - The permissioned-groups package ID
+ * @param packageId - The **original (V1)** permissioned-groups package ID.
+ *   TypeNames on-chain always use V1 addresses (via `type_name::with_original_ids`).
  * @param witnessType - The witness type parameter (e.g., `0xdef::messaging::Messaging`)
  */
 export function permissionedGroupType(packageId: string, witnessType: string): string {

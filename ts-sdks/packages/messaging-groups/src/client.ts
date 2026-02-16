@@ -176,7 +176,9 @@ export class MessagingGroupsClient<TApproveContext = void> {
 			suiClient: this.#client,
 			view: this.view,
 			derive: this.derive,
-			packageId: this.#packageConfig.packageId,
+			originalPackageId: this.#packageConfig.originalPackageId,
+			latestPackageId: this.#packageConfig.latestPackageId,
+			versionId: this.#packageConfig.versionId,
 			encryption: options.encryption,
 		});
 		this.call = new MessagingGroupsCall({
