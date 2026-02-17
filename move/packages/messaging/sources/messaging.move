@@ -28,8 +28,10 @@
 module messaging::messaging;
 
 use messaging::encryption_history::{Self, EncryptionHistory, EncryptionKeyRotator};
-use permissioned_groups::permissioned_group::{Self, PermissionedGroup};
+use messaging::group_leaver::{Self, GroupLeaver};
+use permissioned_groups::permissioned_group::{Self, PermissionedGroup, PermissionsAdmin};
 use std::string::String;
+use sui::derived_object;
 use sui::package;
 use sui::vec_set::{Self, VecSet};
 
@@ -73,9 +75,13 @@ public struct MessagingNamespace has key {
 fun init(otw: MESSAGING, ctx: &mut TxContext) {
     package::claim_and_keep(otw, ctx);
 
-    transfer::share_object(MessagingNamespace {
+    let mut namespace = MessagingNamespace {
         id: object::new(ctx),
-    });
+    };
+
+    let group_leaver = group_leaver::new(&mut namespace.id);
+    transfer::share_object(namespace);
+    group_leaver::share(group_leaver);
 }
 
 // === Public Functions ===
@@ -120,6 +126,14 @@ public fun create_group(
 
     let creator = ctx.sender();
     grant_all_messaging_permissions(&mut group, creator, ctx);
+
+    // Grant PermissionsAdmin to the GroupLeaver actor so it can remove members on behalf of callers.
+    // The address is derived deterministically from the namespace — no need to pass the object.
+    let group_leaver_address = derived_object::derive_address(
+        object::id(namespace),
+        group_leaver::derivation_key(),
+    );
+    group.grant_permission<Messaging, PermissionsAdmin>(group_leaver_address, ctx);
 
     // Grant MessagingReader permission to initial members (skip creator)
     initial_members.into_keys().do!(|member| {
@@ -187,6 +201,32 @@ public fun rotate_encryption_key(
 ) {
     assert!(group.has_permission<Messaging, EncryptionKeyRotator>(ctx.sender()), ENotPermitted);
     encryption_history.rotate_key(new_encrypted_dek);
+}
+
+/// Removes the caller from a messaging group.
+/// The `GroupLeaver` actor holds `PermissionsAdmin` on all groups and calls
+/// `object_remove_member` on behalf of the caller.
+///
+/// # Parameters
+/// - `group_leaver`: Reference to the shared `GroupLeaver` object
+/// - `group`: Mutable reference to the `PermissionedGroup<Messaging>`
+/// - `ctx`: Transaction context
+///
+/// # Aborts
+/// - `EMemberNotFound` (from `permissioned_group`): if the caller is not a member
+/// - `ELastPermissionsAdmin` (from `permissioned_group`): if the caller is the last
+///   `PermissionsAdmin` holder (including actor objects)
+///
+/// NOTE: Because `GroupLeaver` itself holds `PermissionsAdmin` on every group, a human
+/// admin can always leave — leaving `GroupLeaver` as the sole remaining admin. A group in
+/// that state has no human admins. To promote a new human admin from that state, a
+/// dedicated actor-object wrapper over `object_grant_permission` would be needed.
+public fun leave(
+    group_leaver: &GroupLeaver,
+    group: &mut PermissionedGroup<Messaging>,
+    ctx: &TxContext,
+) {
+    group_leaver::leave<Messaging>(group_leaver, group, ctx);
 }
 
 /// Grants all messaging permissions to a member.

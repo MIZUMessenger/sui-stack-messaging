@@ -6,8 +6,6 @@ use permissioned_groups::permissioned_group::{
     PermissionedGroup,
     PermissionsAdmin,
     ExtensionPermissionsAdmin,
-    UIDAccessor,
-    SelfLeave
 };
 use std::unit_test::{assert_eq, destroy};
 use sui::test_scenario as ts;
@@ -529,99 +527,6 @@ fun new_derived_duplicate_key_fails() {
     abort
 }
 
-// === leave tests ===
-
-#[test]
-fun leave_removes_member() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    let mut group = permissioned_group::new<TestWitness>(TestWitness(), ts.ctx());
-
-    // Grant Bob CustomPermission + SelfLeave
-    group.grant_permission<TestWitness, CustomPermission>(BOB, ts.ctx());
-    group.grant_permission<TestWitness, SelfLeave>(BOB, ts.ctx());
-    transfer::public_share_object(group);
-
-    // Bob leaves
-    ts.next_tx(BOB);
-    let mut group = ts.take_shared<PermissionedGroup<TestWitness>>();
-    group.leave<TestWitness>(ts.ctx());
-
-    assert!(!group.is_member(BOB));
-
-    ts::return_shared(group);
-    ts.end();
-}
-
-#[test, expected_failure(abort_code = permissioned_group::ENotPermitted)]
-fun leave_without_permission_fails() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    let mut group = permissioned_group::new<TestWitness>(TestWitness(), ts.ctx());
-
-    // Grant Bob CustomPermission but NOT SelfLeave
-    group.grant_permission<TestWitness, CustomPermission>(BOB, ts.ctx());
-    transfer::public_share_object(group);
-
-    // Bob tries to leave (should fail - no SelfLeave)
-    ts.next_tx(BOB);
-    let mut group = ts.take_shared<PermissionedGroup<TestWitness>>();
-    group.leave<TestWitness>(ts.ctx());
-
-    abort
-}
-
-#[test, expected_failure(abort_code = permissioned_group::ELastPermissionsAdmin)]
-fun leave_last_admin_fails() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    let mut group = permissioned_group::new<TestWitness>(TestWitness(), ts.ctx());
-
-    // Grant Alice SelfLeave (she's the only PermissionsAdmin)
-    group.grant_permission<TestWitness, SelfLeave>(ALICE, ts.ctx());
-
-    // Alice tries to leave (should fail - last PermissionsAdmin)
-    group.leave<TestWitness>(ts.ctx());
-
-    abort
-}
-
-// === UID access tests ===
-
-#[test]
-fun uid_with_permission_works() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    let mut group = permissioned_group::new<TestWitness>(TestWitness(), ts.ctx());
-
-    // Grant Alice UIDAccessor
-    group.grant_permission<TestWitness, UIDAccessor>(ALICE, ts.ctx());
-
-    // Access &UID and &mut UID
-    let _uid_ref = group.uid<TestWitness>(ts.ctx());
-    let _uid_mut = group.uid_mut<TestWitness>(ts.ctx());
-
-    destroy(group);
-    ts.end();
-}
-
-#[test, expected_failure(abort_code = permissioned_group::ENotPermitted)]
-fun uid_without_permission_fails() {
-    let mut ts = ts::begin(ALICE);
-
-    ts.next_tx(ALICE);
-    let group = permissioned_group::new<TestWitness>(TestWitness(), ts.ctx());
-
-    // Alice has PermissionsAdmin but NOT UIDAccessor
-    let _uid_ref = group.uid<TestWitness>(ts.ctx());
-
-    abort
-}
-
 // === Permission scoping tests ===
 
 // LIMITATION: `permissions_admin_cannot_manage_extension_permission` cannot be tested here because
@@ -640,10 +545,10 @@ fun extension_admin_cannot_manage_core_permission() {
     group.grant_permission<TestWitness, ExtensionPermissionsAdmin>(BOB, ts.ctx());
     transfer::public_share_object(group);
 
-    // Bob tries to grant SelfLeave (core permission) — should fail
+    // Bob tries to grant PermissionsAdmin (core permission) — should fail
     ts.next_tx(BOB);
     let mut group = ts.take_shared<PermissionedGroup<TestWitness>>();
-    group.grant_permission<TestWitness, SelfLeave>(CHARLIE, ts.ctx());
+    group.grant_permission<TestWitness, PermissionsAdmin>(CHARLIE, ts.ctx());
 
     abort
 }

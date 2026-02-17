@@ -6,14 +6,18 @@
 ///
 /// Core permissions (defined in this package):
 /// - `PermissionsAdmin`: Manages core permissions. Can grant/revoke PermissionsAdmin,
-///   ExtensionPermissionsAdmin, UIDAccessor, SelfLeave. Can remove members.
+///   ExtensionPermissionsAdmin, ObjectAdmin. Can remove members.
 /// - `ExtensionPermissionsAdmin`: Manages extension permissions defined in third-party packages.
-/// - `UIDAccessor`: Grants access to the group's UID (&UID and &mut UID).
-/// - `SelfLeave`: Grants ability to self-remove via `leave()`.
+/// - `ObjectAdmin`: Admin-tier permission granting raw `&mut UID` access to the group object.
+///   Use cases include attaching dynamic fields or integrating with external protocols
+///   (e.g. SuiNS reverse lookup). Only accessible via the actor-object pattern
+///   (`object_uid` / `object_uid_mut`), which forces extending contracts to explicitly
+///   reason about the implications of mutating the group object.
 ///
 /// ## Permission Scoping
 ///
-/// - `PermissionsAdmin` can ONLY manage core permissions (from this package)
+/// - `PermissionsAdmin` can ONLY manage core permissions (from this package):
+///   PermissionsAdmin, ExtensionPermissionsAdmin, ObjectAdmin
 /// - `ExtensionPermissionsAdmin` can ONLY manage extension permissions (from other packages)
 ///
 /// ## Key Concepts
@@ -54,7 +58,7 @@ const PERMISSIONS_TABLE_DERIVATION_KEY_BYTES: vector<u8> = b"permissions_table";
 // === Permission Witnesses ===
 
 /// Permission to manage core permissions defined in the permissioned_groups package.
-/// Can manage: PermissionsAdmin, ExtensionPermissionsAdmin, UIDAccessor, SelfLeave.
+/// Can manage: PermissionsAdmin, ExtensionPermissionsAdmin, ObjectAdmin.
 /// Cannot manage extension permissions (those from other packages).
 public struct PermissionsAdmin() has drop;
 
@@ -63,13 +67,9 @@ public struct PermissionsAdmin() has drop;
 /// Cannot manage core permissions (PermissionsAdmin, ExtensionPermissionsAdmin, etc.).
 public struct ExtensionPermissionsAdmin() has drop;
 
-/// Permission to access the group's UID (&UID and &mut UID).
-/// Enables attaching dynamic fields and using derived objects.
-public struct UIDAccessor() has drop;
-
-/// Permission to leave the group (self-remove).
-/// Never auto-granted — always opt-in.
-public struct SelfLeave() has drop;
+/// Admin-tier permission granting access to the group's UID (&UID and &mut UID).
+/// Only accessible via the actor-object pattern; see `object_uid` / `object_uid_mut`.
+public struct ObjectAdmin() has drop;
 
 // === Structs ===
 
@@ -335,20 +335,6 @@ public fun object_remove_member<T: drop>(
     });
 }
 
-/// Allows the sender to leave the group. Requires `SelfLeave` permission.
-/// Removes all permissions atomically. Prevented if sender is the last PermissionsAdmin.
-public fun leave<T: drop>(self: &mut PermissionedGroup<T>, ctx: &TxContext) {
-    let member = ctx.sender();
-    assert!(self.has_permission<T, SelfLeave>(member), ENotPermitted);
-    self.safe_decrement_permissions_admin_count(member);
-    self.permissions.remove_member(member);
-
-    event::emit(MemberRemoved<T> {
-        group_id: object::id(self),
-        member,
-    });
-}
-
 /// Revokes a permission from a member.
 /// If this is the member's last permission, they are automatically removed from the group.
 /// Emits `PermissionsRevoked` and potentially `MemberRemoved` events.
@@ -468,27 +454,27 @@ public fun creator<T: drop>(self: &PermissionedGroup<T>): address {
 
 // === UID Access Functions ===
 
-/// Returns a reference to the group's UID. Requires `UIDAccessor` permission.
-public fun uid<T: drop>(self: &PermissionedGroup<T>, ctx: &TxContext): &UID {
-    assert!(self.has_permission<T, UIDAccessor>(ctx.sender()), ENotPermitted);
-    &self.id
-}
-
-/// Returns a mutable reference to the group's UID. Requires `UIDAccessor` permission.
-public fun uid_mut<T: drop>(self: &mut PermissionedGroup<T>, ctx: &TxContext): &mut UID {
-    assert!(self.has_permission<T, UIDAccessor>(ctx.sender()), ENotPermitted);
-    &mut self.id
-}
-
-/// Object-actor variant of `uid()`. Requires `UIDAccessor` permission on the actor.
+/// Returns a reference to the group's UID via an actor object.
+/// The actor object must have `ObjectAdmin` permission on the group.
+/// Only accessible via the actor-object pattern — use this to build wrapper modules
+/// that explicitly reason about the implications of accessing the group UID.
+///
+/// # Aborts
+/// - `ENotPermitted`: if actor_object doesn't have `ObjectAdmin` permission
 public fun object_uid<T: drop>(self: &PermissionedGroup<T>, actor_object: &UID): &UID {
-    assert!(self.has_permission<T, UIDAccessor>(actor_object.to_address()), ENotPermitted);
+    assert!(self.has_permission<T, ObjectAdmin>(actor_object.to_address()), ENotPermitted);
     &self.id
 }
 
-/// Object-actor variant of `uid_mut()`. Requires `UIDAccessor` permission on the actor.
+/// Returns a mutable reference to the group's UID via an actor object.
+/// The actor object must have `ObjectAdmin` permission on the group.
+/// Only accessible via the actor-object pattern — use this to build wrapper modules
+/// that explicitly reason about the implications of mutating the group UID.
+///
+/// # Aborts
+/// - `ENotPermitted`: if actor_object doesn't have `ObjectAdmin` permission
 public fun object_uid_mut<T: drop>(self: &mut PermissionedGroup<T>, actor_object: &UID): &mut UID {
-    assert!(self.has_permission<T, UIDAccessor>(actor_object.to_address()), ENotPermitted);
+    assert!(self.has_permission<T, ObjectAdmin>(actor_object.to_address()), ENotPermitted);
     &mut self.id
 }
 
@@ -529,6 +515,11 @@ fun assert_can_manage_permission<T: drop, Permission: drop>(
 /// Decrements permissions_admin_count if member has `PermissionsAdmin`.
 /// Used when revoking `PermissionsAdmin` permission or removing a member.
 /// Aborts if this would leave no PermissionsAdmins.
+///
+/// NOTE: `permissions_admin_count` tracks all holders of `PermissionsAdmin`, including
+/// actor-object addresses. If actor objects hold `PermissionsAdmin`, a group may end up
+/// with no human admins without this guard triggering. Downstream packages using the
+/// actor-object pattern for self-service operations should be aware of this.
 fun safe_decrement_permissions_admin_count<T: drop>(
     self: &mut PermissionedGroup<T>,
     member: address,
