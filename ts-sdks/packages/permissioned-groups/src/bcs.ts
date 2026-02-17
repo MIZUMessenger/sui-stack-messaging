@@ -8,8 +8,7 @@ import type { PermissionedGroupsPackageConfig } from './types.js';
 import {
 	PermissionsAdmin,
 	ExtensionPermissionsAdmin,
-	UIDAccessor,
-	SelfLeave,
+	ObjectAdmin,
 	GroupCreated,
 	GroupDerived,
 	MemberAdded,
@@ -22,8 +21,7 @@ import {
 export type ParsedPermissionedGroup = ReturnType<typeof PermissionedGroup>['$inferType'];
 export type ParsedPermissionsAdmin = (typeof PermissionsAdmin)['$inferType'];
 export type ParsedExtensionPermissionsAdmin = (typeof ExtensionPermissionsAdmin)['$inferType'];
-export type ParsedUIDAccessor = (typeof UIDAccessor)['$inferType'];
-export type ParsedSelfLeave = (typeof SelfLeave)['$inferType'];
+export type ParsedObjectAdmin = (typeof ObjectAdmin)['$inferType'];
 export type ParsedGroupCreated = ReturnType<typeof GroupCreated>['$inferType'];
 export type ParsedGroupDerived<DerivationKey = unknown> = {
 	group_id: string;
@@ -64,10 +62,8 @@ export class PermissionedGroupsBCS {
 	readonly PermissionsAdmin: BcsType<ParsedPermissionsAdmin, unknown>;
 	/** Core permission: manages extension permissions from other packages */
 	readonly ExtensionPermissionsAdmin: BcsType<ParsedExtensionPermissionsAdmin, unknown>;
-	/** Core permission: grants UID access (&UID and &mut UID) */
-	readonly UIDAccessor: BcsType<ParsedUIDAccessor, unknown>;
-	/** Core permission: grants ability to self-remove via leave() */
-	readonly SelfLeave: BcsType<ParsedSelfLeave, unknown>;
+	/** Core permission: grants raw &mut UID access via the actor-object pattern */
+	readonly ObjectAdmin: BcsType<ParsedObjectAdmin, unknown>;
 	/** Main group struct containing membership and permission data */
 	readonly PermissionedGroup: BcsType<ParsedPermissionedGroup, unknown>;
 	/** Event emitted when a group is created */
@@ -93,8 +89,7 @@ export class PermissionedGroupsBCS {
 
 		this.PermissionsAdmin = this.#withPackageId(PermissionsAdmin);
 		this.ExtensionPermissionsAdmin = this.#withPackageId(ExtensionPermissionsAdmin);
-		this.UIDAccessor = this.#withPackageId(UIDAccessor);
-		this.SelfLeave = this.#withPackageId(SelfLeave);
+		this.ObjectAdmin = this.#withPackageId(ObjectAdmin);
 		this.PermissionedGroup = this.#withPackageId(PermissionedGroup(this.#phantomWitnessBcs));
 		this.GroupCreated = this.#withPackageId(GroupCreated(this.#phantomWitnessBcs));
 		this.MemberAdded = this.#withPackageId(MemberAdded(this.#phantomWitnessBcs));

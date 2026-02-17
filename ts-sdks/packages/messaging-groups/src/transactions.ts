@@ -4,7 +4,11 @@
 import { Transaction } from '@mysten/sui/transactions';
 
 import type { MessagingGroupsCall } from './call.js';
-import type { CreateGroupCallOptions, RotateEncryptionKeyCallOptions } from './types.js';
+import type {
+	CreateGroupCallOptions,
+	LeaveCallOptions,
+	RotateEncryptionKeyCallOptions,
+} from './types.js';
 
 export interface MessagingGroupsTransactionsOptions {
 	call: MessagingGroupsCall;
@@ -62,6 +66,15 @@ export class MessagingGroupsTransactions {
 	rotateEncryptionKey(options: RotateEncryptionKeyCallOptions): Transaction {
 		const tx = new Transaction();
 		tx.add(this.#call.rotateEncryptionKey(options));
+		return tx;
+	}
+
+	/**
+	 * Creates a Transaction that removes the sender from a messaging group.
+	 */
+	leave(options: LeaveCallOptions): Transaction {
+		const tx = new Transaction();
+		tx.add(this.#call.leave(options));
 		return tx;
 	}
 }

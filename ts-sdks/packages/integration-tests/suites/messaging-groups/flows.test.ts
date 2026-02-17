@@ -379,6 +379,75 @@ describe('Full Flows', () => {
 		});
 	});
 
+	describe('leave', () => {
+		it('should allow a member to leave a messaging group', async () => {
+			const uuid = crypto.randomUUID();
+
+			await adminClient.messaging.createAndShareGroup({
+				signer: adminKeypair,
+				uuid,
+			});
+
+			const groupId = adminClient.messaging.derive.groupId({ uuid });
+
+			// Fund a member and add them to the group
+			const memberKeypair = await fundNewKeypair(faucetUrl);
+			const memberAddress = memberKeypair.getPublicKey().toSuiAddress();
+			const memberClient = createMessagingGroupsClient({
+				...clientConfig,
+				url: clientConfig.suiClientUrl,
+				network: 'localnet',
+				keypair: memberKeypair,
+			});
+
+			await adminClient.groups.grantPermissions({
+				signer: adminKeypair,
+				groupId,
+				member: memberAddress,
+				permissionTypes: Object.values(messagingPermissionTypes(messagingPackageId)),
+			});
+
+			expect(
+				await adminClient.groups.view.isMember({ groupId, member: memberAddress }),
+			).toBe(true);
+
+			// Member leaves via the messaging leave (GroupLeaver actor)
+			await memberClient.messaging.leave({
+				signer: memberKeypair,
+				groupId,
+			});
+
+			expect(
+				await adminClient.groups.view.isMember({ groupId, member: memberAddress }),
+			).toBe(false);
+		});
+
+		it('should allow the last human admin to leave (GroupLeaver retains PermissionsAdmin)', async () => {
+			const uuid = crypto.randomUUID();
+
+			await adminClient.messaging.createAndShareGroup({
+				signer: adminKeypair,
+				uuid,
+			});
+
+			const groupId = adminClient.messaging.derive.groupId({ uuid });
+
+			// Admin is the only human PermissionsAdmin, but GroupLeaver also holds PermissionsAdmin.
+			// So leaving should succeed — the group is not left without an admin.
+			await adminClient.messaging.leave({
+				signer: adminKeypair,
+				groupId,
+			});
+
+			expect(
+				await adminClient.groups.view.isMember({
+					groupId,
+					member: adminKeypair.getPublicKey().toSuiAddress(),
+				}),
+			).toBe(false);
+		});
+	});
+
 	describe('member removal', () => {
 		it('should remove member via groups extension and deny removed member on current key', async () => {
 			const uuid = crypto.randomUUID();

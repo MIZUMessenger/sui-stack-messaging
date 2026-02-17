@@ -9,7 +9,6 @@ import type {
 	GrantAllPermissionsCallOptions,
 	GrantPermissionCallOptions,
 	GrantPermissionsCallOptions,
-	LeaveCallOptions,
 	ObjectGrantPermissionCallOptions,
 	ObjectRemoveMemberCallOptions,
 	ObjectRevokePermissionCallOptions,
@@ -168,8 +167,8 @@ export class PermissionedGroupsCall {
 	}
 
 	/**
-	 * Grants all 4 core permissions to a member:
-	 * PermissionsAdmin, ExtensionPermissionsAdmin, UIDAccessor, SelfLeave.
+	 * Grants all 3 core permissions to a member:
+	 * PermissionsAdmin, ExtensionPermissionsAdmin, ObjectAdmin.
 	 */
 	grantAllPermissions(options: GrantAllPermissionsCallOptions): (tx: Transaction) => void {
 		const types = permissionTypes(this.#packageConfig.packageId);
@@ -177,20 +176,6 @@ export class PermissionedGroupsCall {
 			groupId: options.groupId,
 			member: options.member,
 			permissionTypes: Object.values(types),
-		});
-	}
-
-	/**
-	 * Allows the sender to leave the group.
-	 * Requires SelfLeave permission.
-	 */
-	leave(options: LeaveCallOptions): (tx: Transaction) => TransactionResult {
-		return permissionedGroup.leave({
-			package: this.#packageConfig.packageId,
-			arguments: {
-				self: options.groupId,
-			},
-			typeArguments: [this.#witnessType],
 		});
 	}
 

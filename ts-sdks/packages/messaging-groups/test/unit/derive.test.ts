@@ -42,6 +42,32 @@ describe('MessagingGroupsDerive', () => {
 		});
 	});
 
+	describe('groupLeaverId', () => {
+		it('should return a deterministic ID', () => {
+			const derive = createDerive();
+			const id = derive.groupLeaverId();
+
+			expect(id).toBeDefined();
+			expect(typeof id).toBe('string');
+			expect(id.startsWith('0x')).toBe(true);
+		});
+
+		it('should return same ID on repeated calls (pure function)', () => {
+			const derive = createDerive();
+			expect(derive.groupLeaverId()).toBe(derive.groupLeaverId());
+		});
+
+		it('should differ from groupId and encryptionHistoryId', () => {
+			const derive = createDerive();
+			const leaverId = derive.groupLeaverId();
+			const groupId = derive.groupId({ uuid: 'any-uuid' });
+			const encHistId = derive.encryptionHistoryId({ uuid: 'any-uuid' });
+
+			expect(leaverId).not.toBe(groupId);
+			expect(leaverId).not.toBe(encHistId);
+		});
+	});
+
 	describe('encryptionHistoryId', () => {
 		it('should return a deterministic ID for a given UUID', () => {
 			const derive = createDerive();

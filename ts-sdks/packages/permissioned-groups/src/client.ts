@@ -14,7 +14,6 @@ import type {
 	GrantAllPermissionsOptions,
 	GrantPermissionOptions,
 	GrantPermissionsOptions,
-	LeaveOptions,
 	ObjectGrantPermissionOptions,
 	ObjectRemoveMemberOptions,
 	ObjectRevokePermissionOptions,
@@ -188,8 +187,8 @@ export class PermissionedGroupsClient {
 	}
 
 	/**
-	 * Grants all 4 core permissions to a member:
-	 * PermissionsAdmin, ExtensionPermissionsAdmin, UIDAccessor, SelfLeave.
+	 * Grants all 3 core permissions to a member:
+	 * PermissionsAdmin, ExtensionPermissionsAdmin, ObjectAdmin.
 	 */
 	async grantAllPermissions(options: GrantAllPermissionsOptions) {
 		const { signer, ...callOptions } = options;
@@ -223,16 +222,6 @@ export class PermissionedGroupsClient {
 		const { signer, ...callOptions } = options;
 		const transaction = this.tx.revokePermissions(callOptions);
 		return this.#executeTransaction(transaction, signer, 'revoke permissions');
-	}
-
-	/**
-	 * Allows the sender to leave the group.
-	 * Requires SelfLeave permission.
-	 */
-	async leave(options: LeaveOptions) {
-		const { signer, ...callOptions } = options;
-		const transaction = this.tx.leave(callOptions);
-		return this.#executeTransaction(transaction, signer, 'leave group');
 	}
 
 	/**

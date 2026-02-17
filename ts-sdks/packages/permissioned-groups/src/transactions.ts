@@ -8,7 +8,6 @@ import type {
 	GrantAllPermissionsCallOptions,
 	GrantPermissionCallOptions,
 	GrantPermissionsCallOptions,
-	LeaveCallOptions,
 	ObjectGrantPermissionCallOptions,
 	ObjectRemoveMemberCallOptions,
 	ObjectRevokePermissionCallOptions,
@@ -104,20 +103,11 @@ export class PermissionedGroupsTransactions {
 	}
 
 	/**
-	 * Creates a Transaction that grants all 4 core permissions to a member.
+	 * Creates a Transaction that grants all 3 core permissions to a member.
 	 */
 	grantAllPermissions(options: GrantAllPermissionsCallOptions): Transaction {
 		const tx = new Transaction();
 		tx.add(this.#call.grantAllPermissions(options));
-		return tx;
-	}
-
-	/**
-	 * Creates a Transaction that allows the sender to leave the group.
-	 */
-	leave(options: LeaveCallOptions): Transaction {
-		const tx = new Transaction();
-		tx.add(this.#call.leave(options));
 		return tx;
 	}
 

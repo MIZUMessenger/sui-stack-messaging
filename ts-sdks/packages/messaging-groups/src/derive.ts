@@ -4,6 +4,7 @@
 import { bcs } from '@mysten/sui/bcs';
 import { deriveObjectID } from '@mysten/sui/utils';
 
+import { GROUP_LEAVER_DERIVATION_KEY } from './constants.js';
 import type { MessagingGroupsPackageConfig } from './types.js';
 
 export interface MessagingGroupsDeriveOptions {
@@ -54,5 +55,18 @@ export class MessagingGroupsDerive {
 		const typeTag = `${this.#packageConfig.packageId}::encryption_history::EncryptionHistoryTag`;
 		const key = bcs.string().serialize(options.uuid).toBytes();
 		return deriveObjectID(this.#packageConfig.namespaceId, typeTag, key);
+	}
+
+	/**
+	 * Derive the `GroupLeaver` singleton object ID.
+	 *
+	 * `GroupLeaver` is derived from `MessagingNamespace` with the fixed string key
+	 * `GROUP_LEAVER_DERIVATION_KEY`. This matches the Move constant in `group_leaver.move`.
+	 *
+	 * @returns The deterministic object ID for the GroupLeaver shared object
+	 */
+	groupLeaverId(): string {
+		const key = bcs.string().serialize(GROUP_LEAVER_DERIVATION_KEY).toBytes();
+		return deriveObjectID(this.#packageConfig.namespaceId, '0x1::string::String', key);
 	}
 }

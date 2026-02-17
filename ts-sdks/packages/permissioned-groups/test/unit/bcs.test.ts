@@ -31,16 +31,10 @@ describe('PermissionedGroupsBCS', () => {
 			expect(bcsTypes.ExtensionPermissionsAdmin.name).not.toContain(LOCAL_PACKAGE_ALIAS);
 		});
 
-		it('should scope UIDAccessor type name with package ID', () => {
+		it('should scope ObjectAdmin type name with package ID', () => {
 			const bcsTypes = createBCS();
-			expect(bcsTypes.UIDAccessor.name).toContain(MOCK_PACKAGE_ID);
-			expect(bcsTypes.UIDAccessor.name).not.toContain(LOCAL_PACKAGE_ALIAS);
-		});
-
-		it('should scope SelfLeave type name with package ID', () => {
-			const bcsTypes = createBCS();
-			expect(bcsTypes.SelfLeave.name).toContain(MOCK_PACKAGE_ID);
-			expect(bcsTypes.SelfLeave.name).not.toContain(LOCAL_PACKAGE_ALIAS);
+			expect(bcsTypes.ObjectAdmin.name).toContain(MOCK_PACKAGE_ID);
+			expect(bcsTypes.ObjectAdmin.name).not.toContain(LOCAL_PACKAGE_ALIAS);
 		});
 
 		it('should scope PermissionedGroup type name with package ID and witness type', () => {
@@ -71,8 +65,7 @@ describe('PermissionedGroupsBCS', () => {
 			const allTypes = [
 				bcsTypes.PermissionsAdmin,
 				bcsTypes.ExtensionPermissionsAdmin,
-				bcsTypes.UIDAccessor,
-				bcsTypes.SelfLeave,
+				bcsTypes.ObjectAdmin,
 				bcsTypes.PermissionedGroup,
 				bcsTypes.GroupCreated,
 				bcsTypes.MemberAdded,

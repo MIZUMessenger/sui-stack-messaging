@@ -14,6 +14,16 @@ export const MAINNET_MESSAGING_GROUPS_PACKAGE_CONFIG = {
 } satisfies MessagingGroupsPackageConfig;
 
 /**
+ * The derivation key used by `group_leaver.move` to derive the `GroupLeaver` singleton
+ * from `MessagingNamespace`. Must match the Move constant `GROUP_LEAVER_DERIVATION_KEY`.
+ *
+ * NOTE: To avoid hardcoding this constant (and needing to keep it in sync with Move),
+ * a future improvement could add a `view.ts` method that calls `group_leaver::derivation_key()`
+ * via devInspect and caches the result. Deemed overengineering for now.
+ */
+export const GROUP_LEAVER_DERIVATION_KEY = 'group_leaver';
+
+/**
  * Returns full Move type paths for all messaging-specific permissions.
  *
  * @example

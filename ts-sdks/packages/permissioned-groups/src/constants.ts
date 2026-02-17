@@ -35,8 +35,7 @@ export function permissionTypes(packageId: string) {
 	return {
 		PermissionsAdmin: `${packageId}::permissioned_group::PermissionsAdmin`,
 		ExtensionPermissionsAdmin: `${packageId}::permissioned_group::ExtensionPermissionsAdmin`,
-		UIDAccessor: `${packageId}::permissioned_group::UIDAccessor`,
-		SelfLeave: `${packageId}::permissioned_group::SelfLeave`,
+		ObjectAdmin: `${packageId}::permissioned_group::ObjectAdmin`,
 	} as const;
 }
 

@@ -151,6 +151,12 @@ export interface ShareGroupCallOptions {
 	encryptionHistory: TransactionArgument;
 }
 
+/** Options for leaving a messaging group. */
+export interface LeaveCallOptions {
+	/** Object ID or TransactionArgument for the PermissionedGroup<Messaging> */
+	groupId: string | TransactionArgument;
+}
+
 // === Top-level Imperative Options (add signer) ===
 
 /** Options for creating a group (imperative) */
@@ -164,6 +170,12 @@ export type RotateEncryptionKeyOptions = RotateEncryptionKeyCallOptions & {
 	/** Signer to execute the transaction */
 	signer: Signer;
 };
+
+/** Options for leaving a group (imperative) */
+export interface LeaveOptions extends LeaveCallOptions {
+	/** Signer to execute the transaction */
+	signer: Signer;
+}
 
 // === Shared Reference Types ===
 

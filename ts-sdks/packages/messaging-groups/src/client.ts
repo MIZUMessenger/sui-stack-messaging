@@ -14,6 +14,7 @@ import {
 import { EnvelopeEncryption } from './encryption/envelope-encryption.js';
 import type {
 	CreateGroupOptions,
+	LeaveOptions,
 	MessagingGroupsClientOptions,
 	MessagingGroupsCompatibleClient,
 	MessagingGroupsEncryptionOptions,
@@ -168,6 +169,7 @@ export class MessagingGroupsClient<TApproveContext = void> {
 		this.call = new MessagingGroupsCall({
 			packageConfig: this.#packageConfig,
 			encryption: this.encryption,
+			derive: this.derive,
 			permissionedGroupTypeName: groupsExt.bcs.PermissionedGroup.name,
 			encryptionHistoryTypeName: this.bcs.EncryptionHistory.name,
 		});
@@ -237,5 +239,14 @@ export class MessagingGroupsClient<TApproveContext = void> {
 		const { signer, ...callOptions } = options;
 		const transaction = this.tx.rotateEncryptionKey(callOptions);
 		return this.#executeTransaction(transaction, signer, 'rotate encryption key');
+	}
+
+	/**
+	 * Removes the transaction sender from a messaging group.
+	 */
+	async leave(options: LeaveOptions) {
+		const { signer, ...callOptions } = options;
+		const transaction = this.tx.leave(callOptions);
+		return this.#executeTransaction(transaction, signer, 'leave group');
 	}
 }

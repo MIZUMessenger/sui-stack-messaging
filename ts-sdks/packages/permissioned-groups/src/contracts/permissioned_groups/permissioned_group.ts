@@ -12,16 +12,20 @@
  * Core permissions (defined in this package):
  *
  * - `PermissionsAdmin`: Manages core permissions. Can grant/revoke
- *   PermissionsAdmin, ExtensionPermissionsAdmin, UIDAccessor, SelfLeave. Can
- *   remove members.
+ *   PermissionsAdmin, ExtensionPermissionsAdmin, ObjectAdmin. Can remove members.
  * - `ExtensionPermissionsAdmin`: Manages extension permissions defined in
  *   third-party packages.
- * - `UIDAccessor`: Grants access to the group's UID (&UID and &mut UID).
- * - `SelfLeave`: Grants ability to self-remove via `leave()`.
+ * - `ObjectAdmin`: Admin-tier permission granting raw `&mut UID` access to the
+ *   group object. Use cases include attaching dynamic fields or integrating with
+ *   external protocols (e.g. SuiNS reverse lookup). Only accessible via the
+ *   actor-object pattern (`object_uid` / `object_uid_mut`), which forces extending
+ *   contracts to explicitly reason about the implications of mutating the group
+ *   object.
  *
  * ## Permission Scoping
  *
- * - `PermissionsAdmin` can ONLY manage core permissions (from this package)
+ * - `PermissionsAdmin` can ONLY manage core permissions (from this package):
+ *   PermissionsAdmin, ExtensionPermissionsAdmin, ObjectAdmin
  * - `ExtensionPermissionsAdmin` can ONLY manage extension permissions (from other
  *   packages)
  *
@@ -60,11 +64,10 @@ export const ExtensionPermissionsAdmin = new MoveTuple({
 	name: `${$moduleName}::ExtensionPermissionsAdmin`,
 	fields: [bcs.bool()],
 });
-export const UIDAccessor = new MoveTuple({
-	name: `${$moduleName}::UIDAccessor`,
+export const ObjectAdmin = new MoveTuple({
+	name: `${$moduleName}::ObjectAdmin`,
 	fields: [bcs.bool()],
 });
-export const SelfLeave = new MoveTuple({ name: `${$moduleName}::SelfLeave`, fields: [bcs.bool()] });
 /**
  * Group state mapping addresses to their granted permissions. Parameterized by `T`
  * to scope permissions to a specific package.
@@ -455,31 +458,6 @@ export function objectRemoveMember(options: ObjectRemoveMemberOptions) {
 			typeArguments: options.typeArguments,
 		});
 }
-export interface LeaveArguments {
-	self: RawTransactionArgument<string>;
-}
-export interface LeaveOptions {
-	package?: string;
-	arguments: LeaveArguments | [self: RawTransactionArgument<string>];
-	typeArguments: [string];
-}
-/**
- * Allows the sender to leave the group. Requires `SelfLeave` permission. Removes
- * all permissions atomically. Prevented if sender is the last PermissionsAdmin.
- */
-export function leave(options: LeaveOptions) {
-	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
-	const argumentsTypes = [null] satisfies (string | null)[];
-	const parameterNames = ['self'];
-	return (tx: Transaction) =>
-		tx.moveCall({
-			package: packageAddress,
-			module: 'permissioned_group',
-			function: 'leave',
-			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
-			typeArguments: options.typeArguments,
-		});
-}
 export interface RevokePermissionArguments {
 	self: RawTransactionArgument<string>;
 	member: RawTransactionArgument<string>;
@@ -700,53 +678,6 @@ export function creator(options: CreatorOptions) {
 			typeArguments: options.typeArguments,
 		});
 }
-export interface UidArguments {
-	self: RawTransactionArgument<string>;
-}
-export interface UidOptions {
-	package?: string;
-	arguments: UidArguments | [self: RawTransactionArgument<string>];
-	typeArguments: [string];
-}
-/** Returns a reference to the group's UID. Requires `UIDAccessor` permission. */
-export function uid(options: UidOptions) {
-	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
-	const argumentsTypes = [null] satisfies (string | null)[];
-	const parameterNames = ['self'];
-	return (tx: Transaction) =>
-		tx.moveCall({
-			package: packageAddress,
-			module: 'permissioned_group',
-			function: 'uid',
-			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
-			typeArguments: options.typeArguments,
-		});
-}
-export interface UidMutArguments {
-	self: RawTransactionArgument<string>;
-}
-export interface UidMutOptions {
-	package?: string;
-	arguments: UidMutArguments | [self: RawTransactionArgument<string>];
-	typeArguments: [string];
-}
-/**
- * Returns a mutable reference to the group's UID. Requires `UIDAccessor`
- * permission.
- */
-export function uidMut(options: UidMutOptions) {
-	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
-	const argumentsTypes = [null] satisfies (string | null)[];
-	const parameterNames = ['self'];
-	return (tx: Transaction) =>
-		tx.moveCall({
-			package: packageAddress,
-			module: 'permissioned_group',
-			function: 'uid_mut',
-			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
-			typeArguments: options.typeArguments,
-		});
-}
 export interface ObjectUidArguments {
 	self: RawTransactionArgument<string>;
 	actorObject: RawTransactionArgument<string>;
@@ -758,7 +689,16 @@ export interface ObjectUidOptions {
 		| [self: RawTransactionArgument<string>, actorObject: RawTransactionArgument<string>];
 	typeArguments: [string];
 }
-/** Object-actor variant of `uid()`. Requires `UIDAccessor` permission on the actor. */
+/**
+ * Returns a reference to the group's UID via an actor object. The actor object
+ * must have `ObjectAdmin` permission on the group. Only accessible via the
+ * actor-object pattern — use this to build wrapper modules that explicitly reason
+ * about the implications of accessing the group UID.
+ *
+ * # Aborts
+ *
+ * - `ENotPermitted`: if actor_object doesn't have `ObjectAdmin` permission
+ */
 export function objectUid(options: ObjectUidOptions) {
 	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
 	const argumentsTypes = [null, '0x2::object::ID'] satisfies (string | null)[];
@@ -784,8 +724,14 @@ export interface ObjectUidMutOptions {
 	typeArguments: [string];
 }
 /**
- * Object-actor variant of `uid_mut()`. Requires `UIDAccessor` permission on the
- * actor.
+ * Returns a mutable reference to the group's UID via an actor object. The actor
+ * object must have `ObjectAdmin` permission on the group. Only accessible via the
+ * actor-object pattern — use this to build wrapper modules that explicitly reason
+ * about the implications of mutating the group UID.
+ *
+ * # Aborts
+ *
+ * - `ENotPermitted`: if actor_object doesn't have `ObjectAdmin` permission
  */
 export function objectUidMut(options: ObjectUidMutOptions) {
 	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';

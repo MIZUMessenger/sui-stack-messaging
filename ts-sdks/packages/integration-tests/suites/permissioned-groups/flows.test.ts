@@ -150,39 +150,6 @@ describe('Full Flows', () => {
 		});
 	});
 
-	describe('self leave', () => {
-		it('should allow a member with SelfLeave permission to leave the group', async () => {
-			const groupId = await createAndShareGroup();
-
-			const memberKeypair = new Ed25519Keypair();
-			const memberAddress = memberKeypair.getPublicKey().toSuiAddress();
-			await requestSuiFromFaucetV2({ host: faucetUrl, recipient: memberAddress });
-
-			const packageId = inject('publishedPackages')['permissioned-groups'].packageId;
-
-			// Grant SelfLeave + PermissionsAdmin so the member is in the group
-			await client.groups.grantPermissions({
-				groupId,
-				member: memberAddress,
-				permissionTypes: [
-					permissionTypes(packageId).SelfLeave,
-					permissionTypes(packageId).PermissionsAdmin,
-				],
-				signer: adminKeypair,
-			});
-
-			expect(await client.groups.view.isMember({ groupId, member: memberAddress })).toBe(true);
-
-			// Member leaves the group using their own signer
-			await client.groups.leave({
-				groupId,
-				signer: memberKeypair,
-			});
-
-			expect(await client.groups.view.isMember({ groupId, member: memberAddress })).toBe(false);
-		});
-	});
-
 	describe('remove member', () => {
 		it('should remove a member and verify they are no longer a member', async () => {
 			const groupId = await createAndShareGroup();

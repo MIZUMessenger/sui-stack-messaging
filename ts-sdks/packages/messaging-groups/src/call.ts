@@ -5,8 +5,10 @@ import type { Transaction } from '@mysten/sui/transactions';
 
 import type { EnvelopeEncryption } from './encryption/envelope-encryption.js';
 import * as messaging from './contracts/messaging/messaging.js';
+import type { MessagingGroupsDerive } from './derive.js';
 import type {
 	CreateGroupCallOptions,
+	LeaveCallOptions,
 	MessagingGroupsPackageConfig,
 	RotateEncryptionKeyCallOptions,
 	ShareGroupCallOptions,
@@ -16,6 +18,7 @@ export interface MessagingGroupsCallOptions {
 	packageConfig: MessagingGroupsPackageConfig;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Call only uses context-independent methods (generateGroupDEK, generateRotationDEK)
 	encryption: EnvelopeEncryption<any>;
+	derive: MessagingGroupsDerive;
 	/** Full Move type name for PermissionedGroup<Messaging> (resolved from groups BCS). */
 	permissionedGroupTypeName: string;
 	/** Full Move type name for EncryptionHistory (resolved from messaging BCS). */
@@ -40,12 +43,14 @@ export class MessagingGroupsCall {
 	#packageConfig: MessagingGroupsPackageConfig;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Call only uses context-independent methods (generateGroupDEK, generateRotationDEK)
 	#encryption: EnvelopeEncryption<any>;
+	#derive: MessagingGroupsDerive;
 	#permissionedGroupTypeName: string;
 	#encryptionHistoryTypeName: string;
 
 	constructor(options: MessagingGroupsCallOptions) {
 		this.#packageConfig = options.packageConfig;
 		this.#encryption = options.encryption;
+		this.#derive = options.derive;
 		this.#permissionedGroupTypeName = options.permissionedGroupTypeName;
 		this.#encryptionHistoryTypeName = options.encryptionHistoryTypeName;
 	}
@@ -159,6 +164,29 @@ export class MessagingGroupsCall {
 						encryptionHistory: encryptionHistoryId,
 						group: groupId,
 						newEncryptedDek: Array.from(encryptedDek),
+					},
+				}),
+			);
+		};
+	}
+
+	/**
+	 * Removes the transaction sender from a messaging group.
+	 *
+	 * Internally derives the `GroupLeaver` singleton ID from the namespace.
+	 * No caller-provided `groupLeaverId` is needed.
+	 *
+	 * @throws if the caller is not a member, or is the last `PermissionsAdmin`
+	 */
+	leave(options: LeaveCallOptions) {
+		return (tx: Transaction) => {
+			const groupLeaverId = this.#derive.groupLeaverId();
+			return tx.add(
+				messaging.leave({
+					package: this.#packageConfig.packageId,
+					arguments: {
+						groupLeaver: groupLeaverId,
+						group: options.groupId,
 					},
 				}),
 			);

@@ -216,3 +216,48 @@ export function rotateEncryptionKey(options: RotateEncryptionKeyOptions) {
 			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
 		});
 }
+export interface LeaveArguments {
+	groupLeaver: RawTransactionArgument<string>;
+	group: RawTransactionArgument<string>;
+}
+export interface LeaveOptions {
+	package?: string;
+	arguments:
+		| LeaveArguments
+		| [groupLeaver: RawTransactionArgument<string>, group: RawTransactionArgument<string>];
+}
+/**
+ * Removes the caller from a messaging group. The `GroupLeaver` actor holds
+ * `PermissionsAdmin` on all groups and calls `object_remove_member` on behalf of
+ * the caller.
+ *
+ * # Parameters
+ *
+ * - `group_leaver`: Reference to the shared `GroupLeaver` object
+ * - `group`: Mutable reference to the `PermissionedGroup<Messaging>`
+ * - `ctx`: Transaction context
+ *
+ * # Aborts
+ *
+ * - `EMemberNotFound` (from `permissioned_group`): if the caller is not a member
+ * - `ELastPermissionsAdmin` (from `permissioned_group`): if the caller is the last
+ *   `PermissionsAdmin` holder (including actor objects)
+ *
+ * NOTE: Because `GroupLeaver` itself holds `PermissionsAdmin` on every group, a
+ * human admin can always leave — leaving `GroupLeaver` as the sole remaining
+ * admin. A group in that state has no human admins. To promote a new human admin
+ * from that state, a dedicated actor-object wrapper over `object_grant_permission`
+ * would be needed.
+ */
+export function leave(options: LeaveOptions) {
+	const packageAddress = options.package ?? '@local-pkg/messaging';
+	const argumentsTypes = [null, null] satisfies (string | null)[];
+	const parameterNames = ['groupLeaver', 'group'];
+	return (tx: Transaction) =>
+		tx.moveCall({
+			package: packageAddress,
+			module: 'messaging',
+			function: 'leave',
+			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
+		});
+}
