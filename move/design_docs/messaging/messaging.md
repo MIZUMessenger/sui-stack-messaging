@@ -27,6 +27,8 @@ Messaging-specific:
 - <code><a href="../messaging/messaging.md#messaging_messaging_MessagingEditor">MessagingEditor</a></code>: Edit messages
 - <code><a href="../messaging/messaging.md#messaging_messaging_MessagingDeleter">MessagingDeleter</a></code>: Delete messages
 - <code>EncryptionKeyRotator</code>: Rotate encryption keys
+- <code><a href="../messaging/messaging.md#messaging_messaging_SuiNsAdmin">SuiNsAdmin</a></code>: Manage SuiNS reverse lookups on the group
+- <code><a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a></code>: Edit group metadata (name, data)
 
 
 <a name="@Security_1"></a>
@@ -47,6 +49,8 @@ Messaging-specific:
 -  [Struct `MessagingReader`](#messaging_messaging_MessagingReader)
 -  [Struct `MessagingDeleter`](#messaging_messaging_MessagingDeleter)
 -  [Struct `MessagingEditor`](#messaging_messaging_MessagingEditor)
+-  [Struct `SuiNsAdmin`](#messaging_messaging_SuiNsAdmin)
+-  [Struct `MetadataAdmin`](#messaging_messaging_MetadataAdmin)
 -  [Struct `MessagingNamespace`](#messaging_messaging_MessagingNamespace)
 -  [Constants](#@Constants_2)
 -  [Function `init`](#messaging_messaging_init)
@@ -61,45 +65,83 @@ Messaging-specific:
 -  [Function `rotate_encryption_key`](#messaging_messaging_rotate_encryption_key)
     -  [Parameters](#@Parameters_9)
     -  [Aborts](#@Aborts_10)
--  [Function `grant_all_messaging_permissions`](#messaging_messaging_grant_all_messaging_permissions)
+-  [Function `leave`](#messaging_messaging_leave)
     -  [Parameters](#@Parameters_11)
     -  [Aborts](#@Aborts_12)
--  [Function `grant_all_permissions`](#messaging_messaging_grant_all_permissions)
-    -  [Parameters](#@Parameters_13)
-    -  [Aborts](#@Aborts_14)
+-  [Function `archive_group`](#messaging_messaging_archive_group)
+    -  [Aborts](#@Aborts_13)
+    -  [Note](#@Note_14)
+-  [Function `set_suins_reverse_lookup`](#messaging_messaging_set_suins_reverse_lookup)
+    -  [Parameters](#@Parameters_15)
+    -  [Aborts](#@Aborts_16)
+-  [Function `unset_suins_reverse_lookup`](#messaging_messaging_unset_suins_reverse_lookup)
+    -  [Parameters](#@Parameters_17)
+    -  [Aborts](#@Aborts_18)
+-  [Function `set_group_name`](#messaging_messaging_set_group_name)
+    -  [Aborts](#@Aborts_19)
+-  [Function `insert_group_data`](#messaging_messaging_insert_group_data)
+    -  [Aborts](#@Aborts_20)
+-  [Function `remove_group_data`](#messaging_messaging_remove_group_data)
+    -  [Returns](#@Returns_21)
+    -  [Aborts](#@Aborts_22)
+-  [Function `grant_all_messaging_permissions`](#messaging_messaging_grant_all_messaging_permissions)
 
 
 <pre><code><b>use</b> <a href="../messaging/encryption_history.md#messaging_encryption_history">messaging::encryption_history</a>;
+<b>use</b> <a href="../messaging/group_leaver.md#messaging_group_leaver">messaging::group_leaver</a>;
+<b>use</b> <a href="../messaging/group_manager.md#messaging_group_manager">messaging::group_manager</a>;
+<b>use</b> <a href="../messaging/metadata.md#messaging_metadata">messaging::metadata</a>;
+<b>use</b> <a href="../messaging/version.md#messaging_version">messaging::version</a>;
 <b>use</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group">permissioned_groups::permissioned_group</a>;
 <b>use</b> <a href="../dependencies/permissioned_groups/permissions_table.md#permissioned_groups_permissions_table">permissioned_groups::permissions_table</a>;
+<b>use</b> <a href="../dependencies/permissioned_groups/unpause_cap.md#permissioned_groups_unpause_cap">permissioned_groups::unpause_cap</a>;
 <b>use</b> <a href="../dependencies/std/address.md#std_address">std::address</a>;
 <b>use</b> <a href="../dependencies/std/ascii.md#std_ascii">std::ascii</a>;
 <b>use</b> <a href="../dependencies/std/bcs.md#std_bcs">std::bcs</a>;
+<b>use</b> <a href="../dependencies/std/internal.md#std_internal">std::internal</a>;
 <b>use</b> <a href="../dependencies/std/option.md#std_option">std::option</a>;
 <b>use</b> <a href="../dependencies/std/string.md#std_string">std::string</a>;
 <b>use</b> <a href="../dependencies/std/type_name.md#std_type_name">std::type_name</a>;
+<b>use</b> <a href="../dependencies/std/u128.md#std_u128">std::u128</a>;
 <b>use</b> <a href="../dependencies/std/vector.md#std_vector">std::vector</a>;
 <b>use</b> <a href="../dependencies/sui/accumulator.md#sui_accumulator">sui::accumulator</a>;
-<b>use</b> <a href="../dependencies/sui/accumulator_metadata.md#sui_accumulator_metadata">sui::accumulator_metadata</a>;
 <b>use</b> <a href="../dependencies/sui/accumulator_settlement.md#sui_accumulator_settlement">sui::accumulator_settlement</a>;
 <b>use</b> <a href="../dependencies/sui/address.md#sui_address">sui::address</a>;
 <b>use</b> <a href="../dependencies/sui/bag.md#sui_bag">sui::bag</a>;
+<b>use</b> <a href="../dependencies/sui/balance.md#sui_balance">sui::balance</a>;
 <b>use</b> <a href="../dependencies/sui/bcs.md#sui_bcs">sui::bcs</a>;
+<b>use</b> <a href="../dependencies/sui/clock.md#sui_clock">sui::clock</a>;
+<b>use</b> <a href="../dependencies/sui/coin.md#sui_coin">sui::coin</a>;
+<b>use</b> <a href="../dependencies/sui/config.md#sui_config">sui::config</a>;
+<b>use</b> <a href="../dependencies/sui/deny_list.md#sui_deny_list">sui::deny_list</a>;
 <b>use</b> <a href="../dependencies/sui/derived_object.md#sui_derived_object">sui::derived_object</a>;
 <b>use</b> <a href="../dependencies/sui/dynamic_field.md#sui_dynamic_field">sui::dynamic_field</a>;
+<b>use</b> <a href="../dependencies/sui/dynamic_object_field.md#sui_dynamic_object_field">sui::dynamic_object_field</a>;
 <b>use</b> <a href="../dependencies/sui/event.md#sui_event">sui::event</a>;
+<b>use</b> <a href="../dependencies/sui/funds_accumulator.md#sui_funds_accumulator">sui::funds_accumulator</a>;
 <b>use</b> <a href="../dependencies/sui/hash.md#sui_hash">sui::hash</a>;
 <b>use</b> <a href="../dependencies/sui/hex.md#sui_hex">sui::hex</a>;
 <b>use</b> <a href="../dependencies/sui/object.md#sui_object">sui::object</a>;
 <b>use</b> <a href="../dependencies/sui/package.md#sui_package">sui::package</a>;
 <b>use</b> <a href="../dependencies/sui/party.md#sui_party">sui::party</a>;
+<b>use</b> <a href="../dependencies/sui/protocol_config.md#sui_protocol_config">sui::protocol_config</a>;
+<b>use</b> <a href="../dependencies/sui/sui.md#sui_sui">sui::sui</a>;
 <b>use</b> <a href="../dependencies/sui/table.md#sui_table">sui::table</a>;
 <b>use</b> <a href="../dependencies/sui/table_vec.md#sui_table_vec">sui::table_vec</a>;
 <b>use</b> <a href="../dependencies/sui/transfer.md#sui_transfer">sui::transfer</a>;
 <b>use</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context">sui::tx_context</a>;
 <b>use</b> <a href="../dependencies/sui/types.md#sui_types">sui::types</a>;
+<b>use</b> <a href="../dependencies/sui/url.md#sui_url">sui::url</a>;
 <b>use</b> <a href="../dependencies/sui/vec_map.md#sui_vec_map">sui::vec_map</a>;
 <b>use</b> <a href="../dependencies/sui/vec_set.md#sui_vec_set">sui::vec_set</a>;
+<b>use</b> <a href="../dependencies/suins/constants.md#suins_constants">suins::constants</a>;
+<b>use</b> <a href="../dependencies/suins/controller.md#suins_controller">suins::controller</a>;
+<b>use</b> <a href="../dependencies/suins/domain.md#suins_domain">suins::domain</a>;
+<b>use</b> <a href="../dependencies/suins/name_record.md#suins_name_record">suins::name_record</a>;
+<b>use</b> <a href="../dependencies/suins/registry.md#suins_registry">suins::registry</a>;
+<b>use</b> <a href="../dependencies/suins/subdomain_registration.md#suins_subdomain_registration">suins::subdomain_registration</a>;
+<b>use</b> <a href="../dependencies/suins/suins.md#suins_suins">suins::suins</a>;
+<b>use</b> <a href="../dependencies/suins/suins_registration.md#suins_suins_registration">suins::suins_registration</a>;
 </code></pre>
 
 
@@ -238,6 +280,50 @@ Permission to edit messages in the group.
 
 </details>
 
+<a name="messaging_messaging_SuiNsAdmin"></a>
+
+## Struct `SuiNsAdmin`
+
+Permission to manage SuiNS reverse lookups on the group.
+
+
+<pre><code><b>public</b> <b>struct</b> <a href="../messaging/messaging.md#messaging_messaging_SuiNsAdmin">SuiNsAdmin</a> <b>has</b> drop
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+</dl>
+
+
+</details>
+
+<a name="messaging_messaging_MetadataAdmin"></a>
+
+## Struct `MetadataAdmin`
+
+Permission to edit group metadata (name, data).
+
+
+<pre><code><b>public</b> <b>struct</b> <a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a> <b>has</b> drop
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+</dl>
+
+
+</details>
+
 <a name="messaging_messaging_MessagingNamespace"></a>
 
 ## Struct `MessagingNamespace`
@@ -281,6 +367,16 @@ Caller lacks the required permission for the operation.
 
 
 
+<a name="messaging_messaging_EGroupArchived"></a>
+
+The group is archived (paused) and cannot be mutated.
+
+
+<pre><code><b>const</b> <a href="../messaging/messaging.md#messaging_messaging_EGroupArchived">EGroupArchived</a>: u64 = 1;
+</code></pre>
+
+
+
 <a name="messaging_messaging_init"></a>
 
 ## Function `init`
@@ -298,9 +394,14 @@ Caller lacks the required permission for the operation.
 
 <pre><code><b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_init">init</a>(otw: <a href="../messaging/messaging.md#messaging_messaging_MESSAGING">MESSAGING</a>, ctx: &<b>mut</b> TxContext) {
     package::claim_and_keep(otw, ctx);
-    transfer::share_object(<a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">MessagingNamespace</a> {
+    <b>let</b> <b>mut</b> namespace = <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">MessagingNamespace</a> {
         id: object::new(ctx),
-    });
+    };
+    <b>let</b> <a href="../messaging/group_leaver.md#messaging_group_leaver">group_leaver</a> = <a href="../messaging/group_leaver.md#messaging_group_leaver_new">group_leaver::new</a>(&<b>mut</b> namespace.id);
+    <b>let</b> <a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a> = <a href="../messaging/group_manager.md#messaging_group_manager_new">group_manager::new</a>(&<b>mut</b> namespace.id);
+    transfer::share_object(namespace);
+    <a href="../messaging/group_leaver.md#messaging_group_leaver_share">group_leaver::share</a>(<a href="../messaging/group_leaver.md#messaging_group_leaver">group_leaver</a>);
+    <a href="../messaging/group_manager.md#messaging_group_manager_share">group_manager::share</a>(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>);
 }
 </code></pre>
 
@@ -320,7 +421,10 @@ The transaction sender (<code>ctx.sender()</code>) automatically becomes the cre
 
 ### Parameters
 
+- <code><a href="../messaging/version.md#messaging_version">version</a></code>: Reference to the Version shared object
 - <code>namespace</code>: Mutable reference to the MessagingNamespace
+- <code><a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a></code>: Reference to the shared GroupManager actor
+- <code>name</code>: Human-readable group name
 - <code>uuid</code>: Client-provided UUID for deterministic address derivation
 - <code>initial_encrypted_dek</code>: Initial Seal-encrypted DEK bytes
 - <code>initial_members</code>: Addresses to grant <code><a href="../messaging/messaging.md#messaging_messaging_MessagingReader">MessagingReader</a></code> permission (should not include
@@ -348,10 +452,11 @@ members list.
 
 ### Aborts
 
+- <code>EInvalidVersion</code> (from <code><a href="../messaging/version.md#messaging_version">version</a></code>): if package version doesn't match
 - If the UUID has already been used (duplicate derivation)
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_group">create_group</a>(namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">messaging::messaging::MessagingNamespace</a>, uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, initial_encrypted_dek: vector&lt;u8&gt;, initial_members: <a href="../dependencies/sui/vec_set.md#sui_vec_set_VecSet">sui::vec_set::VecSet</a>&lt;<b>address</b>&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): (<a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">messaging::encryption_history::EncryptionHistory</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_group">create_group</a>(<a href="../messaging/version.md#messaging_version">version</a>: &<a href="../messaging/version.md#messaging_version_Version">messaging::version::Version</a>, namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">messaging::messaging::MessagingNamespace</a>, <a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &<a href="../messaging/group_manager.md#messaging_group_manager_GroupManager">messaging::group_manager::GroupManager</a>, name: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, initial_encrypted_dek: vector&lt;u8&gt;, initial_members: <a href="../dependencies/sui/vec_set.md#sui_vec_set_VecSet">sui::vec_set::VecSet</a>&lt;<b>address</b>&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): (<a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">messaging::encryption_history::EncryptionHistory</a>)
 </code></pre>
 
 
@@ -361,12 +466,16 @@ members list.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_group">create_group</a>(
+    <a href="../messaging/version.md#messaging_version">version</a>: &Version,
     namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">MessagingNamespace</a>,
+    <a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &GroupManager,
+    name: String,
     uuid: String,
     initial_encrypted_dek: vector&lt;u8&gt;,
     initial_members: VecSet&lt;<b>address</b>&gt;,
     ctx: &<b>mut</b> TxContext,
 ): (PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;, EncryptionHistory) {
+    <a href="../messaging/version.md#messaging_version">version</a>.validate_version();
     <b>let</b> <b>mut</b> group: PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt; = permissioned_group::new_derived&lt;
         <a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>,
         <a href="../messaging/encryption_history.md#messaging_encryption_history_PermissionedGroupTag">encryption_history::PermissionedGroupTag</a>,
@@ -378,6 +487,23 @@ members list.
     );
     <b>let</b> creator = ctx.sender();
     <a href="../messaging/messaging.md#messaging_messaging_grant_all_messaging_permissions">grant_all_messaging_permissions</a>(&<b>mut</b> group, creator, ctx);
+    // Grant PermissionsAdmin to the GroupLeaver actor so it can remove members on behalf of
+    // callers.
+    // The <b>address</b> is derived deterministically from the namespace — no need to pass the object.
+    <b>let</b> group_leaver_address = <a href="../dependencies/sui/derived_object.md#sui_derived_object_derive_address">sui::derived_object::derive_address</a>(
+        object::id(namespace),
+        <a href="../messaging/group_leaver.md#messaging_group_leaver_derivation_key">group_leaver::derivation_key</a>(),
+    );
+    group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, PermissionsAdmin&gt;(group_leaver_address, ctx);
+    // Grant ObjectAdmin to the GroupManager actor so it can access the group UID
+    // <b>for</b> SuiNS reverse lookups and <a href="../messaging/metadata.md#messaging_metadata">metadata</a> management.
+    group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, ObjectAdmin&gt;(
+        object::id(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>).to_address(),
+        ctx,
+    );
+    // Attach Metadata via GroupManager
+    <b>let</b> m = <a href="../messaging/metadata.md#messaging_metadata_new">metadata::new</a>(name, uuid, creator);
+    <a href="../messaging/group_manager.md#messaging_group_manager_attach_metadata">group_manager::attach_metadata</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>, &<b>mut</b> group, m);
     // Grant <a href="../messaging/messaging.md#messaging_messaging_MessagingReader">MessagingReader</a> permission to initial members (skip creator)
     initial_members.into_keys().do!(|member| {
         <b>if</b> (member != creator) {
@@ -410,7 +536,10 @@ Creates a new messaging group and shares both objects.
 
 ### Parameters
 
+- <code><a href="../messaging/version.md#messaging_version">version</a></code>: Reference to the Version shared object
 - <code>namespace</code>: Mutable reference to the MessagingNamespace
+- <code><a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a></code>: Reference to the shared GroupManager actor
+- <code>name</code>: Human-readable group name
 - <code>uuid</code>: Client-provided UUID for deterministic address derivation
 - <code>initial_encrypted_dek</code>: Initial Seal-encrypted DEK bytes
 - <code>initial_members</code>: Set of addresses to grant <code><a href="../messaging/messaging.md#messaging_messaging_MessagingReader">MessagingReader</a></code> permission
@@ -424,7 +553,7 @@ Creates a new messaging group and shares both objects.
 See <code><a href="../messaging/messaging.md#messaging_messaging_create_group">create_group</a></code> for details on creator permissions and initial member handling.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_and_share_group">create_and_share_group</a>(namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">messaging::messaging::MessagingNamespace</a>, uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, initial_encrypted_dek: vector&lt;u8&gt;, initial_members: <a href="../dependencies/sui/vec_set.md#sui_vec_set_VecSet">sui::vec_set::VecSet</a>&lt;<b>address</b>&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+<pre><code><b>entry</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_and_share_group">create_and_share_group</a>(<a href="../messaging/version.md#messaging_version">version</a>: &<a href="../messaging/version.md#messaging_version_Version">messaging::version::Version</a>, namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">messaging::messaging::MessagingNamespace</a>, <a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &<a href="../messaging/group_manager.md#messaging_group_manager_GroupManager">messaging::group_manager::GroupManager</a>, name: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, uuid: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, initial_encrypted_dek: vector&lt;u8&gt;, initial_members: vector&lt;<b>address</b>&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
 </code></pre>
 
 
@@ -433,18 +562,24 @@ See <code><a href="../messaging/messaging.md#messaging_messaging_create_group">c
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_and_share_group">create_and_share_group</a>(
+<pre><code><b>entry</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_create_and_share_group">create_and_share_group</a>(
+    <a href="../messaging/version.md#messaging_version">version</a>: &Version,
     namespace: &<b>mut</b> <a href="../messaging/messaging.md#messaging_messaging_MessagingNamespace">MessagingNamespace</a>,
+    <a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &GroupManager,
+    name: String,
     uuid: String,
     initial_encrypted_dek: vector&lt;u8&gt;,
-    initial_members: VecSet&lt;<b>address</b>&gt;,
+    initial_members: vector&lt;<b>address</b>&gt;,
     ctx: &<b>mut</b> TxContext,
 ) {
     <b>let</b> (group, <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>) = <a href="../messaging/messaging.md#messaging_messaging_create_group">create_group</a>(
+        <a href="../messaging/version.md#messaging_version">version</a>,
         namespace,
+        <a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>,
+        name,
         uuid,
         initial_encrypted_dek,
-        initial_members,
+        vec_set::from_keys(initial_members),
         ctx,
     );
     transfer::public_share_object(group);
@@ -477,10 +612,11 @@ Rotates the encryption key for a group.
 
 ### Aborts
 
+- <code>EInvalidVersion</code> (from <code><a href="../messaging/version.md#messaging_version">version</a></code>): if package version doesn't match
 - <code><a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have <code>EncryptionKeyRotator</code> permission
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_rotate_encryption_key">rotate_encryption_key</a>(<a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>: &<b>mut</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">messaging::encryption_history::EncryptionHistory</a>, group: &<a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, new_encrypted_dek: vector&lt;u8&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_rotate_encryption_key">rotate_encryption_key</a>(<a href="../messaging/version.md#messaging_version">version</a>: &<a href="../messaging/version.md#messaging_version_Version">messaging::version::Version</a>, <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>: &<b>mut</b> <a href="../messaging/encryption_history.md#messaging_encryption_history_EncryptionHistory">messaging::encryption_history::EncryptionHistory</a>, group: &<a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, new_encrypted_dek: vector&lt;u8&gt;, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
 </code></pre>
 
 
@@ -490,13 +626,355 @@ Rotates the encryption key for a group.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_rotate_encryption_key">rotate_encryption_key</a>(
+    <a href="../messaging/version.md#messaging_version">version</a>: &Version,
     <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>: &<b>mut</b> EncryptionHistory,
     group: &PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;,
     new_encrypted_dek: vector&lt;u8&gt;,
-    ctx: &<b>mut</b> TxContext,
+    ctx: &TxContext,
 ) {
+    <a href="../messaging/version.md#messaging_version">version</a>.validate_version();
+    <b>assert</b>!(!group.is_paused(), <a href="../messaging/messaging.md#messaging_messaging_EGroupArchived">EGroupArchived</a>);
     <b>assert</b>!(group.has_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, EncryptionKeyRotator&gt;(ctx.sender()), <a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a>);
     <a href="../messaging/encryption_history.md#messaging_encryption_history">encryption_history</a>.rotate_key(new_encrypted_dek);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="messaging_messaging_leave"></a>
+
+## Function `leave`
+
+Removes the caller from a messaging group.
+The <code>GroupLeaver</code> actor holds <code>PermissionsAdmin</code> on all groups and calls
+<code>object_remove_member</code> on behalf of the caller.
+
+
+<a name="@Parameters_11"></a>
+
+### Parameters
+
+- <code><a href="../messaging/group_leaver.md#messaging_group_leaver">group_leaver</a></code>: Reference to the shared <code>GroupLeaver</code> object
+- <code>group</code>: Mutable reference to the <code>PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;</code>
+- <code>ctx</code>: Transaction context
+
+
+<a name="@Aborts_12"></a>
+
+### Aborts
+
+- <code>EMemberNotFound</code> (from <code>permissioned_group</code>): if the caller is not a member
+- <code>ELastPermissionsAdmin</code> (from <code>permissioned_group</code>): if the caller is the last
+<code>PermissionsAdmin</code> holder (including actor objects)
+
+NOTE: Because <code>GroupLeaver</code> itself holds <code>PermissionsAdmin</code> on every group, a human
+admin can always leave — leaving <code>GroupLeaver</code> as the sole remaining admin. A group in
+that state has no human admins. To promote a new human admin from that state, a
+dedicated actor-object wrapper over <code>object_grant_permission</code> would be needed.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_leave">leave</a>(<a href="../messaging/group_leaver.md#messaging_group_leaver">group_leaver</a>: &<a href="../messaging/group_leaver.md#messaging_group_leaver_GroupLeaver">messaging::group_leaver::GroupLeaver</a>, group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_leave">leave</a>(
+    <a href="../messaging/group_leaver.md#messaging_group_leaver">group_leaver</a>: &GroupLeaver,
+    group: &<b>mut</b> PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;,
+    ctx: &TxContext,
+) {
+    <a href="../messaging/group_leaver.md#messaging_group_leaver_leave">group_leaver::leave</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;(<a href="../messaging/group_leaver.md#messaging_group_leaver">group_leaver</a>, group, ctx);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="messaging_messaging_archive_group"></a>
+
+## Function `archive_group`
+
+Permanently archives a messaging group.
+
+Pauses the group and burns the <code>UnpauseCap</code>, making it impossible to unpause.
+After this call, <code>is_paused()</code> returns <code><b>true</b></code> and all mutations are blocked.
+
+The caller must have <code>PermissionsAdmin</code> permission (enforced by <code>pause()</code>).
+
+
+<a name="@Aborts_13"></a>
+
+### Aborts
+
+- <code><a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a></code> (from <code>pause</code>): if caller doesn't have <code>PermissionsAdmin</code>
+- <code>EAlreadyPaused</code> (from <code>pause</code>): if the group is already paused
+
+
+<a name="@Note_14"></a>
+
+### Note
+
+Alternative to burning: <code>transfer::public_freeze_object(cap)</code> makes the cap immutable
+and un-passable by value, also preventing unpause without destroying the object.
+
+
+<pre><code><b>entry</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_archive_group">archive_group</a>(<a href="../messaging/version.md#messaging_version">version</a>: &<a href="../messaging/version.md#messaging_version_Version">messaging::version::Version</a>, group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>entry</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_archive_group">archive_group</a>(
+    <a href="../messaging/version.md#messaging_version">version</a>: &Version,
+    group: &<b>mut</b> PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;,
+    ctx: &<b>mut</b> TxContext,
+) {
+    <a href="../messaging/version.md#messaging_version">version</a>.validate_version();
+    <b>let</b> cap = group.pause&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;(ctx);
+    cap.burn();
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="messaging_messaging_set_suins_reverse_lookup"></a>
+
+## Function `set_suins_reverse_lookup`
+
+Sets a SuiNS reverse lookup on a messaging group.
+The caller must have <code><a href="../messaging/messaging.md#messaging_messaging_SuiNsAdmin">SuiNsAdmin</a></code> permission on the group.
+The <code>GroupManager</code> actor internally holds <code>ObjectAdmin</code> to access the group UID.
+
+
+<a name="@Parameters_15"></a>
+
+### Parameters
+
+- <code><a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a></code>: Reference to the shared <code>GroupManager</code> actor
+- <code>group</code>: Mutable reference to the <code>PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;</code>
+- <code>suins</code>: Mutable reference to the SuiNS shared object
+- <code>domain_name</code>: The domain name to set as reverse lookup
+- <code>ctx</code>: Transaction context
+
+
+<a name="@Aborts_16"></a>
+
+### Aborts
+
+- <code><a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have <code><a href="../messaging/messaging.md#messaging_messaging_SuiNsAdmin">SuiNsAdmin</a></code>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_set_suins_reverse_lookup">set_suins_reverse_lookup</a>(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &<a href="../messaging/group_manager.md#messaging_group_manager_GroupManager">messaging::group_manager::GroupManager</a>, group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, suins: &<b>mut</b> <a href="../dependencies/suins/suins.md#suins_suins_SuiNS">suins::suins::SuiNS</a>, domain_name: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_set_suins_reverse_lookup">set_suins_reverse_lookup</a>(
+    <a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &GroupManager,
+    group: &<b>mut</b> PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;,
+    suins: &<b>mut</b> SuiNS,
+    domain_name: String,
+    ctx: &TxContext,
+) {
+    <b>assert</b>!(group.has_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, <a href="../messaging/messaging.md#messaging_messaging_SuiNsAdmin">SuiNsAdmin</a>&gt;(ctx.sender()), <a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a>);
+    <a href="../messaging/group_manager.md#messaging_group_manager_set_reverse_lookup">group_manager::set_reverse_lookup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>, group, suins, domain_name);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="messaging_messaging_unset_suins_reverse_lookup"></a>
+
+## Function `unset_suins_reverse_lookup`
+
+Unsets a SuiNS reverse lookup on a messaging group.
+The caller must have <code><a href="../messaging/messaging.md#messaging_messaging_SuiNsAdmin">SuiNsAdmin</a></code> permission on the group.
+The <code>GroupManager</code> actor internally holds <code>ObjectAdmin</code> to access the group UID.
+
+
+<a name="@Parameters_17"></a>
+
+### Parameters
+
+- <code><a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a></code>: Reference to the shared <code>GroupManager</code> actor
+- <code>group</code>: Mutable reference to the <code>PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;</code>
+- <code>suins</code>: Mutable reference to the SuiNS shared object
+- <code>ctx</code>: Transaction context
+
+
+<a name="@Aborts_18"></a>
+
+### Aborts
+
+- <code><a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have <code><a href="../messaging/messaging.md#messaging_messaging_SuiNsAdmin">SuiNsAdmin</a></code>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_unset_suins_reverse_lookup">unset_suins_reverse_lookup</a>(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &<a href="../messaging/group_manager.md#messaging_group_manager_GroupManager">messaging::group_manager::GroupManager</a>, group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, suins: &<b>mut</b> <a href="../dependencies/suins/suins.md#suins_suins_SuiNS">suins::suins::SuiNS</a>, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_unset_suins_reverse_lookup">unset_suins_reverse_lookup</a>(
+    <a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &GroupManager,
+    group: &<b>mut</b> PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;,
+    suins: &<b>mut</b> SuiNS,
+    ctx: &TxContext,
+) {
+    <b>assert</b>!(group.has_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, <a href="../messaging/messaging.md#messaging_messaging_SuiNsAdmin">SuiNsAdmin</a>&gt;(ctx.sender()), <a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a>);
+    <a href="../messaging/group_manager.md#messaging_group_manager_unset_reverse_lookup">group_manager::unset_reverse_lookup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>, group, suins);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="messaging_messaging_set_group_name"></a>
+
+## Function `set_group_name`
+
+Sets the group name.
+Caller must have <code><a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a></code> permission.
+
+
+<a name="@Aborts_19"></a>
+
+### Aborts
+
+- <code><a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have <code><a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a></code>
+- <code>ENameTooLong</code> (from <code><a href="../messaging/metadata.md#messaging_metadata">metadata</a></code>): if name exceeds limit
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_set_group_name">set_group_name</a>(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &<a href="../messaging/group_manager.md#messaging_group_manager_GroupManager">messaging::group_manager::GroupManager</a>, group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, name: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_set_group_name">set_group_name</a>(
+    <a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &GroupManager,
+    group: &<b>mut</b> PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;,
+    name: String,
+    ctx: &TxContext,
+) {
+    <b>assert</b>!(group.has_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, <a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a>&gt;(ctx.sender()), <a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a>);
+    <b>let</b> m = <a href="../messaging/group_manager.md#messaging_group_manager_borrow_metadata_mut">group_manager::borrow_metadata_mut</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>, group);
+    m.set_name(name);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="messaging_messaging_insert_group_data"></a>
+
+## Function `insert_group_data`
+
+Inserts a key-value pair into the group's metadata data map.
+Caller must have <code><a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a></code> permission.
+
+
+<a name="@Aborts_20"></a>
+
+### Aborts
+
+- <code><a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have <code><a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a></code>
+- <code>EDataKeyTooLong</code> (from <code><a href="../messaging/metadata.md#messaging_metadata">metadata</a></code>): if key exceeds limit
+- <code>EDataValueTooLong</code> (from <code><a href="../messaging/metadata.md#messaging_metadata">metadata</a></code>): if value exceeds limit
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_insert_group_data">insert_group_data</a>(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &<a href="../messaging/group_manager.md#messaging_group_manager_GroupManager">messaging::group_manager::GroupManager</a>, group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, key: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, value: <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_insert_group_data">insert_group_data</a>(
+    <a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &GroupManager,
+    group: &<b>mut</b> PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;,
+    key: String,
+    value: String,
+    ctx: &TxContext,
+) {
+    <b>assert</b>!(group.has_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, <a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a>&gt;(ctx.sender()), <a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a>);
+    <b>let</b> m = <a href="../messaging/group_manager.md#messaging_group_manager_borrow_metadata_mut">group_manager::borrow_metadata_mut</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>, group);
+    m.insert_data(key, value);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="messaging_messaging_remove_group_data"></a>
+
+## Function `remove_group_data`
+
+Removes a key-value pair from the group's metadata data map.
+Caller must have <code><a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a></code> permission.
+
+
+<a name="@Returns_21"></a>
+
+### Returns
+
+The removed (key, value) tuple.
+
+
+<a name="@Aborts_22"></a>
+
+### Aborts
+
+- <code><a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a></code>: if caller doesn't have <code><a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a></code>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_remove_group_data">remove_group_data</a>(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &<a href="../messaging/group_manager.md#messaging_group_manager_GroupManager">messaging::group_manager::GroupManager</a>, group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, key: &<a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>): (<a href="../dependencies/std/string.md#std_string_String">std::string::String</a>, <a href="../dependencies/std/string.md#std_string_String">std::string::String</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_remove_group_data">remove_group_data</a>(
+    <a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>: &GroupManager,
+    group: &<b>mut</b> PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;,
+    key: &String,
+    ctx: &TxContext,
+): (String, String) {
+    <b>assert</b>!(group.has_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, <a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a>&gt;(ctx.sender()), <a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a>);
+    <b>let</b> m = <a href="../messaging/group_manager.md#messaging_group_manager_borrow_metadata_mut">group_manager::borrow_metadata_mut</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;(<a href="../messaging/group_manager.md#messaging_group_manager">group_manager</a>, group);
+    m.remove_data(key)
 }
 </code></pre>
 
@@ -510,27 +988,10 @@ Rotates the encryption key for a group.
 
 Grants all messaging permissions to a member.
 Includes: <code><a href="../messaging/messaging.md#messaging_messaging_MessagingSender">MessagingSender</a></code>, <code><a href="../messaging/messaging.md#messaging_messaging_MessagingReader">MessagingReader</a></code>, <code><a href="../messaging/messaging.md#messaging_messaging_MessagingEditor">MessagingEditor</a></code>,
-<code><a href="../messaging/messaging.md#messaging_messaging_MessagingDeleter">MessagingDeleter</a></code>, <code>EncryptionKeyRotator</code>.
+<code><a href="../messaging/messaging.md#messaging_messaging_MessagingDeleter">MessagingDeleter</a></code>, <code>EncryptionKeyRotator</code>, <code><a href="../messaging/messaging.md#messaging_messaging_SuiNsAdmin">SuiNsAdmin</a></code>, <code><a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a></code>.
 
 
-<a name="@Parameters_11"></a>
-
-### Parameters
-
-- <code>group</code>: Mutable reference to the PermissionedGroup<Messaging>
-- <code>member</code>: Address to grant permissions to
-- <code>ctx</code>: Transaction context
-
-
-<a name="@Aborts_12"></a>
-
-### Aborts
-
-- <code><a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a></code> (from <code>permissioned_group</code>): if caller doesn't have <code>ExtensionPermissionsAdmin</code>
-permission
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_grant_all_messaging_permissions">grant_all_messaging_permissions</a>(group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, member: <b>address</b>, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
+<pre><code><b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_grant_all_messaging_permissions">grant_all_messaging_permissions</a>(group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, member: <b>address</b>, ctx: &<a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
 </code></pre>
 
 
@@ -539,64 +1000,18 @@ permission
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_grant_all_messaging_permissions">grant_all_messaging_permissions</a>(
+<pre><code><b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_grant_all_messaging_permissions">grant_all_messaging_permissions</a>(
     group: &<b>mut</b> PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;,
     member: <b>address</b>,
-    ctx: &<b>mut</b> TxContext,
+    ctx: &TxContext,
 ) {
     group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, <a href="../messaging/messaging.md#messaging_messaging_MessagingSender">MessagingSender</a>&gt;(member, ctx);
     group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, <a href="../messaging/messaging.md#messaging_messaging_MessagingReader">MessagingReader</a>&gt;(member, ctx);
     group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, <a href="../messaging/messaging.md#messaging_messaging_MessagingEditor">MessagingEditor</a>&gt;(member, ctx);
     group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, <a href="../messaging/messaging.md#messaging_messaging_MessagingDeleter">MessagingDeleter</a>&gt;(member, ctx);
     group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, EncryptionKeyRotator&gt;(member, ctx);
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="messaging_messaging_grant_all_permissions"></a>
-
-## Function `grant_all_permissions`
-
-Grants all permissions (PermissionsAdmin, ExtensionPermissionsAdmin + messaging) to a member,
-making them an admin.
-
-
-<a name="@Parameters_13"></a>
-
-### Parameters
-
-- <code>group</code>: Mutable reference to the PermissionedGroup<Messaging>
-- <code>member</code>: Address to grant permissions to
-- <code>ctx</code>: Transaction context
-
-
-<a name="@Aborts_14"></a>
-
-### Aborts
-
-- <code><a href="../messaging/messaging.md#messaging_messaging_ENotPermitted">ENotPermitted</a></code> (from <code>permissioned_group</code>): if caller doesn't have <code>PermissionsAdmin</code> permission
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_grant_all_permissions">grant_all_permissions</a>(group: &<b>mut</b> <a href="../dependencies/permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group_PermissionedGroup">permissioned_groups::permissioned_group::PermissionedGroup</a>&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">messaging::messaging::Messaging</a>&gt;, member: <b>address</b>, ctx: &<b>mut</b> <a href="../dependencies/sui/tx_context.md#sui_tx_context_TxContext">sui::tx_context::TxContext</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="../messaging/messaging.md#messaging_messaging_grant_all_permissions">grant_all_permissions</a>(
-    group: &<b>mut</b> PermissionedGroup&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>&gt;,
-    member: <b>address</b>,
-    ctx: &<b>mut</b> TxContext,
-) {
-    group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, PermissionsAdmin&gt;(member, ctx);
-    group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, ExtensionPermissionsAdmin&gt;(member, ctx);
-    <a href="../messaging/messaging.md#messaging_messaging_grant_all_messaging_permissions">grant_all_messaging_permissions</a>(group, member, ctx);
+    group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, <a href="../messaging/messaging.md#messaging_messaging_SuiNsAdmin">SuiNsAdmin</a>&gt;(member, ctx);
+    group.grant_permission&lt;<a href="../messaging/messaging.md#messaging_messaging_Messaging">Messaging</a>, <a href="../messaging/messaging.md#messaging_messaging_MetadataAdmin">MetadataAdmin</a>&gt;(member, ctx);
 }
 </code></pre>
 

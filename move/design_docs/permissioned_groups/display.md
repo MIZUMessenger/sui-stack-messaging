@@ -75,6 +75,7 @@ ctx,
 
 <pre><code><b>use</b> <a href="../permissioned_groups/permissioned_group.md#permissioned_groups_permissioned_group">permissioned_groups::permissioned_group</a>;
 <b>use</b> <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table">permissioned_groups::permissions_table</a>;
+<b>use</b> <a href="../permissioned_groups/unpause_cap.md#permissioned_groups_unpause_cap">permissioned_groups::unpause_cap</a>;
 <b>use</b> <a href="../dependencies/std/address.md#std_address">std::address</a>;
 <b>use</b> <a href="../dependencies/std/ascii.md#std_ascii">std::ascii</a>;
 <b>use</b> <a href="../dependencies/std/bcs.md#std_bcs">std::bcs</a>;

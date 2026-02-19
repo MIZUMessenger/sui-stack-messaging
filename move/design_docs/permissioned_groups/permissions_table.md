@@ -21,6 +21,8 @@ Created as a child of <code>PermissionedGroup</code> for easy discoverability.
 -  [Function `has_permission`](#permissioned_groups_permissions_table_has_permission)
 -  [Function `is_member`](#permissioned_groups_permissions_table_is_member)
 -  [Function `length`](#permissioned_groups_permissions_table_length)
+-  [Function `destroy_empty`](#permissioned_groups_permissions_table_destroy_empty)
+    -  [Aborts](#@Aborts_2)
 
 
 <pre><code><b>use</b> <a href="../dependencies/std/address.md#std_address">std::address</a>;
@@ -87,6 +89,16 @@ Attempted to derive a PermissionsTable that already exists for the given parent.
 
 
 <pre><code><b>const</b> <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_EPermissionsTableAlreadyExists">EPermissionsTableAlreadyExists</a>: u64 = 0;
+</code></pre>
+
+
+
+<a name="permissioned_groups_permissions_table_EPermissionsTableNotEmpty"></a>
+
+Attempted to destroy a PermissionsTable that still has members.
+
+
+<pre><code><b>const</b> <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_EPermissionsTableNotEmpty">EPermissionsTableNotEmpty</a>: u64 = 1;
 </code></pre>
 
 
@@ -255,6 +267,7 @@ Useful for checking if the member should be removed (empty set).
 ## Function `has_permission`
 
 Returns whether a member has the specified permission.
+Aborts if the address is not a member — callers should check <code><a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_is_member">is_member</a>()</code> first.
 
 
 <pre><code><b>public</b>(package) <b>fun</b> <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_has_permission">has_permission</a>(self: &<a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_PermissionsTable">permissioned_groups::permissions_table::PermissionsTable</a>, member: <b>address</b>, permission: &<a href="../dependencies/std/type_name.md#std_type_name_TypeName">std::type_name::TypeName</a>): bool
@@ -323,6 +336,40 @@ Returns the number of members in the table.
 
 <pre><code><b>public</b>(package) <b>fun</b> <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_length">length</a>(self: &<a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_PermissionsTable">PermissionsTable</a>): u64 {
     self.<a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_length">length</a>
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="permissioned_groups_permissions_table_destroy_empty"></a>
+
+## Function `destroy_empty`
+
+Destroys an empty PermissionsTable.
+
+
+<a name="@Aborts_2"></a>
+
+### Aborts
+
+- <code><a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_EPermissionsTableNotEmpty">EPermissionsTableNotEmpty</a></code>: if the table still has members
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_destroy_empty">destroy_empty</a>(self: <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_PermissionsTable">permissioned_groups::permissions_table::PermissionsTable</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_destroy_empty">destroy_empty</a>(self: <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_PermissionsTable">PermissionsTable</a>) {
+    <b>let</b> <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_PermissionsTable">PermissionsTable</a> { id, <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_length">length</a> } = self;
+    <b>assert</b>!(<a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_length">length</a> == 0, <a href="../permissioned_groups/permissions_table.md#permissioned_groups_permissions_table_EPermissionsTableNotEmpty">EPermissionsTableNotEmpty</a>);
+    id.delete();
 }
 </code></pre>
 
