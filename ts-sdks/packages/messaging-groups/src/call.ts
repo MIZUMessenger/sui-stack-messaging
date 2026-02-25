@@ -81,8 +81,9 @@ export class MessagingGroupsCall {
 
 			return tx.add(
 				messaging.createGroup({
-					package: this.#packageConfig.packageId,
+					package: this.#packageConfig.latestPackageId,
 					arguments: {
+						version: this.#packageConfig.versionId,
 						namespace: this.#packageConfig.namespaceId,
 						uuid,
 						initialEncryptedDek: Array.from(encryptedDek),
@@ -106,8 +107,9 @@ export class MessagingGroupsCall {
 
 			return tx.add(
 				messaging.createAndShareGroup({
-					package: this.#packageConfig.packageId,
+					package: this.#packageConfig.latestPackageId,
 					arguments: {
+						version: this.#packageConfig.versionId,
 						namespace: this.#packageConfig.namespaceId,
 						uuid,
 						initialEncryptedDek: Array.from(encryptedDek),
@@ -167,8 +169,9 @@ export class MessagingGroupsCall {
 
 			return tx.add(
 				messaging.rotateEncryptionKey({
-					package: this.#packageConfig.packageId,
+					package: this.#packageConfig.latestPackageId,
 					arguments: {
+						version: this.#packageConfig.versionId,
 						encryptionHistory: encryptionHistoryId,
 						group: groupId,
 						newEncryptedDek: Array.from(encryptedDek),
@@ -191,7 +194,7 @@ export class MessagingGroupsCall {
 			const groupLeaverId = this.#derive.groupLeaverId();
 			return tx.add(
 				messaging.leave({
-					package: this.#packageConfig.packageId,
+					package: this.#packageConfig.latestPackageId,
 					arguments: {
 						groupLeaver: groupLeaverId,
 						group: options.groupId,
@@ -218,7 +221,7 @@ export class MessagingGroupsCall {
 			const suinsManagerId = this.#derive.suinsManagerId();
 			return tx.add(
 				messaging.setSuinsReverseLookup({
-					package: this.#packageConfig.packageId,
+					package: this.#packageConfig.latestPackageId,
 					arguments: {
 						suinsManager: suinsManagerId,
 						group: options.groupId,
@@ -242,7 +245,7 @@ export class MessagingGroupsCall {
 			const suinsManagerId = this.#derive.suinsManagerId();
 			return tx.add(
 				messaging.unsetSuinsReverseLookup({
-					package: this.#packageConfig.packageId,
+					package: this.#packageConfig.latestPackageId,
 					arguments: {
 						suinsManager: suinsManagerId,
 						group: options.groupId,

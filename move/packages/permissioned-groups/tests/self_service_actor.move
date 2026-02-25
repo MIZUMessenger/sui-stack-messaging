@@ -98,24 +98,17 @@ public fun custom_revoke_permission<T: drop, P: drop>(
 
 // === Tests ===
 
-#[test_only]
+// Module is already #[test_only] — no need for per-item annotations.
 use permissioned_groups::permissioned_group;
-#[test_only]
 use permissioned_groups::permissioned_group::PermissionsAdmin;
-#[test_only]
 use sui::test_scenario as ts;
-#[test_only]
 use std::unit_test::assert_eq;
 
-#[test_only]
 const ALICE: address = @0xA11CE;
-#[test_only]
 const BOB: address = @0xB0B;
 
-#[test_only]
 public struct TestWitness() has drop;
 
-#[test_only]
 public struct CustomPermission() has drop;
 
 // LIMITATION: CustomPermission is in the same package as permissioned_groups, so

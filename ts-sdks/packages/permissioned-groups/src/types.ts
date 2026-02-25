@@ -10,9 +10,20 @@ import type { TransactionArgument } from '@mysten/sui/transactions';
 /**
  * Configuration for the permissioned_groups Move package.
  * This is managed by us and provided in constants for testnet/mainnet.
+ *
+ * After a package upgrade on Sui, the original (V1) package ID is still needed
+ * for TypeName strings (BCS parsing, permission type comparisons), Seal encryption
+ * namespace, and `deriveObjectID` type tags — because Move's `type_name::with_original_ids()`
+ * always references V1 addresses.
+ *
+ * The latest package ID is used for `moveCall` targets so that transactions
+ * execute the most recent version of the contract code.
  */
 export type PermissionedGroupsPackageConfig = {
-	packageId: string;
+	/** The original (V1) package ID. Used for TypeName strings, BCS, Seal namespace, and deriveObjectID. */
+	originalPackageId: string;
+	/** The latest (current) package ID. Used for moveCall targets. Equals originalPackageId before any upgrade. */
+	latestPackageId: string;
 };
 
 export interface PermissionedGroupsCompatibleClient extends ClientWithCoreApi {}

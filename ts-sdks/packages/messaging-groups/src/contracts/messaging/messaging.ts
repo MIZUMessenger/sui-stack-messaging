@@ -69,6 +69,7 @@ export const MessagingNamespace = new MoveStruct({
 	},
 });
 export interface CreateGroupArguments {
+	version: RawTransactionArgument<string>;
 	namespace: RawTransactionArgument<string>;
 	uuid: RawTransactionArgument<string>;
 	initialEncryptedDek: RawTransactionArgument<number[]>;
@@ -79,6 +80,7 @@ export interface CreateGroupOptions {
 	arguments:
 		| CreateGroupArguments
 		| [
+				version: RawTransactionArgument<string>,
 				namespace: RawTransactionArgument<string>,
 				uuid: RawTransactionArgument<string>,
 				initialEncryptedDek: RawTransactionArgument<number[]>,
@@ -110,15 +112,16 @@ export interface CreateGroupOptions {
  *
  * # Aborts
  *
+ * - `EInvalidVersion` (from `version`): if package version doesn't match
  * - If the UUID has already been used (duplicate derivation)
  */
 export function createGroup(options: CreateGroupOptions) {
 	const packageAddress = options.package ?? '@local-pkg/messaging';
-	const argumentsTypes = [null, '0x1::string::String', 'vector<u8>', null] satisfies (
+	const argumentsTypes = [null, null, '0x1::string::String', 'vector<u8>', null] satisfies (
 		| string
 		| null
 	)[];
-	const parameterNames = ['namespace', 'uuid', 'initialEncryptedDek', 'initialMembers'];
+	const parameterNames = ['version', 'namespace', 'uuid', 'initialEncryptedDek', 'initialMembers'];
 	return (tx: Transaction) =>
 		tx.moveCall({
 			package: packageAddress,
@@ -128,6 +131,7 @@ export function createGroup(options: CreateGroupOptions) {
 		});
 }
 export interface CreateAndShareGroupArguments {
+	version: RawTransactionArgument<string>;
 	namespace: RawTransactionArgument<string>;
 	uuid: RawTransactionArgument<string>;
 	initialEncryptedDek: RawTransactionArgument<number[]>;
@@ -138,6 +142,7 @@ export interface CreateAndShareGroupOptions {
 	arguments:
 		| CreateAndShareGroupArguments
 		| [
+				version: RawTransactionArgument<string>,
 				namespace: RawTransactionArgument<string>,
 				uuid: RawTransactionArgument<string>,
 				initialEncryptedDek: RawTransactionArgument<number[]>,
@@ -162,11 +167,14 @@ export interface CreateAndShareGroupOptions {
  */
 export function createAndShareGroup(options: CreateAndShareGroupOptions) {
 	const packageAddress = options.package ?? '@local-pkg/messaging';
-	const argumentsTypes = [null, '0x1::string::String', 'vector<u8>', 'vector<address>'] satisfies (
-		| string
-		| null
-	)[];
-	const parameterNames = ['namespace', 'uuid', 'initialEncryptedDek', 'initialMembers'];
+	const argumentsTypes = [
+		null,
+		null,
+		'0x1::string::String',
+		'vector<u8>',
+		'vector<address>',
+	] satisfies (string | null)[];
+	const parameterNames = ['version', 'namespace', 'uuid', 'initialEncryptedDek', 'initialMembers'];
 	return (tx: Transaction) =>
 		tx.moveCall({
 			package: packageAddress,
@@ -176,6 +184,7 @@ export function createAndShareGroup(options: CreateAndShareGroupOptions) {
 		});
 }
 export interface RotateEncryptionKeyArguments {
+	version: RawTransactionArgument<string>;
 	encryptionHistory: RawTransactionArgument<string>;
 	group: RawTransactionArgument<string>;
 	newEncryptedDek: RawTransactionArgument<number[]>;
@@ -185,6 +194,7 @@ export interface RotateEncryptionKeyOptions {
 	arguments:
 		| RotateEncryptionKeyArguments
 		| [
+				version: RawTransactionArgument<string>,
 				encryptionHistory: RawTransactionArgument<string>,
 				group: RawTransactionArgument<string>,
 				newEncryptedDek: RawTransactionArgument<number[]>,
@@ -202,12 +212,13 @@ export interface RotateEncryptionKeyOptions {
  *
  * # Aborts
  *
+ * - `EInvalidVersion` (from `version`): if package version doesn't match
  * - `ENotPermitted`: if caller doesn't have `EncryptionKeyRotator` permission
  */
 export function rotateEncryptionKey(options: RotateEncryptionKeyOptions) {
 	const packageAddress = options.package ?? '@local-pkg/messaging';
-	const argumentsTypes = [null, null, 'vector<u8>'] satisfies (string | null)[];
-	const parameterNames = ['encryptionHistory', 'group', 'newEncryptedDek'];
+	const argumentsTypes = [null, null, null, 'vector<u8>'] satisfies (string | null)[];
+	const parameterNames = ['version', 'encryptionHistory', 'group', 'newEncryptedDek'];
 	return (tx: Transaction) =>
 		tx.moveCall({
 			package: packageAddress,

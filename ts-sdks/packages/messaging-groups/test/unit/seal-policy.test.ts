@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { DefaultSealPolicy } from '../../src/encryption/seal-policy.js';
 
 const MOCK_PACKAGE_ID = '0x' + 'ab'.repeat(32);
+const MOCK_VERSION_ID = '0x' + '11'.repeat(32);
 const MOCK_GROUP_ID = '0x' + 'cd'.repeat(32);
 
 describe('DefaultSealPolicy', () => {
@@ -66,7 +67,7 @@ describe('DefaultSealPolicy', () => {
 
 	describe('sealApproveThunk', () => {
 		it('should return a Transaction thunk', () => {
-			const policy = new DefaultSealPolicy(MOCK_PACKAGE_ID);
+			const policy = new DefaultSealPolicy(MOCK_PACKAGE_ID, MOCK_PACKAGE_ID, MOCK_VERSION_ID);
 			const identityBytes = DefaultSealPolicy.encodeIdentity(MOCK_GROUP_ID, 0n);
 			const thunk = policy.sealApproveThunk(identityBytes, MOCK_GROUP_ID, '0x' + 'ee'.repeat(32));
 

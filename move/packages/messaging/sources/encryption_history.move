@@ -239,11 +239,9 @@ public fun current_encrypted_key(self: &EncryptionHistory): &vector<u8> {
 
 #[test, expected_failure(abort_code = EEncryptionHistoryAlreadyExists)]
 fun new_duplicate_derivation_key_fails() {
-    use std::string;
-
     let mut ctx = tx_context::dummy();
     let mut namespace_uid = object::new(&mut ctx);
-    let uuid = string::utf8(b"550e8400-e29b-41d4-a716-446655440000");
+    let uuid = b"550e8400-e29b-41d4-a716-446655440000".to_string();
 
     // Create first EncryptionHistory with UUID
     let _eh1 = new(

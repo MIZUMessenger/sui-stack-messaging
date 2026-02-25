@@ -40,7 +40,7 @@ export class MessagingGroupsDerive {
 	 * @returns The deterministic object ID for the PermissionedGroup
 	 */
 	groupId(options: { uuid: string }): string {
-		const typeTag = `${this.#packageConfig.packageId}::encryption_history::PermissionedGroupTag`;
+		const typeTag = `${this.#packageConfig.originalPackageId}::encryption_history::PermissionedGroupTag`;
 		const key = bcs.string().serialize(options.uuid).toBytes();
 		return deriveObjectID(this.#packageConfig.namespaceId, typeTag, key);
 	}
@@ -52,7 +52,7 @@ export class MessagingGroupsDerive {
 	 * @returns The deterministic object ID for the EncryptionHistory
 	 */
 	encryptionHistoryId(options: { uuid: string }): string {
-		const typeTag = `${this.#packageConfig.packageId}::encryption_history::EncryptionHistoryTag`;
+		const typeTag = `${this.#packageConfig.originalPackageId}::encryption_history::EncryptionHistoryTag`;
 		const key = bcs.string().serialize(options.uuid).toBytes();
 		return deriveObjectID(this.#packageConfig.namespaceId, typeTag, key);
 	}

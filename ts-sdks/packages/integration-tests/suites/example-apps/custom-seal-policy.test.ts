@@ -80,12 +80,14 @@ describe('Custom SealPolicy — Subscription-Gated Encryption', () => {
 		permissionedGroupsPackageId: string;
 		messagingPackageId: string;
 		namespaceId: string;
+		versionId: string;
 	};
 
 	beforeAll(async () => {
 		const suiClientUrl = inject('suiClientUrl');
 		const publishedPackages = inject('publishedPackages');
 		const namespaceId = inject('messagingNamespaceId');
+		const versionId = inject('messagingVersionId');
 		const adminAccount = inject('adminAccount');
 		const faucetPort = inject('faucetPort');
 
@@ -98,6 +100,7 @@ describe('Custom SealPolicy — Subscription-Gated Encryption', () => {
 			permissionedGroupsPackageId: publishedPackages['permissioned-groups'].packageId,
 			messagingPackageId: publishedPackages['messaging'].packageId,
 			namespaceId: namespaceId!,
+			versionId: versionId!,
 		};
 
 		// 1. Create a default-policy admin client (for group management)

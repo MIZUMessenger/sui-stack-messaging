@@ -30,6 +30,7 @@ module messaging::messaging;
 use messaging::encryption_history::{Self, EncryptionHistory, EncryptionKeyRotator};
 use messaging::group_leaver::{Self, GroupLeaver};
 use messaging::suins_manager::{Self, SuinsManager};
+use messaging::version::Version;
 use permissioned_groups::permissioned_group::{
     Self, PermissionedGroup, PermissionsAdmin, ExtensionPermissionsAdmin, ObjectAdmin,
 };
@@ -112,14 +113,17 @@ fun init(otw: MESSAGING, ctx: &mut TxContext) {
 /// members list.
 ///
 /// # Aborts
+/// - `EInvalidVersion` (from `version`): if package version doesn't match
 /// - If the UUID has already been used (duplicate derivation)
 public fun create_group(
+    version: &Version,
     namespace: &mut MessagingNamespace,
     uuid: String,
     initial_encrypted_dek: vector<u8>,
     initial_members: VecSet<address>,
     ctx: &mut TxContext,
 ): (PermissionedGroup<Messaging>, EncryptionHistory) {
+    version.validate_version();
     let mut group: PermissionedGroup<Messaging> = permissioned_group::new_derived<
         Messaging,
         encryption_history::PermissionedGroupTag,
@@ -180,6 +184,7 @@ public fun create_group(
 /// See `create_group` for details on creator permissions and initial member handling.
 #[allow(lint(share_owned))]
 entry fun create_and_share_group(
+    version: &Version,
     namespace: &mut MessagingNamespace,
     uuid: String,
     initial_encrypted_dek: vector<u8>,
@@ -187,6 +192,7 @@ entry fun create_and_share_group(
     ctx: &mut TxContext,
 ) {
     let (group, encryption_history) = create_group(
+        version,
         namespace,
         uuid,
         initial_encrypted_dek,
@@ -206,13 +212,16 @@ entry fun create_and_share_group(
 /// - `ctx`: Transaction context
 ///
 /// # Aborts
+/// - `EInvalidVersion` (from `version`): if package version doesn't match
 /// - `ENotPermitted`: if caller doesn't have `EncryptionKeyRotator` permission
 public fun rotate_encryption_key(
+    version: &Version,
     encryption_history: &mut EncryptionHistory,
     group: &PermissionedGroup<Messaging>,
     new_encrypted_dek: vector<u8>,
-    ctx: &mut TxContext,
+    ctx: &TxContext,
 ) {
+    version.validate_version();
     assert!(group.has_permission<Messaging, EncryptionKeyRotator>(ctx.sender()), ENotPermitted);
     encryption_history.rotate_key(new_encrypted_dek);
 }

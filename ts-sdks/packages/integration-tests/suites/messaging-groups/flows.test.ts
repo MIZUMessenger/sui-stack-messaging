@@ -38,12 +38,14 @@ describe('Full Flows', () => {
 		permissionedGroupsPackageId: string;
 		messagingPackageId: string;
 		namespaceId: string;
+		versionId: string;
 	};
 
 	beforeAll(() => {
 		const suiClientUrl = inject('suiClientUrl');
 		const publishedPackages = inject('publishedPackages');
 		const namespaceId = inject('messagingNamespaceId');
+		const versionId = inject('messagingVersionId');
 		const adminAccount = inject('adminAccount');
 		const faucetPort = inject('faucetPort');
 
@@ -56,6 +58,7 @@ describe('Full Flows', () => {
 			permissionedGroupsPackageId: publishedPackages['permissioned-groups'].packageId,
 			messagingPackageId,
 			namespaceId: namespaceId!,
+			versionId: versionId!,
 		};
 
 		adminClient = createMessagingGroupsClient({

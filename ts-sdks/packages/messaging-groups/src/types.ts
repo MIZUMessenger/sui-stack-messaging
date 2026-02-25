@@ -16,12 +16,19 @@ import type { SealPolicy } from './encryption/seal-policy.js';
 /**
  * Configuration for the messaging Move package.
  * This is managed by us and provided in constants for testnet/mainnet.
+ *
+ * See {@link PermissionedGroupsPackageConfig} for a detailed explanation of
+ * the `originalPackageId` / `latestPackageId` split.
  */
 export type MessagingGroupsPackageConfig = {
-	/** The messaging package ID */
-	packageId: string;
+	/** The original (V1) package ID. Used for TypeName strings, BCS, Seal namespace, and deriveObjectID. */
+	originalPackageId: string;
+	/** The latest (current) package ID. Used for moveCall targets. Equals originalPackageId before any upgrade. */
+	latestPackageId: string;
 	/** The MessagingNamespace shared object ID */
 	namespaceId: string;
+	/** The Version shared object ID (used for contract upgrade version gating) */
+	versionId: string;
 };
 
 /**

@@ -21,6 +21,12 @@ describe('messaging-groups: Setup & Configuration', () => {
 		expect(namespaceId).toMatch(/^0x[a-f0-9]+$/);
 	});
 
+	it('should have found the Version shared object', () => {
+		const versionId = inject('messagingVersionId');
+		expect(versionId).toBeDefined();
+		expect(versionId).toMatch(/^0x[a-f0-9]+$/);
+	});
+
 	it('should have a working sui client', async () => {
 		const suiClientUrl = inject('suiClientUrl');
 		const adminAccount = inject('adminAccount');
@@ -37,6 +43,7 @@ describe('messaging-groups: Setup & Configuration', () => {
 		const suiClientUrl = inject('suiClientUrl');
 		const publishedPackages = inject('publishedPackages');
 		const namespaceId = inject('messagingNamespaceId');
+		const versionId = inject('messagingVersionId');
 
 		const client = createMessagingGroupsClient({
 			url: suiClientUrl,
@@ -44,6 +51,7 @@ describe('messaging-groups: Setup & Configuration', () => {
 			permissionedGroupsPackageId: publishedPackages['permissioned-groups'].packageId,
 			messagingPackageId: publishedPackages['messaging'].packageId,
 			namespaceId: namespaceId!,
+			versionId: versionId!,
 			keypair: new Ed25519Keypair(),
 		});
 
@@ -65,6 +73,7 @@ describe('messaging-groups: Setup & Configuration', () => {
 		const suiClientUrl = inject('suiClientUrl');
 		const publishedPackages = inject('publishedPackages');
 		const namespaceId = inject('messagingNamespaceId');
+		const versionId = inject('messagingVersionId');
 		const messagingPackageId = publishedPackages['messaging'].packageId;
 
 		const client = createMessagingGroupsClient({
@@ -73,6 +82,7 @@ describe('messaging-groups: Setup & Configuration', () => {
 			permissionedGroupsPackageId: publishedPackages['permissioned-groups'].packageId,
 			messagingPackageId,
 			namespaceId: namespaceId!,
+			versionId: versionId!,
 			keypair: new Ed25519Keypair(),
 		});
 

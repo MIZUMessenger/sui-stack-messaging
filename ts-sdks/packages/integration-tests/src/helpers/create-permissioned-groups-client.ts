@@ -35,7 +35,7 @@ export function createPermissionedGroupsClient(options: CreatePermissionedGroups
 	return createSuiClient({ url, network, transport, mvr })
 		.$extend(
 			permissionedGroups({
-				packageConfig: { packageId },
+				packageConfig: { originalPackageId: packageId, latestPackageId: packageId },
 				witnessType,
 			}),
 		)

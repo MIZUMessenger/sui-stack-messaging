@@ -60,7 +60,7 @@ export class PermissionedGroupsCall {
 	 */
 	grantPermission(options: GrantPermissionCallOptions): (tx: Transaction) => TransactionResult {
 		return permissionedGroup.grantPermission({
-			package: this.#packageConfig.packageId,
+			package: this.#packageConfig.latestPackageId,
 			arguments: {
 				self: options.groupId,
 				member: options.member,
@@ -81,7 +81,7 @@ export class PermissionedGroupsCall {
 		options: ObjectGrantPermissionCallOptions,
 	): (tx: Transaction) => TransactionResult {
 		return permissionedGroup.objectGrantPermission({
-			package: this.#packageConfig.packageId,
+			package: this.#packageConfig.latestPackageId,
 			arguments: {
 				self: options.groupId,
 				actorObject: options.actorObjectUid,
@@ -101,7 +101,7 @@ export class PermissionedGroupsCall {
 	 */
 	revokePermission(options: RevokePermissionCallOptions): (tx: Transaction) => TransactionResult {
 		return permissionedGroup.revokePermission({
-			package: this.#packageConfig.packageId,
+			package: this.#packageConfig.latestPackageId,
 			arguments: {
 				self: options.groupId,
 				member: options.member,
@@ -118,7 +118,7 @@ export class PermissionedGroupsCall {
 		options: ObjectRevokePermissionCallOptions,
 	): (tx: Transaction) => TransactionResult {
 		return permissionedGroup.objectRevokePermission({
-			package: this.#packageConfig.packageId,
+			package: this.#packageConfig.latestPackageId,
 			arguments: {
 				self: options.groupId,
 				actorObject: options.actorObjectUid,
@@ -171,7 +171,7 @@ export class PermissionedGroupsCall {
 	 * PermissionsAdmin, ExtensionPermissionsAdmin, ObjectAdmin.
 	 */
 	grantAllPermissions(options: GrantAllPermissionsCallOptions): (tx: Transaction) => void {
-		const types = permissionTypes(this.#packageConfig.packageId);
+		const types = permissionTypes(this.#packageConfig.originalPackageId);
 		return this.grantPermissions({
 			groupId: options.groupId,
 			member: options.member,
@@ -187,7 +187,7 @@ export class PermissionedGroupsCall {
 	 */
 	removeMember(options: RemoveMemberCallOptions): (tx: Transaction) => TransactionResult {
 		return permissionedGroup.removeMember({
-			package: this.#packageConfig.packageId,
+			package: this.#packageConfig.latestPackageId,
 			arguments: {
 				self: options.groupId,
 				member: options.member,
@@ -204,7 +204,7 @@ export class PermissionedGroupsCall {
 		options: ObjectRemoveMemberCallOptions,
 	): (tx: Transaction) => TransactionResult {
 		return permissionedGroup.objectRemoveMember({
-			package: this.#packageConfig.packageId,
+			package: this.#packageConfig.latestPackageId,
 			arguments: {
 				self: options.groupId,
 				actorObject: options.actorObjectUid,

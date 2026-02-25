@@ -14,5 +14,7 @@ declare module 'vitest' {
 		publishedPackages: Record<string, PublishedPackage>;
 		/** MessagingNamespace shared object ID (messaging-groups suite only) */
 		messagingNamespaceId?: string;
+		/** Version shared object ID (messaging-groups suite only) */
+		messagingVersionId?: string;
 	}
 }

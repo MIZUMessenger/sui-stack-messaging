@@ -18,6 +18,7 @@ export interface CreateMessagingGroupsClientOptions<TApproveContext = void> {
 	permissionedGroupsPackageId: string;
 	messagingPackageId: string;
 	namespaceId: string;
+	versionId: string;
 	keypair: Ed25519Keypair;
 	sealPolicy?: SealPolicy<TApproveContext>;
 }
@@ -39,6 +40,7 @@ export function createMessagingGroupsClient<TApproveContext = void>(
 		permissionedGroupsPackageId,
 		messagingPackageId,
 		namespaceId,
+		versionId,
 		keypair,
 		sealPolicy,
 	} = options;
@@ -62,7 +64,10 @@ export function createMessagingGroupsClient<TApproveContext = void>(
 	return baseClient
 		.$extend(
 			permissionedGroups({
-				packageConfig: { packageId: permissionedGroupsPackageId },
+				packageConfig: {
+					originalPackageId: permissionedGroupsPackageId,
+					latestPackageId: permissionedGroupsPackageId,
+				},
 				witnessType,
 			}),
 			{
@@ -74,8 +79,10 @@ export function createMessagingGroupsClient<TApproveContext = void>(
 		.$extend(
 			messagingGroups<TApproveContext>({
 				packageConfig: {
-					packageId: messagingPackageId,
+					originalPackageId: messagingPackageId,
+					latestPackageId: messagingPackageId,
 					namespaceId,
+					versionId,
 				},
 				encryption: {
 					sessionKey: {
