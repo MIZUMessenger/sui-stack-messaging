@@ -17,6 +17,7 @@ export {
 export * from './types.js';
 export * from './encryption/index.js';
 export * from './relayer/index.js';
+export * from './storage/index.js';
 export type {
 	ParsedMessagingNamespace,
 	ParsedMessaging,
