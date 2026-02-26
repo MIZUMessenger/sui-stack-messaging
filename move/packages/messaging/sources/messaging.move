@@ -41,6 +41,7 @@ use permissioned_groups::permissioned_group::{
     ObjectAdmin
 };
 use std::string::String;
+use sui::derived_object;
 use sui::package;
 use sui::vec_set::{Self, VecSet};
 use suins::suins::SuiNS;
@@ -100,8 +101,8 @@ fun init(otw: MESSAGING, ctx: &mut TxContext) {
     let group_leaver = group_leaver::new(&mut namespace.id);
     let group_manager = group_manager::new(&mut namespace.id);
     transfer::share_object(namespace);
-    group_leaver::share(group_leaver);
-    group_manager::share(group_manager);
+    group_leaver.share();
+    group_manager.share();
 }
 
 // === Public Functions ===
@@ -158,7 +159,7 @@ public fun create_group(
     // Grant PermissionsAdmin to the GroupLeaver actor so it can remove members on behalf of
     // callers.
     // The address is derived deterministically from the namespace — no need to pass the object.
-    let group_leaver_address = sui::derived_object::derive_address(
+    let group_leaver_address = derived_object::derive_address(
         object::id(namespace),
         group_leaver::derivation_key(),
     );
