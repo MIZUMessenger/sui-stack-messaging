@@ -173,7 +173,7 @@ export class EnvelopeEncryption<TApproveContext = void> {
 	async generateRotationDEK(
 		options: GroupRef,
 	): Promise<GeneratedDEK & { groupId: string; encryptionHistoryId: string }> {
-		const { groupId, encryptionHistoryId } = this.#resolveGroupRef(options);
+		const { groupId, encryptionHistoryId } = this.#derive.resolveGroupRef(options);
 
 		const currentVersion = await this.#view.getCurrentKeyVersion({ encryptionHistoryId });
 		const result = await this.#generateDEK({
@@ -195,7 +195,7 @@ export class EnvelopeEncryption<TApproveContext = void> {
 	 * When `TApproveContext` is not `void`, `sealApproveContext` is required.
 	 */
 	async encrypt(options: EncryptOptions<TApproveContext>): Promise<EncryptedEnvelope> {
-		const { groupId, encryptionHistoryId } = this.#resolveGroupRef(options);
+		const { groupId, encryptionHistoryId } = this.#derive.resolveGroupRef(options);
 		const sessionKey = await this.#sessionKeyManager.getSessionKey();
 
 		const keyVersion =
@@ -231,7 +231,7 @@ export class EnvelopeEncryption<TApproveContext = void> {
 	 * When `TApproveContext` is not `void`, `sealApproveContext` is required.
 	 */
 	async decrypt(options: DecryptOptions<TApproveContext>): Promise<Uint8Array> {
-		const { groupId, encryptionHistoryId } = this.#resolveGroupRef(options);
+		const { groupId, encryptionHistoryId } = this.#derive.resolveGroupRef(options);
 		const sessionKey = await this.#sessionKeyManager.getSessionKey();
 
 		const dek = await this.#resolveDEK({
@@ -255,21 +255,6 @@ export class EnvelopeEncryption<TApproveContext = void> {
 	/** Clear cached DEKs — all, or only those for a specific group. */
 	clearCache(groupId?: string): void {
 		this.#dekCache.clear(groupId ? [groupId] : undefined);
-	}
-
-	// === Private: GroupRef Resolution ===
-
-	#resolveGroupRef(ref: GroupRef): { groupId: string; encryptionHistoryId: string } {
-		if ('uuid' in ref && ref.uuid) {
-			return {
-				groupId: this.#derive.groupId({ uuid: ref.uuid }),
-				encryptionHistoryId: this.#derive.encryptionHistoryId({ uuid: ref.uuid }),
-			};
-		}
-		return {
-			groupId: ref.groupId!,
-			encryptionHistoryId: ref.encryptionHistoryId!,
-		};
 	}
 
 	// === Private: DEK Generation ===

@@ -5,7 +5,7 @@ import { bcs } from '@mysten/sui/bcs';
 import { deriveObjectID } from '@mysten/sui/utils';
 
 import { GROUP_LEAVER_DERIVATION_KEY, GROUP_MANAGER_DERIVATION_KEY } from './constants.js';
-import type { MessagingGroupsPackageConfig } from './types.js';
+import type { GroupRef, MessagingGroupsPackageConfig } from './types.js';
 
 export interface MessagingGroupsDeriveOptions {
 	packageConfig: MessagingGroupsPackageConfig;
@@ -55,6 +55,25 @@ export class MessagingGroupsDerive {
 		const typeTag = `${this.#packageConfig.originalPackageId}::encryption_history::EncryptionHistoryTag`;
 		const key = bcs.string().serialize(options.uuid).toBytes();
 		return deriveObjectID(this.#packageConfig.namespaceId, typeTag, key);
+	}
+
+	/**
+	 * Resolve a {@link GroupRef} to explicit `groupId` and `encryptionHistoryId`.
+	 *
+	 * When the ref contains a `uuid`, both IDs are derived deterministically.
+	 * When explicit IDs are provided, they are returned as-is.
+	 */
+	resolveGroupRef(ref: GroupRef): { groupId: string; encryptionHistoryId: string } {
+		if ('uuid' in ref && ref.uuid) {
+			return {
+				groupId: this.groupId({ uuid: ref.uuid }),
+				encryptionHistoryId: this.encryptionHistoryId({ uuid: ref.uuid }),
+			};
+		}
+		return {
+			groupId: (ref as { groupId: string }).groupId,
+			encryptionHistoryId: (ref as { encryptionHistoryId: string }).encryptionHistoryId,
+		};
 	}
 
 	/**

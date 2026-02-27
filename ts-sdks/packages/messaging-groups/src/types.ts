@@ -10,6 +10,7 @@ import type { TransactionArgument } from '@mysten/sui/transactions';
 import type { SuinsConfig } from './constants.js';
 import type { CryptoPrimitives } from './encryption/crypto-primitives.js';
 import type { SealPolicy } from './encryption/seal-policy.js';
+import type { RelayerClientConfig } from './relayer/types.js';
 
 // === Package Configuration ===
 
@@ -126,6 +127,9 @@ export interface MessagingGroupsClientOptions<
 	suinsConfig?: SuinsConfig;
 	/** Encryption configuration (required — session key config must be set at creation). */
 	encryption: MessagingGroupsEncryptionOptions<TApproveContext>;
+	// TODO: make required once HttpRelayerTransport is merged and used as the default transport.
+	/** Relayer configuration — transport and optional attachments support. */
+	relayer?: RelayerClientConfig;
 }
 
 // === Call/Tx Options (no signer) ===

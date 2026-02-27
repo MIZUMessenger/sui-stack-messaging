@@ -14,7 +14,10 @@ import {
 	MAINNET_SUINS_CONFIG,
 	type SuinsConfig,
 } from './constants.js';
+import { AttachmentsManager } from './attachments/attachments-manager.js';
 import { EnvelopeEncryption } from './encryption/envelope-encryption.js';
+import { RelayerClient } from './relayer/client.js';
+import type { RelayerClientConfig } from './relayer/types.js';
 import type {
 	ArchiveGroupOptions,
 	CreateGroupOptions,
@@ -63,6 +66,7 @@ export function messagingGroups<
 	packageConfig,
 	encryption,
 	suinsConfig,
+	relayer,
 }: {
 	name?: Name;
 	/** Name under which the PermissionedGroupsClient extension is registered (default: 'groups'). */
@@ -73,6 +77,9 @@ export function messagingGroups<
 	encryption: MessagingGroupsEncryptionOptions<TApproveContext>;
 	/** SuiNS config for reverse lookup operations (auto-detected for testnet/mainnet). */
 	suinsConfig?: SuinsConfig;
+	// TODO: make required once HttpRelayerTransport is merged and used as the default transport.
+	/** Relayer configuration — transport and optional attachments support. */
+	relayer?: RelayerClientConfig;
 }) {
 	return {
 		name,
@@ -84,6 +91,7 @@ export function messagingGroups<
 				packageConfig,
 				suinsConfig,
 				encryption,
+				relayer,
 			});
 		},
 	};
@@ -132,6 +140,8 @@ export class MessagingGroupsClient<TApproveContext = void> {
 	bcs: MessagingGroupsBCS;
 	derive: MessagingGroupsDerive;
 	encryption: EnvelopeEncryption<TApproveContext>;
+	// TODO: make non-optional once HttpRelayerTransport is merged and used as the default transport.
+	relayer: RelayerClient<TApproveContext> | undefined;
 
 	constructor(options: MessagingGroupsClientOptions<TApproveContext, string, string>) {
 		if (!options.client) {
@@ -196,6 +206,16 @@ export class MessagingGroupsClient<TApproveContext = void> {
 		this.tx = new MessagingGroupsTransactions({
 			call: this.call,
 		});
+		if (options.relayer) {
+			this.relayer = new RelayerClient({
+				transport: options.relayer.transport,
+				encryption: this.encryption,
+				derive: this.derive,
+				attachments: options.relayer.attachments
+					? new AttachmentsManager(this.encryption, options.relayer.attachments)
+					: undefined,
+			});
+		}
 	}
 
 	// === Private Helpers ===

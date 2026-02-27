@@ -3,7 +3,8 @@
 
 import type { Signer } from '@mysten/sui/cryptography';
 
-import type { Attachment } from '../attachments/types.js';
+import type { Attachment, AttachmentsConfig } from '../attachments/types.js';
+import type { RelayerTransport } from './transport.js';
 
 export type SyncStatus =
 	| 'SYNC_PENDING'
@@ -131,4 +132,15 @@ export class RelayerTransportError extends Error {
 export interface RelayerTransportConfig {
 	relayerUrl: string;
 	signer: Signer;
+}
+
+/** Configuration for the RelayerClient, passed via messagingGroups(). */
+export interface RelayerClientConfig {
+	/** Pre-configured transport instance. */
+	transport: RelayerTransport;
+	/**
+	 * Attachment support. When omitted, messages cannot include files,
+	 * and received attachment refs are not resolvable (preserved in rawAttachments).
+	 */
+	attachments?: AttachmentsConfig;
 }
