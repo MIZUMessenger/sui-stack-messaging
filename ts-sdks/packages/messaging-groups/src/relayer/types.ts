@@ -140,7 +140,7 @@ export interface RelayerClientConfig {
 	transport: RelayerTransport;
 	/**
 	 * Attachment support. When omitted, messages cannot include files,
-	 * and received attachment refs are not resolvable (preserved in rawAttachments).
+	 * and received attachments are not resolvable.
 	 */
 	attachments?: AttachmentsConfig;
 }

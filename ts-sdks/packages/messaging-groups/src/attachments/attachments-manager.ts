@@ -159,6 +159,7 @@ export class AttachmentsManager<TApproveContext = void> {
 				mimeType: metadata.mimeType,
 				fileSize: metadata.fileSize,
 				extras: metadata.extras,
+				wire: attachment,
 				data: async () => {
 					const encrypted = await this.#storageAdapter.download(attachment.storageId);
 					return this.#encryption.decrypt({
@@ -175,6 +176,22 @@ export class AttachmentsManager<TApproveContext = void> {
 		}
 
 		return handles;
+	}
+
+	/**
+	 * Best-effort deletion of stored attachment data.
+	 *
+	 * Delegates to {@link StorageAdapter.delete} when the adapter supports it.
+	 * Silently does nothing when the adapter has no `delete` method.
+	 * Errors are swallowed — callers should not fail on cleanup issues.
+	 */
+	async deleteStorageEntries(storageIds: string[]): Promise<void> {
+		if (storageIds.length === 0 || !this.#storageAdapter.delete) return;
+		try {
+			await this.#storageAdapter.delete(storageIds);
+		} catch {
+			// Best-effort: orphaned encrypted data expires naturally.
+		}
 	}
 
 	// === Private: Validation ===

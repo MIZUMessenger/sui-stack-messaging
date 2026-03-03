@@ -76,6 +76,8 @@ export interface AttachmentHandle {
 	fileSize: number;
 	/** Extra data from the encrypted metadata (adapter-specific or user-provided). */
 	extras?: Record<string, unknown>;
+	/** The on-the-wire {@link Attachment} this handle was resolved from. Useful for edits. */
+	wire: Attachment;
 	/** Download and decrypt the attachment data on demand. */
 	data(): Promise<Uint8Array>;
 }

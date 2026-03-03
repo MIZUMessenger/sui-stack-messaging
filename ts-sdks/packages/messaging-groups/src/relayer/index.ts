@@ -25,6 +25,7 @@ export { HTTPRelayerTransport, type HTTPRelayerTransportConfig } from './http-tr
 export { RelayerClient } from './client.js';
 export type {
 	DecryptedMessage,
+	EditAttachments,
 	SendMessageOptions,
 	GetMessageOptions,
 	GetMessagesOptions,

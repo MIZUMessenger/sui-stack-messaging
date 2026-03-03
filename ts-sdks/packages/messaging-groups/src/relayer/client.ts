@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { AttachmentsManager } from '../attachments/attachments-manager.js';
-import type { AttachmentFile, AttachmentHandle } from '../attachments/types.js';
+import type { Attachment, AttachmentFile, AttachmentHandle } from '../attachments/types.js';
 import type { EnvelopeEncryption } from '../encryption/envelope-encryption.js';
 import type { MessagingGroupsDerive } from '../derive.js';
 import { MessagingGroupsClientError } from '../error.js';
@@ -37,8 +37,6 @@ export interface DecryptedMessage {
 	syncStatus: SyncStatus;
 	/** Resolved attachment handles with lazy data download. Empty when no attachments or not configured. */
 	attachments: AttachmentHandle[];
-	/** Raw attachment references from the relayer. Useful when attachments support is not configured. */
-	rawAttachments: string[];
 }
 
 // ── Options types ────────────────────────────────────────────────
@@ -87,13 +85,31 @@ export interface GetMessagesResult {
 	hasNext: boolean;
 }
 
+/**
+ * Describes how attachments should change during an edit.
+ *
+ * The SDK computes the final attachment list as:
+ * `current.filter(a => !remove.includes(a.storageId)) + upload(new)`
+ *
+ * Storage entries for removed attachments are deleted best-effort when
+ * the storage adapter supports it.
+ */
+export interface EditAttachments {
+	/** The current attachments on the message (from {@link DecryptedMessage}). */
+	current: Attachment[];
+	/** Storage IDs of attachments to remove. */
+	remove?: string[];
+	/** New files to encrypt and upload. */
+	new?: AttachmentFile[];
+}
+
 interface EditMessageOptionsBase {
 	groupRef: GroupRef;
 	messageId: string;
 	/** New message text. */
 	text: string;
-	/** New files to attach (replaces all existing attachments). */
-	files?: AttachmentFile[];
+	/** Attachment changes. Omit to leave attachments unchanged. */
+	attachments?: EditAttachments;
 }
 
 /** Options for {@link RelayerClient.editMessage}. */
@@ -262,6 +278,10 @@ export class RelayerClient<TApproveContext = void> {
 	/**
 	 * Encrypt and update an existing message.
 	 * Only the original sender can edit their messages.
+	 *
+	 * When `attachments` is provided, the SDK computes the final attachment list
+	 * from the diff and attempts best-effort storage cleanup for removed entries.
+	 * When omitted, attachments are left unchanged.
 	 */
 	async editMessage(options: EditMessageOptions<TApproveContext>): Promise<void> {
 		const { groupId, encryptionHistoryId } = this.#derive.resolveGroupRef(options.groupRef);
@@ -276,12 +296,30 @@ export class RelayerClient<TApproveContext = void> {
 			...approveContext,
 		} as Parameters<EnvelopeEncryption<TApproveContext>['encrypt']>[0]);
 
-		// 2. Upload new attachments if present.
-		const attachmentRefs = await this.#uploadAttachments(
-			options.files,
-			{ groupId, encryptionHistoryId },
-			approveContext,
-		);
+		// 2. Compute attachment changes if requested.
+		let finalAttachments: Attachment[] | undefined;
+		let removedStorageIds: string[] | undefined;
+
+		if (options.attachments) {
+			const { current, remove, new: newFiles } = options.attachments;
+			const removeSet = new Set(remove ?? []);
+
+			// Keep current attachments that are not in the remove set.
+			const kept =
+				removeSet.size > 0 ? current.filter((a) => !removeSet.has(a.storageId)) : current;
+
+			// Upload new files.
+			const uploaded = await this.#uploadAttachments(
+				newFiles,
+				{ groupId, encryptionHistoryId },
+				approveContext,
+			);
+
+			finalAttachments = [...kept, ...uploaded];
+			if (removeSet.size > 0) {
+				removedStorageIds = [...removeSet];
+			}
+		}
 
 		// 3. Update via transport.
 		await this.#transport.updateMessage({
@@ -290,8 +328,13 @@ export class RelayerClient<TApproveContext = void> {
 			encryptedText: envelope.ciphertext,
 			nonce: envelope.nonce,
 			keyVersion: envelope.keyVersion,
-			attachments: attachmentRefs.length > 0 ? attachmentRefs : undefined,
+			attachments: finalAttachments,
 		});
+
+		// 4. Best-effort storage cleanup for removed attachments.
+		if (removedStorageIds && this.#attachments) {
+			this.#attachments.deleteStorageEntries(removedStorageIds).catch(() => {});
+		}
 	}
 
 	// ── Delete ───────────────────────────────────────────────────
@@ -385,7 +428,6 @@ export class RelayerClient<TApproveContext = void> {
 				isDeleted: true,
 				syncStatus: raw.syncStatus,
 				attachments: [],
-				rawAttachments: raw.attachments,
 			};
 		}
 
@@ -403,7 +445,12 @@ export class RelayerClient<TApproveContext = void> {
 		const text = this.#textDecoder.decode(plaintext);
 
 		// Resolve attachments.
-		const attachments = await this.#resolveAttachments(raw.attachments, groupIds, approveContext);
+		const attachments = await this.#resolveAttachments(
+			raw.attachments,
+			groupIds,
+			raw.keyVersion,
+			approveContext,
+		);
 
 		return {
 			messageId: raw.messageId,
@@ -417,7 +464,6 @@ export class RelayerClient<TApproveContext = void> {
 			isDeleted: false,
 			syncStatus: raw.syncStatus,
 			attachments,
-			rawAttachments: raw.attachments,
 		};
 	}
 
@@ -427,7 +473,7 @@ export class RelayerClient<TApproveContext = void> {
 		files: AttachmentFile[] | undefined,
 		groupIds: { groupId: string; encryptionHistoryId: string },
 		approveContext: Record<string, unknown>,
-	): Promise<string[]> {
+	): Promise<Attachment[]> {
 		if (!files || files.length === 0) return [];
 
 		if (!this.#attachments) {
@@ -437,37 +483,26 @@ export class RelayerClient<TApproveContext = void> {
 			);
 		}
 
-		const result = await this.#attachments.upload(
+		return this.#attachments.upload(
 			files,
 			groupIds,
 			approveContext as Omit<Parameters<EnvelopeEncryption<TApproveContext>['encrypt']>[0], 'data'>,
 		);
-
-		// Encode manifest reference as [manifestId, manifestNonce, manifestKeyVersion].
-		return [result.manifestId, result.manifestNonce, String(result.manifestKeyVersion)];
 	}
 
 	async #resolveAttachments(
-		refs: string[],
+		rawAttachments: Attachment[],
 		groupIds: { groupId: string; encryptionHistoryId: string },
+		keyVersion: bigint,
 		approveContext: Record<string, unknown>,
 	): Promise<AttachmentHandle[]> {
-		if (refs.length === 0) return [];
-
-		// No attachments support configured — caller can check rawAttachments.
+		if (rawAttachments.length === 0) return [];
 		if (!this.#attachments) return [];
 
-		// Parse the 3-element reference: [manifestId, manifestNonce, manifestKeyVersion].
-		const [manifestId, manifestNonce, manifestKeyVersionStr] = refs;
-		if (!manifestId || !manifestNonce || !manifestKeyVersionStr) return [];
-
 		return this.#attachments.resolve(
-			{
-				manifestId,
-				manifestNonce,
-				manifestKeyVersion: Number(manifestKeyVersionStr),
-				...groupIds,
-			},
+			rawAttachments,
+			groupIds,
+			keyVersion,
 			approveContext as Omit<
 				Parameters<EnvelopeEncryption<TApproveContext>['decrypt']>[0],
 				'envelope'
