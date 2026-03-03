@@ -61,8 +61,8 @@ export default async function setup(project: TestProject) {
 	// Find the MessagingNamespace shared object created during init.
 	// Supports both v1.63 format (type === 'created') and v1.65+ format (objectType directly).
 	const objectChanges = publishedPackages['messaging'].objectChanges;
-	const namespaceChange = objectChanges.find(
-		(change: any) => change.objectType?.includes('MessagingNamespace'),
+	const namespaceChange = objectChanges.find((change: any) =>
+		change.objectType?.includes('MessagingNamespace'),
 	);
 
 	if (!namespaceChange || !('objectId' in namespaceChange)) {
@@ -73,8 +73,8 @@ export default async function setup(project: TestProject) {
 	console.log(`Found MessagingNamespace at ${namespaceId}`);
 
 	// Find the Version shared object created during messaging's init
-	const versionChange = objectChanges.find(
-		(change: any) => change.objectType?.includes('::version::Version'),
+	const versionChange = objectChanges.find((change: any) =>
+		change.objectType?.includes('::version::Version'),
 	);
 
 	if (!versionChange || !('objectId' in versionChange)) {
