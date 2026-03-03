@@ -3,38 +3,15 @@
 
 import type { SealCompatibleClient } from '@mysten/seal';
 import { SessionKey } from '@mysten/seal';
-import { permissionedGroups } from '@mysten/permissioned-groups';
-import { messagingGroups, type SealPolicy } from '@mysten/messaging-groups';
-import type { ClientWithCoreApi, SuiClientTypes } from '@mysten/sui/client';
+import {
+	createMessagingGroupsClient as createClient,
+	type SealPolicy,
+} from '@mysten/messaging-groups';
+import type { SuiClientTypes } from '@mysten/sui/client';
 import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-
-import type { RelayerTransport } from '@mysten/messaging-groups';
 
 import { createMockSealClient } from '../seal-mock/index.js';
 import { createSuiClient, type SuiTransport } from './create-sui-client.js';
-
-/** No-op transport for integration tests that don't exercise relayer methods. */
-const noopTransport: RelayerTransport = {
-	sendMessage: () => {
-		throw new Error('noopTransport: sendMessage not implemented');
-	},
-	fetchMessages: () => {
-		throw new Error('noopTransport: fetchMessages not implemented');
-	},
-	fetchMessage: () => {
-		throw new Error('noopTransport: fetchMessage not implemented');
-	},
-	updateMessage: () => {
-		throw new Error('noopTransport: updateMessage not implemented');
-	},
-	deleteMessage: () => {
-		throw new Error('noopTransport: deleteMessage not implemented');
-	},
-	subscribe: () => {
-		throw new Error('noopTransport: subscribe not implemented');
-	},
-	disconnect: () => {},
-};
 
 export interface CreateMessagingGroupsClientOptions<TApproveContext = void> {
 	url: string;
@@ -51,6 +28,9 @@ export interface CreateMessagingGroupsClientOptions<TApproveContext = void> {
 /**
  * Creates a fully extended Sui client with `permissionedGroups`, mock `seal`,
  * and `messagingGroups` extensions.
+ *
+ * Delegates to the production {@link createClient} factory, passing a mock
+ * `SealClient` instance (instead of real key server configs) for localnet testing.
  *
  * Transport-agnostic: uses `SUI_TRANSPORT` env var or explicit `transport` option
  * to choose between JSON-RPC and gRPC.
@@ -70,8 +50,6 @@ export function createMessagingGroupsClient<TApproveContext = void>(
 		sealPolicy,
 	} = options;
 
-	const witnessType = `${messagingPackageId}::messaging::Messaging`;
-
 	const baseClient = createSuiClient({
 		url,
 		network,
@@ -86,48 +64,37 @@ export function createMessagingGroupsClient<TApproveContext = void>(
 		},
 	});
 
-	return baseClient
-		.$extend(
-			permissionedGroups({
-				packageConfig: {
-					originalPackageId: permissionedGroupsPackageId,
-					latestPackageId: permissionedGroupsPackageId,
-				},
-				witnessType,
-			}),
-			{
-				name: 'seal' as const,
-				register: (client: ClientWithCoreApi) =>
-					createMockSealClient({ suiClient: client, packageId: messagingPackageId }),
+	return createClient<TApproveContext>(baseClient, {
+		seal: createMockSealClient({ suiClient: baseClient, packageId: messagingPackageId }),
+		encryption: {
+			sessionKey: {
+				getSessionKey: () =>
+					SessionKey.import(
+						{
+							address: keypair.getPublicKey().toSuiAddress(),
+							packageId: messagingPackageId,
+							creationTimeMs: Date.now(),
+							ttlMin: 30,
+							sessionKey: keypair.getSecretKey(),
+						},
+						{} as SealCompatibleClient,
+					),
 			},
-		)
-		.$extend(
-			messagingGroups<TApproveContext>({
-				packageConfig: {
-					originalPackageId: messagingPackageId,
-					latestPackageId: messagingPackageId,
-					namespaceId,
-					versionId,
-				},
-				encryption: {
-					sessionKey: {
-						getSessionKey: () =>
-							SessionKey.import(
-								{
-									address: keypair.getPublicKey().toSuiAddress(),
-									packageId: messagingPackageId,
-									creationTimeMs: Date.now(),
-									ttlMin: 30,
-									sessionKey: keypair.getSecretKey(),
-								},
-								{} as SealCompatibleClient,
-							),
-					},
-					sealPolicy,
-				},
-				relayer: { transport: noopTransport },
-			}),
-		);
+			sealPolicy,
+		},
+		packageConfig: {
+			messaging: {
+				originalPackageId: messagingPackageId,
+				latestPackageId: messagingPackageId,
+				namespaceId,
+				versionId,
+			},
+			permissionedGroups: {
+				originalPackageId: permissionedGroupsPackageId,
+				latestPackageId: permissionedGroupsPackageId,
+			},
+		},
+	});
 }
 
 /** Convenience type for the return value of `createMessagingGroupsClient` with default (void) approve context. */

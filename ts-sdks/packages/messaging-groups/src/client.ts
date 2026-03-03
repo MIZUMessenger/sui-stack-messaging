@@ -53,7 +53,11 @@ import { MessagingGroupsDerive } from './derive.js';
 import { MessagingGroupsView } from './view.js';
 
 /**
- * Factory function to create a messaging groups client extension.
+ * Client extension factory for messaging groups.
+ *
+ * Requires the base client to already have `permissionedGroups` and `seal`
+ * extensions registered. For a simpler setup that handles all extensions
+ * automatically, see {@link createMessagingGroupsClient}.
  *
  * @example
  * ```ts

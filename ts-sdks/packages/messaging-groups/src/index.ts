@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 export { MessagingGroupsClient, messagingGroups } from './client.js';
+export { createMessagingGroupsClient, type CreateMessagingGroupsClientOptions } from './factory.js';
 export { MessagingGroupsCall } from './call.js';
 export { MessagingGroupsTransactions } from './transactions.js';
 export { MessagingGroupsView } from './view.js';
