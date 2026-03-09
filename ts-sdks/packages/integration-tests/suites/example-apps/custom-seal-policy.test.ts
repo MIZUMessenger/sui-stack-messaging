@@ -115,6 +115,7 @@ describe('Custom SealPolicy — Subscription-Gated Encryption', () => {
 		const uuid = crypto.randomUUID();
 		await defaultAdminClient.messaging.createAndShareGroup({
 			signer: adminKeypair,
+			name: 'Custom Seal Policy Group',
 			uuid,
 		});
 

@@ -45,18 +45,19 @@
 		"lint:fix": "pnpm run oxlint:fix && pnpm run prettier:fix"
 	},
 	"devDependencies": {
-		"@mysten/bcs": "^2.0.1",
-		"@mysten/codegen": "^0.8.0",
+		"@types/node": "^25.0.3",
+		"@mysten/bcs": "^2.0.2",
+		"@mysten/codegen": "^0.8.2",
 		"@mysten/permissioned-groups": "workspace:*",
-		"@mysten/seal": "^1.0.0",
-		"@mysten/sui": "^2.3.1",
+		"@mysten/seal": "^1.1.0",
+		"@mysten/sui": "^2.6.0",
 		"typescript": "^5.9.3",
-		"vitest": "^4.0.16"
+		"vitest": "^4.0.18"
 	},
 	"peerDependencies": {
-		"@mysten/bcs": "^2.0.1",
+		"@mysten/bcs": "^2.0.2",
 		"@mysten/permissioned-groups": "*",
-		"@mysten/seal": "^1.0.0",
-		"@mysten/sui": "^2.3.1"
+		"@mysten/seal": "^1.1.0",
+		"@mysten/sui": "^2.6.0"
 	}
 }
