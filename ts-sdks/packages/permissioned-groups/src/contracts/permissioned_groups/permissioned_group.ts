@@ -949,3 +949,35 @@ export function permissionsAdminCount(options: PermissionsAdminCountOptions) {
 			typeArguments: options.typeArguments,
 		});
 }
+export interface MemberCountArguments {
+	self: RawTransactionArgument<string>;
+}
+export interface MemberCountOptions {
+	package?: string;
+	arguments: MemberCountArguments | [self: RawTransactionArgument<string>];
+	typeArguments: [string];
+}
+/**
+ * Returns the total number of members in the PermissionedGroup.
+ *
+ * # Parameters
+ *
+ * - `self`: Reference to the PermissionedGroup
+ *
+ * # Returns
+ *
+ * The total number of members.
+ */
+export function memberCount(options: MemberCountOptions) {
+	const packageAddress = options.package ?? '@local-pkg/permissioned-groups';
+	const argumentsTypes = [null] satisfies (string | null)[];
+	const parameterNames = ['self'];
+	return (tx: Transaction) =>
+		tx.moveCall({
+			package: packageAddress,
+			module: 'permissioned_group',
+			function: 'member_count',
+			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
+			typeArguments: options.typeArguments,
+		});
+}

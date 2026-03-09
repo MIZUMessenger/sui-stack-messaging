@@ -113,6 +113,36 @@ export function groupId(options: GroupIdOptions) {
 			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
 		});
 }
+export interface UuidArguments {
+	self: RawTransactionArgument<string>;
+}
+export interface UuidOptions {
+	package?: string;
+	arguments: UuidArguments | [self: RawTransactionArgument<string>];
+}
+/**
+ * Returns the UUID used for derivation.
+ *
+ * # Parameters
+ *
+ * - `self`: Reference to the EncryptionHistory
+ *
+ * # Returns
+ *
+ * The UUID string.
+ */
+export function uuid(options: UuidOptions) {
+	const packageAddress = options.package ?? '@local-pkg/messaging';
+	const argumentsTypes = [null] satisfies (string | null)[];
+	const parameterNames = ['self'];
+	return (tx: Transaction) =>
+		tx.moveCall({
+			package: packageAddress,
+			module: 'encryption_history',
+			function: 'uuid',
+			arguments: normalizeMoveArguments(options.arguments, argumentsTypes, parameterNames),
+		});
+}
 export interface CurrentKeyVersionArguments {
 	self: RawTransactionArgument<string>;
 }
