@@ -82,8 +82,8 @@ export class WebCryptoPrimitives implements CryptoPrimitives {
 			{
 				name: 'AES-GCM',
 				iv: nonce as Uint8Array<ArrayBuffer>,
-				additionalData: aad as Uint8Array<ArrayBuffer> | undefined,
 				tagLength: 128,
+				...(aad ? { additionalData: aad as Uint8Array<ArrayBuffer> } : {}),
 			},
 			cryptoKey,
 			plaintext as Uint8Array<ArrayBuffer>,
@@ -108,8 +108,8 @@ export class WebCryptoPrimitives implements CryptoPrimitives {
 			{
 				name: 'AES-GCM',
 				iv: nonce as Uint8Array<ArrayBuffer>,
-				additionalData: aad as Uint8Array<ArrayBuffer> | undefined,
 				tagLength: 128,
+				...(aad ? { additionalData: aad as Uint8Array<ArrayBuffer> } : {}),
 			},
 			cryptoKey,
 			ciphertext as Uint8Array<ArrayBuffer>,

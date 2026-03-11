@@ -344,11 +344,19 @@ export class MessagingGroupsClient<TApproveContext = void> {
 			limit: options.limit,
 		});
 
-		const messages = await Promise.all(
+		const settled = await Promise.allSettled(
 			result.messages.map((raw) =>
 				this.#decryptMessage(raw, { groupId, encryptionHistoryId }, approveContext),
 			),
 		);
+
+		const messages: DecryptedMessage[] = [];
+		for (const entry of settled) {
+			if (entry.status === 'fulfilled') {
+				messages.push(entry.value);
+			}
+			// Silently skip messages that fail decryption (e.g. key not available yet).
+		}
 
 		return { messages, hasNext: result.hasNext };
 	}
@@ -457,7 +465,11 @@ export class MessagingGroupsClient<TApproveContext = void> {
 			afterOrder: options.afterOrder,
 			signal: options.signal,
 		})) {
-			yield this.#decryptMessage(raw, { groupId, encryptionHistoryId }, approveContext);
+			try {
+				yield this.#decryptMessage(raw, { groupId, encryptionHistoryId }, approveContext);
+			} catch {
+				// Skip messages that fail decryption (e.g. key not available yet).
+			}
 		}
 	}
 

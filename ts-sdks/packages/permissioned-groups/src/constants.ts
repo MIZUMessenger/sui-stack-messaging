@@ -4,8 +4,8 @@
 import type { PermissionedGroupsPackageConfig } from './types.js';
 
 export const TESTNET_PERMISSIONED_GROUPS_PACKAGE_CONFIG = {
-	originalPackageId: '0xTBD',
-	latestPackageId: '0xTBD',
+	originalPackageId: '0x6d030f66a03be50cbf2fca8c74b665b0111d06e48cba2265f5b4b8414e2865a3',
+	latestPackageId: '0x6d030f66a03be50cbf2fca8c74b665b0111d06e48cba2265f5b4b8414e2865a3',
 } satisfies PermissionedGroupsPackageConfig;
 
 export const MAINNET_PERMISSIONED_GROUPS_PACKAGE_CONFIG = {

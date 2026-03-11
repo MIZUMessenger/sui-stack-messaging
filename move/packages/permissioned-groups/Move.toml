@@ -1,6 +1,7 @@
 [package]
 name = "permissioned_groups"
 edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
+published-at = "0x6d030f66a03be50cbf2fca8c74b665b0111d06e48cba2265f5b4b8414e2865a3"
 # license = ""           # e.g., "MIT", "GPL", "Apache 2.0"
 # authors = ["..."]      # e.g., ["Joe Smith (joesmith@noemail.com)", "John Snow (johnsnow@noemail.com)"]
 
@@ -18,7 +19,7 @@ edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
 # Override = { local = "../conflicting/version", override = true }
 
 [addresses]
-permissioned_groups = "0x0"
+permissioned_groups = "0x6d030f66a03be50cbf2fca8c74b665b0111d06e48cba2265f5b4b8414e2865a3"
 
 # Named addresses will be accessible in Move as `@name`. They're also exported:
 # for example, `std = "0x1"` is exported by the Standard Library.
@@ -30,7 +31,12 @@ permissioned_groups = "0x0"
 # Local = { local = "../path/to/dev-build" }
 
 [dev-addresses]
-# The dev-addresses section allows overwriting named addresses for the `--test`
-# and `--dev` modes.
-# alice = "0xB0B"
+permissioned_groups = "0x0"
+
+[environments.testnet]
+chain-id = "4c78adac"
+published-at = "0x6d030f66a03be50cbf2fca8c74b665b0111d06e48cba2265f5b4b8414e2865a3"
+
+[environments.testnet.addresses]
+permissioned_groups = "0x6d030f66a03be50cbf2fca8c74b665b0111d06e48cba2265f5b4b8414e2865a3"
 
