@@ -34,15 +34,15 @@ export interface WalrusBlob {
 // ── BlobStoreResult variants ────────────────────────────────────────
 
 export interface WalrusNewlyCreated {
-	blob_object: WalrusBlob;
-	resource_operation: unknown;
+	blobObject: WalrusBlob;
+	resourceOperation: unknown;
 	cost: number;
-	shared_blob_object?: string | null;
+	sharedBlobObject?: string | null;
 }
 
 export interface WalrusAlreadyCertified {
-	blob_id: string;
-	end_epoch: number;
+	blobId: string;
+	endEpoch: number;
 	event?: { txDigest: string; eventSeq: string };
 	object?: string;
 }

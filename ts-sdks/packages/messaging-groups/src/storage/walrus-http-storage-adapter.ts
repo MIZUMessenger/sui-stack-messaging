@@ -156,7 +156,7 @@ export class WalrusHttpStorageAdapter implements StorageAdapter {
 		const { blobStoreResult } = result;
 
 		if (blobStoreResult.newlyCreated) {
-			const blob: WalrusBlob = blobStoreResult.newlyCreated.blob_object;
+			const blob: WalrusBlob = blobStoreResult.newlyCreated.blobObject;
 			return {
 				blobObjectId: blob.id,
 				blobId: blob.blobId,
@@ -171,9 +171,9 @@ export class WalrusHttpStorageAdapter implements StorageAdapter {
 			const cert = blobStoreResult.alreadyCertified;
 			return {
 				blobObjectId: cert.object ?? '',
-				blobId: cert.blob_id,
+				blobId: cert.blobId,
 				startEpoch: 0,
-				endEpoch: cert.end_epoch,
+				endEpoch: cert.endEpoch,
 				cost: 0,
 				deletable: false,
 			};
