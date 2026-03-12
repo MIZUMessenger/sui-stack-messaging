@@ -12,12 +12,9 @@ The reference relayer persists every message to Walrus as quilt patches (batched
 4. **Downloading content from the Walrus aggregator** via the quilt patch API
 5. **Converting** each message using the SDK's `fromWalrusMessage()` utility
 
-The SDK client handles decryption automatically — the recovery transport just needs to deliver `RelayerMessage` objects.
-
 ## Usage
 
 ```ts
-import { messagingGroups } from '@mysten/messaging-groups';
 import { WalrusRecoveryTransport } from './walrus-recovery-transport.js';
 
 const recovery = new WalrusRecoveryTransport({
@@ -25,9 +22,10 @@ const recovery = new WalrusRecoveryTransport({
   aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
 });
 
-// Plug it in as the transport — SDK handles decryption automatically
-const client = messagingGroups({ transport: recovery, ... });
-const { messages } = await client.getMessages({ groupRef: { groupId: '0x...' } });
+const { messages, hasNext } = await recovery.fetchMessages({
+  groupId: '0x...',
+  limit: 50,
+});
 ```
 
 ## Building Your Own Recovery Transport
@@ -38,30 +36,26 @@ The SDK provides everything you need to build a custom recovery transport with y
 
 | Export | Purpose |
 |---|---|
-| `RelayerTransport` | Interface your transport must implement (7 methods) |
-| `RelayerTransportError` | Error class with HTTP status codes (use for 405/501 throws) |
+| `RecoveryTransport` | Interface your transport must implement (2 methods) |
 | `fromWalrusMessage()` | Converts Walrus wire format → `RelayerMessage` |
 | `WalrusMessageWire` | Type for the raw Walrus JSON shape |
-| `RelayerMessage`, `FetchMessagesParams`, etc. | All param/result types |
+| `FetchMessagesParams`, `FetchMessagesResult`, `RelayerMessage` | Shared param/result types |
 | `HttpClientConfig` | Base config type (timeout, fetch override, onError) |
 | `DEFAULT_HTTP_TIMEOUT` | Standard timeout (30s) |
 | `HttpTimeoutError` | Timeout error class |
 
-### 1. Implement `RelayerTransport`
+### 1. Implement `RecoveryTransport`
 
 ```ts
 import {
-  RelayerTransportError,
   fromWalrusMessage,
-  type RelayerTransport,
+  type RecoveryTransport,
   type FetchMessagesParams,
   type FetchMessagesResult,
-  type RelayerMessage,
   type WalrusMessageWire,
-  // ... other param types as needed
 } from '@mysten/messaging-groups';
 
-class MyRecoveryTransport implements RelayerTransport {
+class MyRecoveryTransport implements RecoveryTransport {
   async fetchMessages(params: FetchMessagesParams): Promise<FetchMessagesResult> {
     // 1. Query YOUR indexer for message locations
     // 2. Download content from Walrus
@@ -69,21 +63,7 @@ class MyRecoveryTransport implements RelayerTransport {
     // 4. Return sorted by order
   }
 
-  // Write operations — throw 405 (recovery is read-only)
-  async sendMessage() { throw new RelayerTransportError('Read-only', 405); }
-  async updateMessage() { throw new RelayerTransportError('Read-only', 405); }
-  async deleteMessage() { throw new RelayerTransportError('Read-only', 405); }
-
-  // Optional: single message fetch — throw 501 if not supported
-  async fetchMessage() { throw new RelayerTransportError('Not supported', 501); }
-
-  // One-shot subscribe: yield current messages, then complete
-  async *subscribe(params) {
-    const { messages } = await this.fetchMessages(params);
-    for (const msg of messages) yield msg;
-  }
-
-  disconnect() {} // No-op for recovery
+  disconnect() {}
 }
 ```
 
@@ -95,11 +75,8 @@ The reference relayer stores messages on Walrus as raw JSON (via `serde_json::to
 import { fromWalrusMessage } from '@mysten/messaging-groups';
 import type { WalrusMessageWire, RelayerMessage } from '@mysten/messaging-groups';
 
-// Read blob content from Walrus (however you get it)
 const rawJson = await readFromWalrus(blobId, patchId);
 const wire: WalrusMessageWire = JSON.parse(rawJson);
-
-// Convert to the SDK's RelayerMessage format
 const message: RelayerMessage = fromWalrusMessage(wire);
 ```
 
@@ -109,15 +86,7 @@ const message: RelayerMessage = fromWalrusMessage(wire);
 - Deriving `isEdited` / `isDeleted` from timestamps and sync_status
 - Field name mapping (Rust naming -> SDK naming)
 
-### 3. Inject your transport
-
-```ts
-const client = messagingGroups({ transport: myRecoveryTransport, ... });
-```
-
 ## Limitations
 
-- **Read-only** — write methods throw 405
-- **No single message fetch** — `fetchMessage()` throws 501 (indexer has no by-messageId lookup)
+- **Read-only** — `RecoveryTransport` only supports `fetchMessages`
 - **No attachment content** — Walrus stores attachment patch IDs, not full Attachment objects
-- **One-shot subscription** — `subscribe()` yields current messages then completes (no polling)

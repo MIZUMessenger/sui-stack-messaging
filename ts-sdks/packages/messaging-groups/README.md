@@ -15,7 +15,7 @@ The SDK is **transport-agnostic**. It handles encryption, decryption, key manage
 We provide two **reference implementations**:
 
 - **`HTTPRelayerTransport`** — Built-in transport that works with the [reference relayer](https://github.com/MystenLabs/messaging-sdk-relayer). Ships with the SDK.
-- **`WalrusRecoveryTransport`** — Read-only transport that recovers messages from Walrus storage via the [Discovery Indexer](https://github.com/MystenLabs/messaging-sdk-relayer/tree/main/walrus-discovery-indexer). See [`examples/recovery-transport/`](./examples/recovery-transport/).
+- **`WalrusRecoveryTransport`** — Read-only recovery adapter that fetches messages from Walrus storage via the [Discovery Indexer](https://github.com/MystenLabs/messaging-sdk-relayer/tree/main/walrus-discovery-indexer). Implements `RecoveryTransport`. See [`examples/recovery-transport/`](./examples/recovery-transport/).
 
 Neither is required — you can build your own transport from scratch.
 
@@ -87,14 +87,12 @@ const message: RelayerMessage = fromWalrusMessage(wire);
 
 ### Building a Recovery Transport
 
-To restore full conversation history from Walrus, implement `RelayerTransport` as a read-only transport that:
+To restore full conversation history from Walrus, implement `RecoveryTransport` (2 methods: `fetchMessages` + `disconnect`) that:
 
 1. Queries an indexer for which Walrus blobs contain a group's messages
 2. Downloads message content from the Walrus aggregator
 3. Converts each message using `fromWalrusMessage()`
 4. Returns them sorted by order
-
-Write operations (`sendMessage`, `updateMessage`, `deleteMessage`) should throw `RelayerTransportError` with status 405.
 
 See [`examples/recovery-transport/`](./examples/recovery-transport/) for a complete reference implementation using the [Discovery Indexer](https://github.com/MystenLabs/messaging-sdk-relayer/tree/main/walrus-discovery-indexer).
 
@@ -127,6 +125,7 @@ See [`examples/recovery-transport/`](./examples/recovery-transport/) for a compl
 
 | Export | Description |
 |---|---|
+| `RecoveryTransport` | Read-only interface for recovery adapters |
 | `fromWalrusMessage()` | Convert Walrus wire format to `RelayerMessage` |
 | `WalrusMessageWire` | Type for the raw Walrus JSON shape |
 
