@@ -102,7 +102,7 @@ function ChatView({
   onLeaveGroup?: () => void;
 }>) {
   const account = useCurrentAccount();
-  const client = useRequiredMessagingClient();
+  const { client } = useRequiredMessagingClient();
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
   const { permissions, refresh: refreshPermissions } = usePermissions(group.groupId);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);

@@ -14,7 +14,7 @@ export function CreateGroupModal({
   onClose,
   onGroupCreated,
 }: Readonly<CreateGroupModalProps>) {
-  const client = useRequiredMessagingClient();
+  const { client } = useRequiredMessagingClient();
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
 
   const [name, setName] = useState('');

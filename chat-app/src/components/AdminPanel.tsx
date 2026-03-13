@@ -39,7 +39,7 @@ export function AdminPanel({
   onGroupRenamed,
   onGroupArchived,
 }: Readonly<AdminPanelProps>) {
-  const client = useRequiredMessagingClient();
+  const { client } = useRequiredMessagingClient();
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
 
   const [members, setMembers] = useState<MemberWithPermissions[]>([]);

@@ -8,11 +8,14 @@ import { createMessagingGroupsClient, WalrusHttpStorageAdapter } from '@mysten/m
 import { SuiGraphQLClient } from '@mysten/sui/graphql';
 import { DappKitSigner } from '../lib/dapp-kit-signer';
 
+import type { Signer } from '@mysten/sui/cryptography';
+
 // Infer the client type from the factory return
 type MessagingClient = ReturnType<typeof createMessagingGroupsClient>;
 
 interface MessagingClientContextValue {
   client: MessagingClient | null;
+  signer: Signer | null;
   graphqlClient: SuiGraphQLClient;
 }
 
@@ -76,8 +79,8 @@ export function MessagingClientProvider({
     signRef.current = signPersonalMessage;
   }, [signPersonalMessage]);
 
-  const client = useMemo(() => {
-    if (!account) return null;
+  const { client, signer } = useMemo(() => {
+    if (!account) return { client: null, signer: null };
 
     const signer = new DappKitSigner({
       address: account.address,
@@ -105,7 +108,7 @@ export function MessagingClientProvider({
           }
         : undefined;
 
-    return createMessagingGroupsClient(suiClient, {
+    const client = createMessagingGroupsClient(suiClient, {
       seal: {
         serverConfigs: sealServerConfigs,
       },
@@ -121,16 +124,17 @@ export function MessagingClientProvider({
       packageConfig: parsePackageConfig(),
       relayer: {
         relayerUrl: RELAYER_URL,
-        signer,
         fetch: (...args: Parameters<typeof fetch>) => fetch(...args),
       },
       attachments,
     });
+
+    return { client, signer };
   }, [account, suiClient]);
 
   const value = useMemo(
-    () => ({ client, graphqlClient }),
-    [client],
+    () => ({ client, signer, graphqlClient }),
+    [client, signer],
   );
 
   return (
@@ -155,12 +159,17 @@ export function useMessagingClient(): MessagingClient | null {
 }
 
 /** Access the SDK client, throwing if wallet is disconnected. */
-export function useRequiredMessagingClient(): MessagingClient {
-  const client = useMessagingClient();
-  if (!client) {
+export function useRequiredMessagingClient(): { client: MessagingClient; signer: Signer } {
+  const ctx = useContext(MessagingClientContext);
+  if (!ctx) {
+    throw new Error(
+      'useRequiredMessagingClient must be used within <MessagingClientProvider>',
+    );
+  }
+  if (!ctx.client || !ctx.signer) {
     throw new Error('Wallet must be connected to use messaging client');
   }
-  return client;
+  return { client: ctx.client, signer: ctx.signer };
 }
 
 /** Access the Sui GraphQL client for group discovery queries. */

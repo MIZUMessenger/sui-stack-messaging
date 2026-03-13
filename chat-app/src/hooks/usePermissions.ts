@@ -37,7 +37,7 @@ export interface UsePermissionsResult {
 }
 
 export function usePermissions(groupId: string): UsePermissionsResult {
-  const client = useRequiredMessagingClient();
+  const { client } = useRequiredMessagingClient();
   const account = useCurrentAccount();
   const [permissions, setPermissions] = useState<Permissions>(DEFAULT_PERMISSIONS);
   const [loading, setLoading] = useState(true);

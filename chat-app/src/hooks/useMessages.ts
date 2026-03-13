@@ -20,7 +20,7 @@ export interface Message {
   updatedAt: number;
   isEdited: boolean;
   isDeleted: boolean;
-  syncStatus: string;
+  syncStatus?: string;
   attachments: AttachmentHandle[];
 }
 
@@ -61,7 +61,7 @@ function mergeMessage(prev: Message[], incoming: Message): Message[] {
 }
 
 export function useMessages(uuid: string): UseMessagesResult {
-  const client = useRequiredMessagingClient();
+  const { client, signer } = useRequiredMessagingClient();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +96,7 @@ export function useMessages(uuid: string): UseMessagesResult {
     async function loadInitial() {
       try {
         const result: SDKGetMessagesResult = await client.messaging.getMessages({
+          signer,
           groupRef: {uuid},
           limit: 50,
           sealApproveContext: undefined,
@@ -123,7 +124,7 @@ export function useMessages(uuid: string): UseMessagesResult {
     return () => {
       cancelled = true;
     };
-  }, [uuid, client]);
+  }, [uuid, client, signer]);
 
   // ------------------------------------------------------------------
   // Real-time subscription (polling-based via SDK's subscribe)
@@ -138,6 +139,7 @@ export function useMessages(uuid: string): UseMessagesResult {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const stream: AsyncIterable<Message> = client.messaging.subscribe({
+          signer,
           groupRef: {uuid},
           afterOrder: lastOrderRef.current,
           signal: controller.signal,
@@ -160,7 +162,7 @@ export function useMessages(uuid: string): UseMessagesResult {
     return () => {
       controller.abort();
     };
-  }, [uuid, client, loading]);
+  }, [uuid, client, signer, loading]);
 
   // ------------------------------------------------------------------
   // Load older messages (pagination)
@@ -173,6 +175,7 @@ export function useMessages(uuid: string): UseMessagesResult {
 
     try {
       const result: SDKGetMessagesResult = await client.messaging.getMessages({
+        signer,
         groupRef: {uuid: uuidRef.current},
         beforeOrder: oldestOrder,
         limit: 50,
@@ -186,7 +189,7 @@ export function useMessages(uuid: string): UseMessagesResult {
     } catch (err) {
       console.error('Failed to load more messages:', err);
     }
-  }, [uuid, messages, hasMore, client]);
+  }, [uuid, messages, hasMore, client, signer]);
 
   // ------------------------------------------------------------------
   // Send a new message
@@ -202,6 +205,7 @@ export function useMessages(uuid: string): UseMessagesResult {
 
       try {
         const {messageId} = await client.messaging.sendMessage({
+          signer,
           groupRef: {uuid: uuidRef.current},
           text: trimmed || undefined,
           files: hasFiles ? files : undefined,
@@ -234,7 +238,7 @@ export function useMessages(uuid: string): UseMessagesResult {
         setSending(false);
       }
     },
-    [client],
+    [client, signer],
   );
 
   // ------------------------------------------------------------------
@@ -247,6 +251,7 @@ export function useMessages(uuid: string): UseMessagesResult {
 
       try {
         await client.messaging.editMessage({
+          signer,
           groupRef: {uuid: uuidRef.current},
           messageId,
           text: trimmed,
@@ -269,7 +274,7 @@ export function useMessages(uuid: string): UseMessagesResult {
         throw err;
       }
     },
-    [client],
+    [client, signer],
   );
 
   // ------------------------------------------------------------------
@@ -279,6 +284,7 @@ export function useMessages(uuid: string): UseMessagesResult {
     async (messageId: string) => {
       try {
         await client.messaging.deleteMessage({
+          signer,
           groupRef: {uuid: uuidRef.current},
           messageId,
         });
@@ -299,7 +305,7 @@ export function useMessages(uuid: string): UseMessagesResult {
         throw err;
       }
     },
-    [client],
+    [client, signer],
   );
 
   return {
