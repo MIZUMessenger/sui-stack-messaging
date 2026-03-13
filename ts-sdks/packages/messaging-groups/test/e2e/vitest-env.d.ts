@@ -29,5 +29,7 @@ declare module 'vitest' {
 		faucetUrl: string;
 		/** Seal threshold. Default: 2. */
 		sealThreshold?: number;
+		/** Walrus discovery indexer URL. Empty string when not available. */
+		indexerUrl: string;
 	}
 }

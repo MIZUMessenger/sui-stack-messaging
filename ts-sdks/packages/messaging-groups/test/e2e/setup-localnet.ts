@@ -44,6 +44,8 @@ export async function setupLocalnet(project: TestProject) {
 	// No real Seal key servers for localnet — tests use mock SealClient
 	project.provide('sealServerConfigs', []);
 	project.provide('faucetUrl', `http://localhost:${env.ports.faucet}`);
+	// No indexer on localnet (requires Walrus which isn't available locally)
+	project.provide('indexerUrl', '');
 
 	console.log('E2E localnet environment is ready.');
 }

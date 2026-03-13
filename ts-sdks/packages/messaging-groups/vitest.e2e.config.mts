@@ -3,6 +3,23 @@
 
 import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
+import { BaseSequencer } from 'vitest/node';
+
+/**
+ * Ensures recovery-transport.test.ts always runs last.
+ * It depends on earlier tests having sent messages through the relayer → Walrus,
+ * so the indexer has BlobCertified events to discover.
+ */
+class RecoveryLastSequencer extends BaseSequencer {
+	async sort(files: Parameters<BaseSequencer['sort']>[0]) {
+		const sorted = await super.sort(files);
+		const idx = sorted.findIndex((f) => f.moduleId.includes('recovery-transport'));
+		if (idx >= 0) {
+			sorted.push(...sorted.splice(idx, 1));
+		}
+		return sorted;
+	}
+}
 
 export default defineConfig({
 	resolve: {
@@ -18,5 +35,8 @@ export default defineConfig({
 		testTimeout: 120_000,
 		hookTimeout: 180_000,
 		fileParallelism: false,
+		sequence: {
+			sequencer: RecoveryLastSequencer,
+		},
 	},
 });

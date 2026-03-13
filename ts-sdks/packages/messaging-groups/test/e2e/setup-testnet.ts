@@ -3,6 +3,7 @@
 
 import type { TestProject } from 'vitest/node';
 import { startRelayerContainer } from './fixtures/relayer-container.js';
+import { startIndexerContainer } from './fixtures/indexer-container.js';
 import { TESTNET_MESSAGING_GROUPS_PACKAGE_CONFIG } from '../../src/constants.js';
 import { TESTNET_PERMISSIONED_GROUPS_PACKAGE_CONFIG } from '@mysten/permissioned-groups';
 
@@ -24,6 +25,8 @@ const TESTNET_SEAL_KEY_SERVERS =
  *   MESSAGING_VERSION_ID     — Override Version shared object ID
  *   FAUCET_URL               — Testnet faucet URL (default: https://faucet.testnet.sui.io)
  *   RELAYER_URL              — Pre-deployed relayer URL. When set, skips container startup.
+ *   INDEXER_URL              — Pre-deployed indexer URL. When set, skips container startup.
+ *   WALRUS_PUBLISHER_SUI_ADDRESS — Walrus publisher address for indexer event filtering
  *   SEAL_KEY_SERVERS         — Comma-separated Seal key server object IDs
  *   SEAL_THRESHOLD           — Seal threshold (default: 2)
  */
@@ -58,6 +61,21 @@ export async function setupTestnet(project: TestProject) {
 			groupsPackageId,
 		});
 		relayerUrl = relayer.url;
+	}
+
+	// Start the indexer container or use a pre-deployed one
+	let indexerUrl = '';
+	if (process.env.INDEXER_URL) {
+		indexerUrl = process.env.INDEXER_URL;
+		console.log(`Using pre-deployed indexer at ${indexerUrl}`);
+	} else {
+		console.log('Starting indexer container for testnet...');
+		const indexer = await startIndexerContainer({
+			network: 'testnet',
+			// publisherSuiAddress:
+			// process.env.WALRUS_PUBLISHER_SUI_ADDRESS ?? TESTNET_WALRUS_PUBLISHER_SUI_ADDRESS,
+		});
+		indexerUrl = indexer.url;
 	}
 
 	// Parse Seal key server configs from env
@@ -96,10 +114,12 @@ export async function setupTestnet(project: TestProject) {
 	project.provide('sealServerConfigs', sealServerConfigs);
 	project.provide('faucetUrl', faucetUrl);
 	project.provide('sealThreshold', sealThreshold);
+	project.provide('indexerUrl', indexerUrl);
 
 	console.log(`E2E testnet environment is ready.`);
 	console.log(`  Sui RPC:     ${suiRpcUrl}`);
 	console.log(`  Relayer:     ${relayerUrl}`);
+	console.log(`  Indexer:     ${indexerUrl || '(not available)'}`);
 	console.log(`  Admin:       ${adminAddress}`);
 	console.log(`  Groups pkg:  ${groupsPackageId}`);
 	console.log(`  Messaging:   ${messagingPackageId}`);
