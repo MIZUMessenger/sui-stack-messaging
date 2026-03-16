@@ -37,10 +37,14 @@ async function waitForIndexerPatches(
 			return { groupIds, summary };
 		}
 		const elapsed = Math.round((Date.now() - start) / 1000);
-		const health = await fetch(`${indexerUrl}/health`).then((r) => r.json()).catch(() => null) as any;
+		const health = (await fetch(`${indexerUrl}/health`)
+			.then((r) => r.json())
+			.catch(() => null)) as any;
 		const checkpoint = health?.lastCheckpoint ?? '?';
 		const totalPatches = health?.totalPatches ?? 0;
-		console.log(`Waiting for indexer to discover patches... (${elapsed}s, checkpoint: ${checkpoint}, patches: ${totalPatches})`);
+		console.log(
+			`Waiting for indexer to discover patches... (${elapsed}s, checkpoint: ${checkpoint}, patches: ${totalPatches})`,
+		);
 		await new Promise((r) => setTimeout(r, intervalMs));
 	}
 
@@ -68,53 +72,49 @@ describe.skipIf(!INDEXER_URL)('WalrusRecoveryTransport', () => {
 		expect(healthRes.ok).toBe(true);
 	});
 
-	it(
-		'should recover messages for a group with patches',
-		async () => {
-			// Wait for the indexer to process BlobCertified events from earlier tests.
-			// The publisher address filter speeds this up significantly on testnet.
-			const { groupIds } = await waitForIndexerPatches(INDEXER_URL!);
+	it('should recover messages for a group with patches', async () => {
+		// Wait for the indexer to process BlobCertified events from earlier tests.
+		// The publisher address filter speeds this up significantly on testnet.
+		const { groupIds } = await waitForIndexerPatches(INDEXER_URL!);
 
-			// Pick the group with the most patches
-			let testGroupId = groupIds[0];
-			let maxCount = 0;
-			const summary = (await fetch(`${INDEXER_URL}/v1/patches`).then((r) => r.json())) as any;
-			for (const gid of groupIds) {
-				const count = summary.groups[gid]?.count ?? 0;
-				if (count > maxCount) {
-					maxCount = count;
-					testGroupId = gid;
-				}
+		// Pick the group with the most patches
+		let testGroupId = groupIds[0];
+		let maxCount = 0;
+		const summary = (await fetch(`${INDEXER_URL}/v1/patches`).then((r) => r.json())) as any;
+		for (const gid of groupIds) {
+			const count = summary.groups[gid]?.count ?? 0;
+			if (count > maxCount) {
+				maxCount = count;
+				testGroupId = gid;
 			}
+		}
 
-			const indexerRes = (await fetch(
-				`${INDEXER_URL}/v1/groups/${testGroupId}/patches`,
-			).then((r) => r.json())) as any;
-			const allPatches = indexerRes.patches || [];
-			const activePatches = allPatches.filter(
-				(p: any) => p.syncStatus !== 'DELETED' && p.syncStatus !== 'DELETE_PENDING',
-			);
+		const indexerRes = (await fetch(`${INDEXER_URL}/v1/groups/${testGroupId}/patches`).then((r) =>
+			r.json(),
+		)) as any;
+		const allPatches = indexerRes.patches || [];
+		const activePatches = allPatches.filter(
+			(p: any) => p.syncStatus !== 'DELETED' && p.syncStatus !== 'DELETE_PENDING',
+		);
 
-			const recovery = new WalrusRecoveryTransport({
-				indexerUrl: INDEXER_URL!,
-				aggregatorUrl: AGGREGATOR_URL,
-				onError: (err) => console.error(`[recovery error] ${err.message}`),
-			});
+		const recovery = new WalrusRecoveryTransport({
+			indexerUrl: INDEXER_URL!,
+			aggregatorUrl: AGGREGATOR_URL,
+			onError: (err) => console.error(`[recovery error] ${err.message}`),
+		});
 
-			const result = await recovery.recoverMessages({ groupId: testGroupId });
+		const result = await recovery.recoverMessages({ groupId: testGroupId });
 
-			if (activePatches.length === 0) {
-				expect(result.messages.length).toBe(0);
-			} else {
-				expect(result.messages.length).toBe(activePatches.length);
-			}
+		if (activePatches.length === 0) {
+			expect(result.messages.length).toBe(0);
+		} else {
+			expect(result.messages.length).toBe(activePatches.length);
+		}
 
-			for (const msg of result.messages) {
-				validateMessage(msg, testGroupId);
-			}
-		},
-		240_000,
-	);
+		for (const msg of result.messages) {
+			validateMessage(msg, testGroupId);
+		}
+	}, 240_000);
 
 	it('should read from aggregator for DELETED patches', async () => {
 		const summary = (await fetch(`${INDEXER_URL}/v1/patches`).then((r) => r.json())) as any;
@@ -123,9 +123,9 @@ describe.skipIf(!INDEXER_URL)('WalrusRecoveryTransport', () => {
 		// Find a group where all patches are DELETED
 		let deletedGroupId: string | undefined;
 		for (const gid of groupIds) {
-			const indexerRes = (await fetch(
-				`${INDEXER_URL}/v1/groups/${gid}/patches`,
-			).then((r) => r.json())) as any;
+			const indexerRes = (await fetch(`${INDEXER_URL}/v1/groups/${gid}/patches`).then((r) =>
+				r.json(),
+			)) as any;
 			const patches = indexerRes.patches || [];
 			const activePatches = patches.filter(
 				(p: any) => p.syncStatus !== 'DELETED' && p.syncStatus !== 'DELETE_PENDING',
@@ -141,15 +141,15 @@ describe.skipIf(!INDEXER_URL)('WalrusRecoveryTransport', () => {
 			return;
 		}
 
-		const indexerRes = (await fetch(
-			`${INDEXER_URL}/v1/groups/${deletedGroupId}/patches`,
-		).then((r) => r.json())) as any;
+		const indexerRes = (await fetch(`${INDEXER_URL}/v1/groups/${deletedGroupId}/patches`).then(
+			(r) => r.json(),
+		)) as any;
 		const testPatch = indexerRes.patches[0];
 
 		// List patches in the quilt to get the quilt patch ID
-		const patchList = (await fetch(
-			`${AGGREGATOR_URL}/v1/quilts/${testPatch.blobId}/patches`,
-		).then((r) => r.json())) as any[];
+		const patchList = (await fetch(`${AGGREGATOR_URL}/v1/quilts/${testPatch.blobId}/patches`).then(
+			(r) => r.json(),
+		)) as any[];
 		const matchingPatch = patchList.find((p: any) => p.identifier === testPatch.identifier);
 		expect(matchingPatch).toBeDefined();
 
