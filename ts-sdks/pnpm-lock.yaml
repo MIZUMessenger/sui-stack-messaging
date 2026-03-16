@@ -9,6 +9,7 @@ overrides:
   minimatch@>=9.0.0 <9.0.7: ^9.0.7
   rollup@>=4.0.0 <4.59.0: ^4.59.0
   lodash@>=4.0.0 <=4.17.22: ^4.17.23
+  undici@>=7.0.0 <7.24.0: ^7.24.0
 
 importers:
 
@@ -2205,8 +2206,8 @@ packages:
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
-  undici@7.22.0:
-    resolution: {integrity: sha512-RqslV2Us5BrllB+JeiZnK4peryVTndy9Dnqq62S3yYRRTj0tFQCwEniUy2167skdGOy3vqRzEvl1Dm4sV2ReDg==}
+  undici@7.24.2:
+    resolution: {integrity: sha512-P9J1HWYV/ajFr8uCqk5QixwiRKmB1wOamgS0e+o2Z4A44Ej2+thFVRLG/eA7qprx88XXhnV5Bl8LHXTURpzB3Q==}
     engines: {node: '>=20.18.1'}
 
   universalify@0.1.2:
@@ -4279,7 +4280,7 @@ snapshots:
       ssh-remote-port-forward: 1.0.4
       tar-fs: 3.1.1
       tmp: 0.2.5
-      undici: 7.22.0
+      undici: 7.24.2
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
@@ -4389,7 +4390,7 @@ snapshots:
 
   undici-types@7.16.0: {}
 
-  undici@7.22.0: {}
+  undici@7.24.2: {}
 
   universalify@0.1.2: {}
 
