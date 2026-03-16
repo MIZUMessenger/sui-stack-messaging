@@ -1,8 +1,0 @@
-{
-	"extends": "../../tsconfig.shared.json",
-	"compilerOptions": {
-		"noEmit": true,
-		"types": ["vitest/globals", "node"]
-	},
-	"include": ["src", "suites", "../../../publish/src"]
-}

@@ -48,10 +48,14 @@
 ///
 module example_app::paid_join_rule;
 
-use permissioned_groups::permissioned_group::PermissionedGroup;
-use messaging::messaging::{Messaging, MessagingReader};
+use permissioned_groups::permissioned_group::{PermissionedGroup, ExtensionPermissionsAdmin};
+use messaging::messaging::{Self, Messaging, MessagingReader, MessagingNamespace};
+use messaging::group_manager::GroupManager;
+use messaging::version::Version;
 use sui::balance::{Self, Balance};
 use sui::coin::{Self, Coin};
+use sui::vec_set;
+use std::string::String;
 
 // === Error Codes ===
 
@@ -128,6 +132,64 @@ entry fun new_and_share<Token: drop>(
     ctx: &mut TxContext,
 ) {
     share(new<Token>(group_id, fee, ctx));
+}
+
+/// Creates a messaging group with a PaidJoinRule in a single atomic transaction.
+///
+/// This handles the full setup:
+/// 1. Creates the group via `messaging::create_group`
+/// 2. Creates a `PaidJoinRule<Token>` actor with the specified fee
+/// 3. Grants `ExtensionPermissionsAdmin` to the rule (so it can add members)
+/// 4. Grants `FundsManager` to the caller (so they can withdraw fees)
+/// 5. Shares the group, encryption history, and the rule
+///
+/// # Type Parameters
+/// - `Token`: The coin type accepted for payment (e.g., `SUI`)
+///
+/// # Parameters
+/// - `version`: Reference to the Version shared object
+/// - `namespace`: Mutable reference to the MessagingNamespace
+/// - `group_manager`: Reference to the shared GroupManager actor
+/// - `name`: Human-readable group name
+/// - `uuid`: Client-provided UUID for deterministic address derivation
+/// - `initial_encrypted_dek`: Initial Seal-encrypted DEK bytes
+/// - `fee`: Join fee in Token's smallest unit
+/// - `ctx`: Transaction context
+#[allow(lint(share_owned))]
+entry fun create_token_gated_group<Token: drop>(
+    version: &Version,
+    namespace: &mut MessagingNamespace,
+    group_manager: &GroupManager,
+    name: String,
+    uuid: String,
+    initial_encrypted_dek: vector<u8>,
+    fee: u64,
+    ctx: &mut TxContext,
+) {
+    let (mut group, encryption_history) = messaging::create_group(
+        version,
+        namespace,
+        group_manager,
+        name,
+        uuid,
+        initial_encrypted_dek,
+        vec_set::empty(),
+        ctx,
+    );
+
+    // Create rule and get its address before sharing
+    let rule = new<Token>(object::id(&group), fee, ctx);
+    let rule_address = object::id(&rule).to_address();
+
+    // Grant ExtensionPermissionsAdmin to the rule so it can add members via join()
+    group.grant_permission<Messaging, ExtensionPermissionsAdmin>(rule_address, ctx);
+
+    // Grant FundsManager to the caller so they can withdraw accumulated fees
+    group.grant_permission<Messaging, FundsManager>(ctx.sender(), ctx);
+
+    transfer::public_share_object(group);
+    transfer::public_share_object(encryption_history);
+    share(rule);
 }
 
 /// Allows the transaction sender to join the group by paying the required fee.

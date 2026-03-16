@@ -6,7 +6,7 @@ use messaging::messaging::{Self, Messaging, MessagingNamespace, MessagingReader}
 use messaging::group_manager::GroupManager;
 use messaging::version::{Self, Version};
 use sui::vec_set;
-use example_app::paid_join_rule::{Self, PaidJoinRule, FundsManager};
+use example_app::paid_join_rule::{Self, PaidJoinRule};
 use std::string;
 use std::unit_test::{assert_eq, destroy};
 use sui::coin;
@@ -22,8 +22,8 @@ const TEST_UUID: vector<u8> = b"550e8400-e29b-41d4-a716-446655440000";
 const TEST_UUID_2: vector<u8> = b"550e8400-e29b-41d4-a716-446655440001";
 const TEST_UUID_3: vector<u8> = b"550e8400-e29b-41d4-a716-446655440002";
 
-/// Sets up a messaging group with a PaidJoinRule that has ExtensionPermissionsAdmin permission.
-/// Uses the real create_group flow with MessagingNamespace and EncryptionHistory.
+/// Sets up a messaging group with a PaidJoinRule using `create_token_gated_group`.
+/// This atomically creates the group, rule, and grants all necessary permissions.
 /// Returns the group_id for use in tests.
 fun setup_for_testing(ts: &mut Scenario): ID {
     // Initialize the messaging module (creates MessagingNamespace)
@@ -31,40 +31,29 @@ fun setup_for_testing(ts: &mut Scenario): ID {
     messaging::init_for_testing(ts.ctx());
     version::init_for_testing(ts.ctx());
 
-    // Alice creates group using the real flow
+    // Alice creates a token-gated group in a single call
     ts.next_tx(ALICE);
     let mut namespace = ts.take_shared<MessagingNamespace>();
     let version = ts.take_shared<Version>();
     let group_manager = ts.take_shared<GroupManager>();
-    let (group, encryption_history) = messaging::create_group(
+    paid_join_rule::create_token_gated_group<SUI>(
         &version,
         &mut namespace,
         &group_manager,
         string::utf8(b"Test Group"),
         string::utf8(TEST_UUID),
         b"test_encrypted_dek",
-        vec_set::empty(),
+        FEE,
         ts.ctx(),
     );
-    let group_id = object::id(&group);
-    transfer::public_share_object(group);
-    transfer::public_share_object(encryption_history);
     ts::return_shared(version);
     ts::return_shared(group_manager);
     ts::return_shared(namespace);
 
-    // Alice creates rule and shares it
+    // Retrieve the group_id from the shared group
     ts.next_tx(ALICE);
-    let rule = paid_join_rule::new<SUI>(group_id, FEE, ts.ctx());
-    let rule_address = object::id(&rule).to_address();
-    paid_join_rule::share(rule);
-
-    // Alice grants ExtensionPermissionsAdmin to the rule so it can add members
-    // Also grants herself FundsManager permission
-    ts.next_tx(ALICE);
-    let mut group = ts.take_shared<PermissionedGroup<Messaging>>();
-    group.grant_permission<Messaging, ExtensionPermissionsAdmin>(rule_address, ts.ctx());
-    group.grant_permission<Messaging, FundsManager>(ALICE, ts.ctx());
+    let group = ts.take_shared<PermissionedGroup<Messaging>>();
+    let group_id = object::id(&group);
     ts::return_shared(group);
 
     group_id

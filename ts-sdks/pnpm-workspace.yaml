@@ -8,5 +8,6 @@ minimumReleaseAgeExclude:
   - '@mysten/codegen'
 packages:
   - 'packages/**'
+  - '../publish'
   - '!**/dist/**'
   - '!**/.next/**'

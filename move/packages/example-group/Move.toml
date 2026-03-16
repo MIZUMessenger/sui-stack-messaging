@@ -1,0 +1,9 @@
+[package]
+name = "example_group"
+edition = "2024.beta"
+
+[dependencies]
+permissioned_groups = { local = "../permissioned-groups" }
+
+[addresses]
+example_group = "0x0"

@@ -7,7 +7,13 @@ export { PermissionedGroupsTransactions } from './transactions.js';
 export { PermissionedGroupsView } from './view.js';
 export { PermissionedGroupsBCS } from './bcs.js';
 export { PermissionedGroupsClientError } from './error.js';
-export { permissionTypes, permissionedGroupType, pausedMarkerType } from './constants.js';
+export {
+	permissionTypes,
+	permissionedGroupType,
+	pausedMarkerType,
+	TESTNET_PERMISSIONED_GROUPS_PACKAGE_CONFIG,
+	MAINNET_PERMISSIONED_GROUPS_PACKAGE_CONFIG,
+} from './constants.js';
 export * from './types.js';
 export type {
 	ParsedPermissionedGroup,

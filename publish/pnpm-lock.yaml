@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@mysten/sui':
-        specifier: ^2.3.1
-        version: 2.3.1(typescript@5.9.3)
+        specifier: ^2.6.0
+        version: 2.6.0(typescript@5.9.3)
       zod:
         specifier: ^4.2.1
         version: 4.3.5
@@ -230,15 +230,15 @@ packages:
     peerDependencies:
       graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
 
-  '@mysten/bcs@2.0.1':
-    resolution: {integrity: sha512-/q1uC5Vw/RjXzR4fE9QiIwmTvRx9BstduxkR1j1Z5EbE7ZJynLkFKcJJlXRcnnEytIPcsyiR+TkQixzSbz3msQ==}
+  '@mysten/bcs@2.0.2':
+    resolution: {integrity: sha512-c/nVRPJEV1fRZdKXhysVsy/yCPdiFt7jn6A4/7W2LH1ZPSVPzRkxtLY362D0zaLuBnyT5Y9d9nFLm3ixI8Goug==}
 
-  '@mysten/sui@2.3.1':
-    resolution: {integrity: sha512-EEDK/tvdhBn88ss7beqYtDPaWmE5wgvzcMAsKIPxCMjMpWgjJEUqd6mCAA5qz6WEAEtferSYYhQ2IybF3doskA==}
+  '@mysten/sui@2.6.0':
+    resolution: {integrity: sha512-Dp3z7mDuUCXGgldQ3/AtC1iDiK48XTuAi//fPrHdxEaMl+f5VLjbYtB+mlKNC1SVYLKOUjTeF/RA9qfEBY++pA==}
     engines: {node: '>=22'}
 
-  '@mysten/utils@0.3.0':
-    resolution: {integrity: sha512-paVyFTP+1yHXDO8uorU6YuT1EAIh/GMKXeHbxtGFPJbLzwc5jk1qfUMrks/S7MAwJHMOHcSOx+e2Mwx8ejaIew==}
+  '@mysten/utils@0.3.1':
+    resolution: {integrity: sha512-36KhxG284uhDdSnlkyNaS6fzKTX9FpP2WQWOwUKIRsqQFFIm2ooCf2TP1IuqrtMpkairwpiWkAS0eg7cpemVzg==}
 
   '@noble/curves@2.0.1':
     resolution: {integrity: sha512-vs1Az2OOTBiP4q0pwjW5aF0xp9n4MxVrmkFBxc6EKZc6ddYx5gaZiAsZoq0uRRXWbi3AT/sBqn05eRPtn1JCPw==}
@@ -466,16 +466,16 @@ snapshots:
     dependencies:
       graphql: 16.12.0
 
-  '@mysten/bcs@2.0.1':
+  '@mysten/bcs@2.0.2':
     dependencies:
-      '@mysten/utils': 0.3.0
+      '@mysten/utils': 0.3.1
       '@scure/base': 2.0.0
 
-  '@mysten/sui@2.3.1(typescript@5.9.3)':
+  '@mysten/sui@2.6.0(typescript@5.9.3)':
     dependencies:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.12.0)
-      '@mysten/bcs': 2.0.1
-      '@mysten/utils': 0.3.0
+      '@mysten/bcs': 2.0.2
+      '@mysten/utils': 0.3.1
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
       '@protobuf-ts/grpcweb-transport': 2.11.1
@@ -493,7 +493,7 @@ snapshots:
       - '@gql.tada/vue-support'
       - typescript
 
-  '@mysten/utils@0.3.0':
+  '@mysten/utils@0.3.1':
     dependencies:
       '@scure/base': 2.0.0
 

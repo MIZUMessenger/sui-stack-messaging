@@ -38,6 +38,7 @@
 		"test": "pnpm test:typecheck && pnpm test:unit",
 		"test:typecheck": "tsc -p ./test",
 		"test:unit": "vitest run unit",
+		"test:integration": "vitest run --config vitest.integration.config.mts",
 		"lint": "pnpm run oxlint:check && pnpm run prettier:check",
 		"lint:fix": "pnpm run oxlint:fix && pnpm run prettier:fix"
 	},
@@ -45,6 +46,7 @@
 		"@mysten/bcs": "^2.0.2",
 		"@mysten/codegen": "^0.8.2",
 		"@mysten/sui": "^2.6.0",
+		"testcontainers": "^11.12.0",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.18"
 	},
