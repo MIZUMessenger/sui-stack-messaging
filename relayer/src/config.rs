@@ -14,7 +14,7 @@ pub struct Config {
     /// Server port (default: 3000)
     pub port: u16,
 
-    /// default: 300 = 5 minutes
+    /// default: 900 = 15 minutes
     pub request_ttl_seconds: i64,
 
     /// Set via STORAGE_TYPE env var: "memory" (default) or "postgres"
@@ -62,7 +62,7 @@ pub struct Config {
 impl Config {
     /// Loads configuration from environment variables.
     /// - `PORT`: Server port (default: 3000)
-    /// - `REQUEST_TTL_SECONDS`: Request TTL for replay protection (default: 300)
+    /// - `REQUEST_TTL_SECONDS`: Request TTL for replay protection (default: 900)
     /// - `STORAGE_TYPE`: Storage backend type (default: "memory")
     /// - `MEMBERSHIP_STORE_TYPE`: Membership store type (default: "memory")
     /// - `SUI_RPC_URL`: Sui fullnode gRPC URL
@@ -79,7 +79,7 @@ impl Config {
         let request_ttl_seconds = env::var("REQUEST_TTL_SECONDS")
             .ok()
             .and_then(|v| v.parse().ok())
-            .unwrap_or(300); // 5 minutes default
+            .unwrap_or(900); // 15 minutes default
 
         // Parse storage type from STORAGE_TYPE env var
         let storage_type = match env::var("STORAGE_TYPE")
@@ -163,7 +163,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             port: 3000,
-            request_ttl_seconds: 300,
+            request_ttl_seconds: 900,
             storage_type: StorageType::InMemory,
             membership_store_type: MembershipStoreType::InMemory,
             sui_rpc_url: String::new(),
@@ -186,7 +186,7 @@ mod tests {
     fn test_default_config() {
         let config = Config::default();
         assert_eq!(config.port, 3000);
-        assert_eq!(config.request_ttl_seconds, 300);
+        assert_eq!(config.request_ttl_seconds, 900);
     }
 
     #[test]

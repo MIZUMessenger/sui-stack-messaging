@@ -28,6 +28,14 @@ import { RelayerTransportError } from './types.js';
 export interface HTTPRelayerTransportConfig extends HttpClientConfig {
 	relayerUrl: string;
 	pollingIntervalMs?: number;
+	/**
+	 * The relayer's `REQUEST_TTL_SECONDS` value, in milliseconds.
+	 * Cached auth headers are refreshed slightly before this deadline to
+	 * account for network latency and clock skew.
+	 *
+	 * @default 900_000 (15 minutes — matches the relayer's default)
+	 */
+	headerAuthTtlMs?: number;
 }
 
 /** Raw attachment JSON shape from the relayer API (snake_case). */
@@ -232,8 +240,11 @@ export class HTTPRelayerTransport implements RelayerTransport {
 		string,
 		{ headers: Record<string, string>; createdAt: number }
 	>();
-	/** Reuse cached headers for 2 minutes (relayer TTL is 5 minutes). */
-	static readonly #HEADER_AUTH_CACHE_TTL_MS = 120_000;
+	readonly #headerAuthCacheTtlMs: number;
+
+	static readonly #DEFAULT_HEADER_AUTH_TTL_MS = 900_000; // 15 minutes
+	static readonly #HEADROOM_FIXED_MS = 60_000;
+	static readonly #HEADROOM_RATIO = 0.1;
 
 	constructor(config: HTTPRelayerTransportConfig) {
 		this.#relayerUrl = config.relayerUrl.replace(/\/+$/, '');
@@ -241,12 +252,21 @@ export class HTTPRelayerTransport implements RelayerTransport {
 		this.#fetch = config.fetch ?? globalThis.fetch.bind(globalThis);
 		this.#timeout = config.timeout ?? DEFAULT_HTTP_TIMEOUT;
 		this.#onError = config.onError;
+
+		const serverTtl = config.headerAuthTtlMs ?? HTTPRelayerTransport.#DEFAULT_HEADER_AUTH_TTL_MS;
+		// Headroom covers network latency and clock skew without eating
+		// too much cache time on short TTLs.
+		const headroom = Math.min(
+			HTTPRelayerTransport.#HEADROOM_FIXED_MS,
+			serverTtl * HTTPRelayerTransport.#HEADROOM_RATIO,
+		);
+		this.#headerAuthCacheTtlMs = Math.max(0, serverTtl - headroom);
 	}
 
 	async #cachedHeaderAuth(signer: Signer, groupId: string): Promise<Record<string, string>> {
 		const cacheKey = `${signer.toSuiAddress()}:${groupId}`;
 		const cached = this.#headerAuthCache.get(cacheKey);
-		if (cached && Date.now() - cached.createdAt < HTTPRelayerTransport.#HEADER_AUTH_CACHE_TTL_MS) {
+		if (cached && Date.now() - cached.createdAt < this.#headerAuthCacheTtlMs) {
 			return cached.headers;
 		}
 		const headers = await createHeaderAuth(signer, groupId);
