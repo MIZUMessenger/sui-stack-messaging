@@ -17,6 +17,49 @@ import type {
 } from './types.js';
 
 /**
+ * Checks whether an error is a transport/network-level error that should
+ * be propagated (not swallowed as "object not found").
+ *
+ * Each Sui client transport produces structurally distinct transport errors:
+ *
+ *   - JSON-RPC `SuiHTTPStatusError`: has `status: number` and `statusText: string`
+ *   - JSON-RPC `JsonRpcError`: has `code: number` and `type: string`
+ *   - gRPC `RpcError` (@protobuf-ts): has `meta: object`
+ *   - GraphQL `SuiGraphQLRequestError`: has `name: 'SuiGraphQLRequestError'`
+ *   - GraphQL `GraphQLResponseError`: has `locations` array
+ *   - `fetch` failures: `TypeError`
+ *
+ * Object-level errors (not found, deleted, etc.) lack these markers:
+ *   - JSON-RPC / GraphQL: `ObjectError` with string `code`
+ *   - gRPC: plain `Error(message)` with no transport metadata
+ */
+export function isTransportError(error: unknown): boolean {
+	if (!(error instanceof Error)) return false;
+
+	const e = error as unknown as Record<string, unknown>;
+
+	// JSON-RPC: SuiHTTPStatusError
+	if (typeof e.status === 'number' && typeof e.statusText === 'string') return true;
+
+	// JSON-RPC: JsonRpcError (numeric code + type string)
+	if (typeof e.code === 'number' && typeof e.type === 'string') return true;
+
+	// gRPC: RpcError from @protobuf-ts (carries request metadata)
+	if (typeof e.meta === 'object' && e.meta !== null) return true;
+
+	// GraphQL: SuiGraphQLRequestError
+	if (error.constructor.name === 'SuiGraphQLRequestError') return true;
+
+	// GraphQL: GraphQLResponseError
+	if ('locations' in e) return true;
+
+	// fetch() failures (network unreachable, DNS resolution, etc.)
+	if (error instanceof TypeError) return true;
+
+	return false;
+}
+
+/**
  * BCS type for dynamic field entries keyed by address with VecSet<TypeName> values.
  */
 const DynamicFieldEntry = bcs.struct('Field', {
@@ -100,7 +143,8 @@ export class PermissionedGroupsView {
 			});
 			const parsed = DynamicFieldEntry.parse(object.content);
 			return parsed.value.map((typeName) => typeName.name);
-		} catch {
+		} catch (error) {
+			if (isTransportError(error)) throw error;
 			// Object doesn't exist means member is not in the group
 			return null;
 		}
@@ -235,7 +279,8 @@ export class PermissionedGroupsView {
 		try {
 			await this.#client.core.getObject({ objectId: pausedFieldId });
 			return true;
-		} catch {
+		} catch (error) {
+			if (isTransportError(error)) throw error;
 			return false;
 		}
 	}
