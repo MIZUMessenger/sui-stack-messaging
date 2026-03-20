@@ -12,6 +12,7 @@ import type { SuinsConfig } from './constants.js';
 import type { CryptoPrimitives } from './encryption/crypto-primitives.js';
 import type { SealPolicy } from './encryption/seal-policy.js';
 import type { RelayerConfig } from './relayer/types.js';
+import type { RecoveryTransport } from './recovery/transport.js';
 
 // === Package Configuration ===
 
@@ -135,6 +136,12 @@ export interface MessagingGroupsClientOptions<
 	 * and received attachments are not resolvable.
 	 */
 	attachments?: AttachmentsConfig;
+	/**
+	 * Optional recovery transport for fetching messages from an alternative
+	 * storage backend (e.g., Walrus). When provided, enables the
+	 * `recoverMessages()` method on the client.
+	 */
+	recovery?: RecoveryTransport;
 }
 
 // === Call/Tx Options (no signer) ===

@@ -33,9 +33,11 @@ import type {
 	GetMessageOptions,
 	GetMessagesOptions,
 	GetMessagesResult,
+	RecoverMessagesOptions,
 	SendMessageOptions,
 	SubscribeOptions,
 } from './messaging-types.js';
+import type { RecoveryTransport } from './recovery/transport.js';
 import type {
 	ArchiveGroupOptions,
 	CreateGroupOptions,
@@ -91,6 +93,7 @@ export function messagingGroups<
 	suinsConfig,
 	relayer,
 	attachments,
+	recovery,
 }: {
 	name?: Name;
 	/** Name under which the PermissionedGroupsClient extension is registered (default: 'groups'). */
@@ -105,6 +108,8 @@ export function messagingGroups<
 	relayer: RelayerConfig;
 	/** Attachment support. When omitted, messages cannot include files. */
 	attachments?: MessagingGroupsClientOptions<TApproveContext>['attachments'];
+	/** Optional recovery transport for fetching messages from an alternative storage backend. */
+	recovery?: RecoveryTransport;
 }) {
 	return {
 		name,
@@ -118,6 +123,7 @@ export function messagingGroups<
 				encryption,
 				relayer,
 				attachments,
+				recovery,
 			});
 		},
 	};
@@ -157,6 +163,7 @@ export class MessagingGroupsClient<TApproveContext = void> {
 	#packageConfig: MessagingGroupsPackageConfig;
 	#client: ClientWithCoreApi;
 	#attachments: AttachmentsManager<TApproveContext> | undefined;
+	#recovery: RecoveryTransport | undefined;
 	readonly #textEncoder = new TextEncoder();
 	readonly #textDecoder = new TextDecoder();
 
@@ -247,6 +254,8 @@ export class MessagingGroupsClient<TApproveContext = void> {
 					timeout: options.relayer.timeout,
 					onError: options.relayer.onError,
 				});
+
+		this.#recovery = options.recovery;
 	}
 
 	// === Private Helpers ===
@@ -521,6 +530,51 @@ export class MessagingGroupsClient<TApproveContext = void> {
 	/** Disconnect the underlying transport. Active subscriptions will complete. */
 	disconnect(): void {
 		this.transport.disconnect();
+	}
+
+	// === Recovery ===
+
+	/**
+	 * Fetch and decrypt messages from the recovery transport.
+	 *
+	 * Requires a `recovery` transport to be configured at client creation.
+	 * Recovery is read-only and does not require a signer.
+	 *
+	 * @throws {MessagingGroupsClientError} if no recovery transport is configured.
+	 */
+	async recoverMessages(
+		options: RecoverMessagesOptions<TApproveContext>,
+	): Promise<GetMessagesResult> {
+		if (!this.#recovery) {
+			throw new MessagingGroupsClientError(
+				'Recovery transport is not configured. Provide `recovery` when creating the messaging groups client.',
+			);
+		}
+
+		const { groupId, encryptionHistoryId } = this.derive.resolveGroupRef(options.groupRef);
+		const approveContext = this.#approveContextSpread(options);
+
+		const result = await this.#recovery.recoverMessages({
+			groupId,
+			afterOrder: options.afterOrder,
+			beforeOrder: options.beforeOrder,
+			limit: options.limit,
+		});
+
+		const settled = await Promise.allSettled(
+			result.messages.map((raw) =>
+				this.#decryptMessage(raw, { groupId, encryptionHistoryId }, approveContext),
+			),
+		);
+
+		const messages: DecryptedMessage[] = [];
+		for (const entry of settled) {
+			if (entry.status === 'fulfilled') {
+				messages.push(entry.value);
+			}
+		}
+
+		return { messages, hasNext: result.hasNext };
 	}
 
 	// === Private: sealApproveContext ===

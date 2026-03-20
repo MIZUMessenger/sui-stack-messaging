@@ -141,3 +141,18 @@ export type SubscribeOptions<TApproveContext = void> = WithApproveContext<
 	SubscribeOptionsBase,
 	TApproveContext
 >;
+
+// ── Recovery ─────────────────────────────────────────────────────
+
+interface RecoverMessagesOptionsBase {
+	groupRef: GroupRef;
+	afterOrder?: number;
+	beforeOrder?: number;
+	limit?: number;
+}
+
+/** Options for {@link MessagingGroupsClient.recoverMessages}. */
+export type RecoverMessagesOptions<TApproveContext = void> = WithApproveContext<
+	RecoverMessagesOptionsBase,
+	TApproveContext
+>;

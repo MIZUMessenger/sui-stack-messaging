@@ -17,6 +17,7 @@ import {
 import { MessagingGroupsClientError } from './error.js';
 import type { AttachmentsConfig } from './attachments/types.js';
 import type { RelayerConfig } from './relayer/types.js';
+import type { RecoveryTransport } from './recovery/transport.js';
 import type { MessagingGroupsEncryptionOptions, MessagingGroupsPackageConfig } from './types.js';
 
 /**
@@ -55,6 +56,9 @@ export interface CreateMessagingGroupsClientOptions<TApproveContext = void> {
 
 	/** Attachment support. When omitted, messages cannot include files. */
 	attachments?: AttachmentsConfig;
+
+	/** Optional recovery transport for fetching messages from an alternative storage backend. */
+	recovery?: RecoveryTransport;
 }
 
 /**
@@ -123,6 +127,7 @@ export function createMessagingGroupsClient<TApproveContext = void>(
 				suinsConfig: options.suinsConfig,
 				relayer: options.relayer,
 				attachments: options.attachments,
+				recovery: options.recovery,
 			}),
 		);
 }
