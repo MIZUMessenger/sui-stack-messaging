@@ -38,6 +38,9 @@ sui-rpc = "0.2"
 bcs = "0.1"
 tokio-stream = "0.1"
 
+# CORS middleware
+tower-http = { version = "0.6", features = ["cors"] }
+
 # Walrus HTTP client for blob/quilt storage
 reqwest = { version = "0.12", features = ["json", "multipart"] }
 
