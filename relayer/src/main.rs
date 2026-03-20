@@ -14,12 +14,12 @@ use axum::{
     routing::{delete, get},
     Router,
 };
-use tower_http::cors::{Any, CorsLayer};
 use config::Config;
 use handlers::health::health_check;
 use handlers::messages::{create_message, delete_message, get_messages, update_message};
 use state::AppState;
 use storage::create_storage;
+use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 // Import auth middleware components
