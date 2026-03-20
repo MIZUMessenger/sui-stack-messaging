@@ -19,6 +19,7 @@ use handlers::health::health_check;
 use handlers::messages::{create_message, delete_message, get_messages, update_message};
 use state::AppState;
 use storage::create_storage;
+use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 // Import auth middleware components
@@ -89,10 +90,18 @@ async fn main() {
         .route("/health_check", get(health_check))
         .with_state(app_state);
 
+    // WARNING: This permissive CORS configuration is for development/demo purposes only.
+    // In production, restrict allow_origin to specific trusted domains.
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     // Combine all routes
     let app = Router::new()
         .merge(public_routes)
-        .merge(authenticated_routes);
+        .merge(authenticated_routes)
+        .layer(cors);
 
     let addr = format!("0.0.0.0:{}", config.port);
 
