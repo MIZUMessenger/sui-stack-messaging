@@ -4,8 +4,8 @@
 import type { SuiGroupsPackageConfig } from './types.js';
 
 export const TESTNET_SUI_GROUPS_PACKAGE_CONFIG = {
-	originalPackageId: '0x6d030f66a03be50cbf2fca8c74b665b0111d06e48cba2265f5b4b8414e2865a3',
-	latestPackageId: '0x6d030f66a03be50cbf2fca8c74b665b0111d06e48cba2265f5b4b8414e2865a3',
+	originalPackageId: '0x12434e83027a5691567706f1b688cf18c50a5572abb03fa6f7f9246e7fe1f8e4',
+	latestPackageId: '0x12434e83027a5691567706f1b688cf18c50a5572abb03fa6f7f9246e7fe1f8e4',
 } satisfies SuiGroupsPackageConfig;
 
 export const MAINNET_SUI_GROUPS_PACKAGE_CONFIG = {

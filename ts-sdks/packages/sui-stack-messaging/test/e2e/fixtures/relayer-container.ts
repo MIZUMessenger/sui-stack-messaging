@@ -45,7 +45,7 @@ export async function startRelayerContainer(
 			MEMBERSHIP_STORE_TYPE: 'memory',
 			WALRUS_PUBLISHER_URL: 'https://publisher.walrus-testnet.walrus.space',
 			WALRUS_AGGREGATOR_URL: 'https://aggregator.walrus-testnet.walrus.space',
-			WALRUS_STORAGE_EPOCHS: '5',
+			WALRUS_STORAGE_EPOCHS: '1',
 			WALRUS_SYNC_INTERVAL_SECS: '5',
 			WALRUS_SYNC_BATCH_SIZE: '100',
 			WALRUS_SYNC_MESSAGE_THRESHOLD: '1',

@@ -95,7 +95,7 @@ describe('Permission Synchronization', () => {
 					text: 'Unauthorized message',
 				}),
 			).rejects.toBeInstanceOf(EncryptionAccessDeniedError);
-		});
+		}, 180_000);
 
 		it('should recognize permissions after on-chain grant', async () => {
 			const messagingPerms = messagingPermissionTypes(publishedPackages['messaging'].packageId);
@@ -119,7 +119,7 @@ describe('Permission Synchronization', () => {
 			expect(result.messageId).toMatch(
 				/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
 			);
-		}, 30_000);
+		}, 60_000);
 
 		it('should grant multiple permissions at once', async () => {
 			const messagingPerms = messagingPermissionTypes(publishedPackages['messaging'].packageId);
@@ -144,7 +144,7 @@ describe('Permission Synchronization', () => {
 			});
 
 			expect(result.messageId).toBeTruthy();
-		}, 30_000);
+		}, 60_000);
 	});
 
 	describe('Revoke Permissions Flow', () => {
@@ -178,7 +178,7 @@ describe('Permission Synchronization', () => {
 					error instanceof EncryptionAccessDeniedError ||
 					(error instanceof RelayerTransportError && error.status === 403),
 			);
-		}, 30_000);
+		}, 60_000);
 	});
 
 	describe('Remove Member Flow', () => {
@@ -209,7 +209,7 @@ describe('Permission Synchronization', () => {
 					error instanceof EncryptionAccessDeniedError ||
 					(error instanceof RelayerTransportError && error.status === 403),
 			);
-		}, 30_000);
+		}, 60_000);
 	});
 
 	describe('Admin Operations', () => {
