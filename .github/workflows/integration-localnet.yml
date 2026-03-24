@@ -15,8 +15,8 @@ jobs:
     strategy:
       matrix:
         package:
-          - permissioned-groups
-          - messaging-groups
+          - sui-groups
+          - sui-stack-messaging
     steps:
       - uses: actions/checkout@v4
 

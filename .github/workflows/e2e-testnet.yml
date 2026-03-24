@@ -32,7 +32,7 @@ jobs:
         run: pnpm build
 
       - name: Run E2E tests
-        run: pnpm --filter @mysten/messaging-groups test:e2e
+        run: pnpm --filter @mysten/sui-stack-messaging test:e2e
         env:
           # Required
           TEST_WALLET_PRIVATE_KEY: ${{ secrets.TEST_WALLET_PRIVATE_KEY }}

@@ -13,8 +13,8 @@ jobs:
     strategy:
       matrix:
         package:
-          - permissioned-groups
-          - messaging
+          - sui_groups
+          - sui_stack_messaging
           - example-group
           - example_app
     steps:
