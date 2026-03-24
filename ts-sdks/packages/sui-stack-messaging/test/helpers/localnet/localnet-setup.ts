@@ -59,6 +59,21 @@ export async function bootstrapLocalnet(
 		recipient: admin.address,
 	});
 
+	// The sui-tools container doesn't have mvr, so patch the Move.toml to use
+	// a git-based suins dependency instead of the MVR one before publishing.
+	console.log('Patching Move.toml for localnet (replacing MVR suins dep with git)...');
+	await execCommand(
+		[
+			'sed',
+			'-i',
+			's|suins = { r.mvr = "@suins/core" }|suins = { git = "https://github.com/MystenLabs/suins-contracts", subdir = "packages/suins", rev = "2b75990bdc31472405a6bf47b40152627a1fa6c0" }|',
+			'/test-data/sui_stack_messaging/Move.toml',
+		],
+		SUI_TOOLS_CONTAINER_ID,
+	);
+	// Remove Move.lock so it doesn't conflict with the patched dependency
+	await execCommand(['rm', '-f', '/test-data/sui_stack_messaging/Move.lock'], SUI_TOOLS_CONTAINER_ID);
+
 	console.log('Publishing Move packages...');
 	const published = await publishPackages({
 		packages,
