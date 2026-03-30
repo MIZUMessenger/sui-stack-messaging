@@ -4,10 +4,10 @@
 import type { SuiStackMessagingPackageConfig } from './types.js';
 
 export const TESTNET_SUI_STACK_MESSAGING_PACKAGE_CONFIG = {
-	originalPackageId: '0xd56dfe01c3f658368db54b2d87b31d5b05493ebb5005476aff296bb48bcaf273',
-	latestPackageId: '0xd56dfe01c3f658368db54b2d87b31d5b05493ebb5005476aff296bb48bcaf273',
-	namespaceId: '0xc2c3da35be0bbf6d6a3f99be07a492b4e62e1de09f92c318d4ac9b8ebccb5d81',
-	versionId: '0x2c1bfb8fe43231981762475b2df0b69e4d42e95c430febe23d93f3655a40d2aa',
+	originalPackageId: '0xdb5683e5688ddeb3a37be2b38f33d9db8dd5f6c9bc8827f9e3b196b73bfcfb8c',
+	latestPackageId: '0xdb5683e5688ddeb3a37be2b38f33d9db8dd5f6c9bc8827f9e3b196b73bfcfb8c',
+	namespaceId: '0x65cdb5767e8459801d34475f94921ee37c84d52e735935414ff8fda09c674f79',
+	versionId: '0x5a7104a7dcebdf0e7204a8370c8bd0044160198de0475a545f2f7705c48e9416',
 } satisfies SuiStackMessagingPackageConfig;
 
 export const MAINNET_SUI_STACK_MESSAGING_PACKAGE_CONFIG = {
