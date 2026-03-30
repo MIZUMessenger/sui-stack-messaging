@@ -32,7 +32,8 @@
 ///
 /// ## Invariants
 ///
-/// - At least one `PermissionsAdmin` must always exist
+/// - At least one `PermissionsAdmin` must always exist (best-effort: the count includes
+///   actor-object addresses and cannot distinguish them from human admins)
 /// - Members always have at least one permission (empty permission sets are not allowed)
 module permissioned_groups::permissioned_group;
 
@@ -653,9 +654,11 @@ fun assert_can_manage_permission<T: drop, Permission: drop>(
 /// Aborts if this would leave no PermissionsAdmins.
 ///
 /// NOTE: `permissions_admin_count` tracks all holders of `PermissionsAdmin`, including
-/// actor-object addresses. If actor objects hold `PermissionsAdmin`, a group may end up
-/// with no human admins without this guard triggering. Downstream packages using the
-/// actor-object pattern for self-service operations should be aware of this.
+/// actor-object addresses. This is a best-effort invariant: it prevents the count from
+/// reaching zero, but cannot distinguish human admins from actor-object admins. If actor
+/// objects hold `PermissionsAdmin`, a group may end up with no human admins without this
+/// guard triggering. Downstream packages using the actor-object pattern should be aware
+/// of this limitation.
 fun safe_decrement_permissions_admin_count<T: drop>(
     self: &mut PermissionedGroup<T>,
     member: address,

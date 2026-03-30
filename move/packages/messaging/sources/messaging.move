@@ -54,6 +54,11 @@ const ENotPermitted: u64 = 0;
 const EGroupArchived: u64 = 1;
 /// The provided `EncryptionHistory` does not belong to the given group.
 const EEncryptionHistoryMismatch: u64 = 2;
+/// `PermissionsAdmin` holders cannot use `leave()`. They should use
+/// `permissioned_group::remove_member()` for their own address instead,
+/// which has a best-effort guard against removing the last `PermissionsAdmin`
+/// (see `ELastPermissionsAdmin` — note that this count includes actor-object admins).
+const EPermissionsAdminCannotLeave: u64 = 3;
 
 // === Witnesses ===
 
@@ -264,25 +269,39 @@ public fun rotate_encryption_key(
 /// The `GroupLeaver` actor holds `PermissionsAdmin` on all groups and calls
 /// `object_remove_member` on behalf of the caller.
 ///
+/// `PermissionsAdmin` holders cannot use this function. Since they already have
+/// `PermissionsAdmin`, they can call `permissioned_group::remove_member()` for
+/// their own address instead. Alternatively, they can first revoke their own
+/// `PermissionsAdmin` and then call `leave()`.
+///
+/// **Why**: `leave()` is a self-service action via the `GroupLeaver` actor object.
+/// Since `permissions_admin_count` includes both human and actor-object admins,
+/// there is no reliable way to determine whether removing the caller would leave
+/// the group without a human admin. Blocking `PermissionsAdmin` holders from
+/// `leave()` makes this a deliberate admin decision rather than a casual action.
+///
+/// **Limitation**: Note that `permissions_admin_count` is a best-effort invariant.
+/// Even via `remove_member()`, a group could end up with only actor-object admins
+/// if the caller removes themselves when they are the last human admin. The count
+/// cannot distinguish human from actor-object holders.
+///
 /// # Parameters
 /// - `group_leaver`: Reference to the shared `GroupLeaver` object
 /// - `group`: Mutable reference to the `PermissionedGroup<Messaging>`
 /// - `ctx`: Transaction context
 ///
 /// # Aborts
+/// - `EPermissionsAdminCannotLeave`: if the caller holds `PermissionsAdmin`
 /// - `EMemberNotFound` (from `permissioned_group`): if the caller is not a member
-/// - `ELastPermissionsAdmin` (from `permissioned_group`): if the caller is the last
-///   `PermissionsAdmin` holder (including actor objects)
-///
-/// NOTE: Because `GroupLeaver` itself holds `PermissionsAdmin` on every group, a human
-/// admin can always leave — leaving `GroupLeaver` as the sole remaining admin. A group in
-/// that state has no human admins. To promote a new human admin from that state, a
-/// dedicated actor-object wrapper over `object_grant_permission` would be needed.
 public fun leave(
     group_leaver: &GroupLeaver,
     group: &mut PermissionedGroup<Messaging>,
     ctx: &TxContext,
 ) {
+    assert!(
+        !group.has_permission<Messaging, PermissionsAdmin>(ctx.sender()),
+        EPermissionsAdminCannotLeave,
+    );
     group_leaver::leave<Messaging>(group_leaver, group, ctx);
 }
 

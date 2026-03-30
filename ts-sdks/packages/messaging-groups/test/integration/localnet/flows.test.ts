@@ -426,7 +426,7 @@ describe('Full Flows', () => {
 			);
 		});
 
-		it('should allow the last human admin to leave (GroupLeaver retains PermissionsAdmin)', async () => {
+		it('should reject PermissionsAdmin from using leave (EPermissionsAdminCannotLeave)', async () => {
 			const uuid = crypto.randomUUID();
 
 			await adminClient.messaging.createAndShareGroup({
@@ -437,19 +437,14 @@ describe('Full Flows', () => {
 
 			const groupId = adminClient.messaging.derive.groupId({ uuid });
 
-			// Admin is the only human PermissionsAdmin, but GroupLeaver also holds PermissionsAdmin.
-			// So leaving should succeed — the group is not left without an admin.
-			await adminClient.messaging.leave({
-				signer: adminKeypair,
-				groupId,
-			});
-
-			expect(
-				await adminClient.groups.view.isMember({
+			// PermissionsAdmin holders cannot use leave() — they should use
+			// remove_member() for their own address instead.
+			await expect(
+				adminClient.messaging.leave({
+					signer: adminKeypair,
 					groupId,
-					member: adminKeypair.getPublicKey().toSuiAddress(),
 				}),
-			).toBe(false);
+			).rejects.toThrow();
 		});
 	});
 

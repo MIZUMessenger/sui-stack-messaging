@@ -763,10 +763,9 @@ fun leave_removes_member() {
     ts.end();
 }
 
-#[test]
-fun leave_sole_human_admin_succeeds() {
-    // GroupLeaver holds PermissionsAdmin on all groups, so even the sole human admin can leave.
-    // After leaving, GroupLeaver remains as the only PermissionsAdmin.
+#[test, expected_failure(abort_code = messaging::EPermissionsAdminCannotLeave)]
+fun leave_permissions_admin_fails() {
+    // PermissionsAdmin holders cannot use leave() — they should use remove_member() instead.
     let mut ts = ts::begin(ALICE);
 
     ts.next_tx(ALICE);
@@ -797,14 +796,7 @@ fun leave_sole_human_admin_succeeds() {
     let mut group = ts.take_shared<PermissionedGroup<Messaging>>();
     let group_leaver = ts.take_shared<GroupLeaver>();
     messaging::leave(&group_leaver, &mut group, ts.ctx());
-
-    assert_eq!(group.is_member(ALICE), false);
-    // GroupLeaver is still the remaining PermissionsAdmin
-    assert_eq!(group.permissions_admin_count<Messaging>(), 1);
-
-    ts::return_shared(group);
-    ts::return_shared(group_leaver);
-    ts.end();
+    abort
 }
 
 #[test, expected_failure(abort_code = permissioned_groups::permissioned_group::EMemberNotFound)]
