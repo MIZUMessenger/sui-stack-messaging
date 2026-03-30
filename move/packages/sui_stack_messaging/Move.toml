@@ -3,7 +3,7 @@ name = "sui_stack_messaging"
 edition = "2024.beta"
 
 [dependencies]
-sui_groups = { local = "../sui_groups" }
+sui_groups = { git = "https://github.com/MystenLabs/sui-groups.git", subdir = "move/packages/sui_groups", rev = "main" }
 suins = { r.mvr = "@suins/core" }
 
 [addresses]
