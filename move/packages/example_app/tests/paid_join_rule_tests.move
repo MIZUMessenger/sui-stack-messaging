@@ -122,7 +122,7 @@ fun join_with_insufficient_payment() {
     abort // will differ from EInsufficientPayment
 }
 
-#[test, expected_failure(abort_code = permissioned_groups::permissioned_group::ENotPermitted)]
+#[test, expected_failure(abort_code = sui_groups::permissioned_group::ENotPermitted)]
 fun join_rule_not_member() {
     let mut ts = ts::begin(ALICE);
 
