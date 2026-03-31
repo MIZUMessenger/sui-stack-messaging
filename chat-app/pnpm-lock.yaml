@@ -24,8 +24,8 @@ importers:
         specifier: ^2.13.2
         version: 2.13.2(typescript@5.8.3)
       '@mysten/sui-groups':
-        specifier: link:../ts-sdks/packages/sui-groups
-        version: link:../ts-sdks/packages/sui-groups
+        specifier: ^0.0.1
+        version: 0.0.1(@mysten/bcs@2.0.3)(@mysten/sui@2.13.2(typescript@5.8.3))
       '@mysten/sui-stack-messaging':
         specifier: link:../ts-sdks/packages/sui-stack-messaging
         version: link:../ts-sdks/packages/sui-stack-messaging
@@ -398,6 +398,12 @@ packages:
     resolution: {integrity: sha512-TF1CXXug5VPaV4KImKxZ7nyR0XY//KJVzOFxFXaajBHewLBinCO7s6GS9EYbtQMaNvnjrYQn1cpGhYfwGkzvtQ==}
     peerDependencies:
       '@mysten/sui': ^2.8.0
+
+  '@mysten/sui-groups@0.0.1':
+    resolution: {integrity: sha512-6yck5UQjAtApWUXvgPc0WaMNatTTUxINBU92XrgawYTWZry/PAxGLvU1XjFFW+DAKbQWpkOMqu8yiuwcBybXfA==}
+    peerDependencies:
+      '@mysten/bcs': ^2.0.3
+      '@mysten/sui': ^2.13.0
 
   '@mysten/sui@2.13.2':
     resolution: {integrity: sha512-M/H2CZJQyLyi0vvCJZ6rRzItJCsnh66v1OTI2VoBad2lau/BTuUKOEPjRpfU4YlVJcGR4h+RLCjDXV4ACuRKSA==}
@@ -1777,6 +1783,11 @@ snapshots:
       valibot: 1.2.0(typescript@5.8.3)
     transitivePeerDependencies:
       - typescript
+
+  '@mysten/sui-groups@0.0.1(@mysten/bcs@2.0.3)(@mysten/sui@2.13.2(typescript@5.8.3))':
+    dependencies:
+      '@mysten/bcs': 2.0.3
+      '@mysten/sui': 2.13.2(typescript@5.8.3)
 
   '@mysten/sui@2.13.2(typescript@5.8.3)':
     dependencies:
