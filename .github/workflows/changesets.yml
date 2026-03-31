@@ -39,18 +39,30 @@ jobs:
       - name: Check for pending changesets
         id: changesets
         run: |
-          STATUS=$(pnpm changeset status --output /tmp/changeset-status.json 2>&1 || true)
+          STATUS=$(pnpm changeset status 2>&1 || true)
           if echo "$STATUS" | grep -q "No changesets present"; then
             echo "pending=false" >> $GITHUB_OUTPUT
           else
             echo "pending=true" >> $GITHUB_OUTPUT
           fi
+      - name: Check if version needs publishing
+        if: steps.changesets.outputs.pending == 'false'
+        id: publish-check
+        run: |
+          LOCAL_VERSION=$(node -p "require('./packages/sui-stack-messaging/package.json').version")
+          NPM_VERSION=$(npm view @mysten/sui-stack-messaging version 2>/dev/null || echo "0.0.0")
+          if [ "$LOCAL_VERSION" != "$NPM_VERSION" ]; then
+            echo "needed=true" >> $GITHUB_OUTPUT
+          else
+            echo "needed=false" >> $GITHUB_OUTPUT
+          fi
+          echo "Local: $LOCAL_VERSION, npm: $NPM_VERSION"
       - name: Version packages
         if: steps.changesets.outputs.pending == 'true'
         run: |
-          pnpm changeset-version
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          pnpm changeset-version
       - name: Create Release Pull Request
         if: steps.changesets.outputs.pending == 'true'
         uses: peter-evans/create-pull-request@v7
@@ -61,7 +73,7 @@ jobs:
           body: |
             This PR was opened by the Changesets workflow. When you're ready to release, merge this PR.
       - name: Publish to npm
-        if: steps.changesets.outputs.pending == 'false'
+        if: steps.publish-check.outputs.needed == 'true'
         run: pnpm release
         env:
           NPM_TOKEN: ''
