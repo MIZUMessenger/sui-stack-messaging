@@ -33,8 +33,8 @@ export function addStoredGroup(group: StoredGroup): void {
 }
 
 /** Remove a group from localStorage by uuid. */
-export function removeStoredGroup(uuid: string): void {
-  const groups = getStoredGroups().filter((g) => g.uuid !== uuid);
+export function removeStoredGroup(groupId: string): void {
+  const groups = getStoredGroups().filter((g) => g.groupId !== groupId);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
 }
 

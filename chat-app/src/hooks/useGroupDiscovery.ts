@@ -17,6 +17,7 @@ import {
   getStoredGroups,
   addStoredGroup,
   type StoredGroup,
+  removeStoredGroup,
 } from '../lib/group-store';
 
 // ---------------------------------------------------------------------------
@@ -149,43 +150,60 @@ export function useGroupDiscovery(
         //   {pkgId}::permissioned_group::MemberAdded<{witnessPkgId}::messaging::Messaging>
         const memberAddedType = client!.groups.bcs.MemberAdded.name;
         const memberRemovedType = client!.groups.bcs.MemberRemoved.name;
-
+    
         // Paginate through all events of each type
         const [addedGroupIds, removedGroupIds] = await Promise.all([
           queryAllEventGroupIds(graphqlClient, memberAddedType, address!),
           queryAllEventGroupIds(graphqlClient, memberRemovedType, address!),
         ]);
-
+    
         // Abort check
         if (controller.signal.aborted) return;
-
-        // Compute net membership: added minus removed
-        const removedSet = new Set(removedGroupIds);
-        const activeGroupIds = [
-          ...new Set(addedGroupIds.filter((id) => !removedSet.has(id))),
-        ];
-
+    
+        // A member can be removed then added back again, so we check net count
+        const counts = removedGroupIds.reduce(
+          (acc, g) => acc.set(g, (acc.get(g) ?? 0) - 1),
+          addedGroupIds.reduce(
+            (acc, g) => acc.set(g, (acc.get(g) ?? 0) + 1),
+            new Map<string, number>()
+          )
+        );
+    
+        // Groups where added count > removed count = active
+        const activeGroupIds = [...counts.entries()]
+          .filter(([, count]) => count > 0)
+          .map(([groupId]) => groupId);
+    
         // Merge discovered groups with localStorage
         // (Keep existing names/UUIDs for groups we already know about)
         const stored = getStoredGroups();
         const storedByGroupId = new Map(stored.map((g) => [g.groupId, g]));
-
-        // Fetch metadata (name, uuid) for all active groups
-        const groupMetadata = await client!.messaging.view.groupsMetadata({ groupIds: activeGroupIds, refresh: true });
-
-        for (const groupId of activeGroupIds) {
-          if (!storedByGroupId.has(groupId)) {
-            const meta = groupMetadata[groupId];
-            if (!meta) continue;
-            addStoredGroup({
-              uuid: meta.uuid,
-              name: meta.name,
-              groupId,
-              createdAt: Date.now(),
-            });
+    
+        // Fetch metadata (name, uuid) only for active groups not already in storage
+        const newGroupIds = activeGroupIds.filter((id) => !storedByGroupId.has(id));
+        const groupMetadata = newGroupIds.length > 0
+          ? await client!.messaging.view.groupsMetadata({ groupIds: newGroupIds, refresh: true })
+          : {};
+    
+        // Remove stored groups that are no longer active
+        for (const storedId of storedByGroupId.keys()) {
+          if (!activeGroupIds.includes(storedId)) {
+            removeStoredGroup(storedId);
           }
         }
-
+    
+        // If the group is not in the stored groups, add it
+        for (const groupId of newGroupIds) {
+          const meta = groupMetadata[groupId];
+          if (!meta) continue;
+          addStoredGroup({
+            uuid: meta.uuid,
+            name: meta.name,
+            groupId,
+            createdAt: Date.now(),
+          });
+        }
+    
         if (!controller.signal.aborted) {
           setGroups(getStoredGroups());
         }
