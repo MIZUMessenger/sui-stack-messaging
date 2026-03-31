@@ -1,5 +1,12 @@
 # Sui Stack Messaging
 
+> [!NOTE]
+> The Sui Stack Messaging tooling is currently in Beta and available on both Testnet and Mainnet.
+>
+> The tooling is production-capable for many use cases, but developers should evaluate their own security, reliability, and operational requirements before deploying to production.
+>
+> For questions, feedback, or production discussions, reach out to the team on [Sui Discord](https://discord.com/channels/916379725201563759/1417696942074630194).
+
 ## Contents
 
 - [Architecture](#architecture)
