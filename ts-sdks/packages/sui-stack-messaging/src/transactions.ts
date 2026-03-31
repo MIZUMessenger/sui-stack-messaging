@@ -48,18 +48,6 @@ export class SuiStackMessagingTransactions {
 	// === Group Creation Functions ===
 
 	/**
-	 * Creates a Transaction that creates a new messaging group.
-	 * Returns a tuple of (PermissionedGroup<Messaging>, EncryptionHistory).
-	 */
-	createGroup({
-		transaction = new Transaction(),
-		...options
-	}: CreateGroupCallOptions & { transaction?: Transaction }): Transaction {
-		transaction.add(this.#call.createGroup(options));
-		return transaction;
-	}
-
-	/**
 	 * Creates a Transaction that creates a new messaging group and shares both objects.
 	 */
 	createAndShareGroup({

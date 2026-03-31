@@ -23,7 +23,11 @@
 			"minimatch@>=9.0.0 <9.0.7": "^9.0.7",
 			"rollup@>=4.0.0 <4.59.0": "^4.59.0",
 			"lodash@>=4.0.0 <=4.17.22": "^4.17.23",
-			"undici@>=7.0.0 <7.24.0": "^7.24.0"
+			"undici@>=7.0.0 <7.24.0": "^7.24.0",
+			"picomatch@<2.3.2": "^2.3.2",
+			"picomatch@>=4.0.0 <4.0.4": "^4.0.4",
+			"brace-expansion@>=2.0.0 <2.0.3": "^2.0.3",
+			"yaml@>=2.0.0 <2.8.3": "^2.8.3"
 		}
 	},
 	"engines": {
@@ -39,13 +43,13 @@
 		"@changesets/cli": "^2.29.8",
 		"@ianvs/prettier-plugin-sort-imports": "^4.7.0",
 		"@manypkg/cli": "^0.25.1",
-		"@testcontainers/postgresql": "^11.12.0",
+		"@testcontainers/postgresql": "^11.13.0",
 		"concurrently": "^9.2.1",
 		"oxlint": "^1.39.0",
 		"oxlint-tsgolint": "^0.11.0",
 		"prettier": "^3.7.4",
 		"prettier-plugin-tailwindcss": "^0.7.2",
-		"testcontainers": "^11.12.0",
+		"testcontainers": "^11.13.0",
 		"tsx": "^4.21.0",
 		"tsdown": "^0.20.0-beta.1",
 		"turbo": "^2.7.4",

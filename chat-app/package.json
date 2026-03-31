@@ -10,12 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@mysten/bcs": "^2.0.2",
-    "@mysten/dapp-kit": "^1.0.3",
+    "@mysten/bcs": "^2.0.3",
+    "@mysten/dapp-kit": "^1.0.4",
     "@mysten/sui-stack-messaging": "link:../ts-sdks/packages/sui-stack-messaging",
     "@mysten/sui-groups": "link:../ts-sdks/packages/sui-groups",
-    "@mysten/seal": "^1.1.0",
-    "@mysten/sui": "^2.6.0",
+    "@mysten/seal": "^1.1.1",
+    "@mysten/sui": "^2.13.2",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/react-query": "^5.90.21",
     "react": "^19.1.0",
@@ -32,6 +32,9 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "picomatch@>=4.0.0 <4.0.4": "^4.0.4"
+    }
   }
 }

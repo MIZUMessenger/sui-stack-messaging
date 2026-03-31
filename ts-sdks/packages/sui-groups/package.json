@@ -43,15 +43,15 @@
 		"lint:fix": "pnpm run oxlint:fix && pnpm run prettier:fix"
 	},
 	"devDependencies": {
-		"@mysten/bcs": "^2.0.2",
-		"@mysten/codegen": "^0.8.2",
-		"@mysten/sui": "^2.6.0",
-		"testcontainers": "^11.12.0",
+		"@mysten/bcs": "^2.0.3",
+		"@mysten/codegen": "^0.8.3",
+		"@mysten/sui": "^2.13.2",
+		"testcontainers": "^11.13.0",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.18"
 	},
 	"peerDependencies": {
-		"@mysten/bcs": "^2.0.2",
-		"@mysten/sui": "^2.6.0"
+		"@mysten/bcs": "^2.0.3",
+		"@mysten/sui": "^2.13.2"
 	}
 }

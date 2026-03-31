@@ -10,6 +10,10 @@ overrides:
   rollup@>=4.0.0 <4.59.0: ^4.59.0
   lodash@>=4.0.0 <=4.17.22: ^4.17.23
   undici@>=7.0.0 <7.24.0: ^7.24.0
+  picomatch@<2.3.2: ^2.3.2
+  picomatch@>=4.0.0 <4.0.4: ^4.0.4
+  brace-expansion@>=2.0.0 <2.0.3: ^2.0.3
+  yaml@>=2.0.0 <2.8.3: ^2.8.3
 
 importers:
 
@@ -25,8 +29,8 @@ importers:
         specifier: ^0.25.1
         version: 0.25.1
       '@testcontainers/postgresql':
-        specifier: ^11.12.0
-        version: 11.12.0
+        specifier: ^11.13.0
+        version: 11.13.0
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -43,8 +47,8 @@ importers:
         specifier: ^0.7.2
         version: 0.7.2(@ianvs/prettier-plugin-sort-imports@4.7.0(prettier@3.7.4))(prettier@3.7.4)
       testcontainers:
-        specifier: ^11.12.0
-        version: 11.12.0
+        specifier: ^11.13.0
+        version: 11.13.0
       tsdown:
         specifier: ^0.20.0-beta.1
         version: 0.20.1(typescript@5.9.3)
@@ -61,8 +65,8 @@ importers:
   ../publish:
     dependencies:
       '@mysten/sui':
-        specifier: ^2.6.0
-        version: 2.6.0(typescript@5.9.3)
+        specifier: ^2.13.2
+        version: 2.13.2(typescript@5.9.3)
       zod:
         specifier: ^4.2.1
         version: 4.3.6
@@ -83,38 +87,38 @@ importers:
   packages/sui-groups:
     devDependencies:
       '@mysten/bcs':
-        specifier: ^2.0.2
-        version: 2.0.2
+        specifier: ^2.0.3
+        version: 2.0.3
       '@mysten/codegen':
-        specifier: ^0.8.2
-        version: 0.8.2
+        specifier: ^0.8.3
+        version: 0.8.3
       '@mysten/sui':
-        specifier: ^2.6.0
-        version: 2.6.0(typescript@5.9.3)
+        specifier: ^2.13.2
+        version: 2.13.2(typescript@5.9.3)
       testcontainers:
-        specifier: ^11.12.0
-        version: 11.12.0
+        specifier: ^11.13.0
+        version: 11.13.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
         specifier: ^4.0.18
-        version: 4.0.18(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.2)
+        version: 4.0.18(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.3)
 
   packages/sui-stack-messaging:
     devDependencies:
       '@mysten/bcs':
-        specifier: ^2.0.2
-        version: 2.0.2
+        specifier: ^2.0.3
+        version: 2.0.3
       '@mysten/codegen':
-        specifier: ^0.8.2
-        version: 0.8.2
+        specifier: ^0.8.3
+        version: 0.8.3
       '@mysten/seal':
-        specifier: ^1.1.0
-        version: 1.1.0(@mysten/sui@2.6.0(typescript@5.9.3))
+        specifier: ^1.1.1
+        version: 1.1.1(@mysten/sui@2.13.2(typescript@5.9.3))
       '@mysten/sui':
-        specifier: ^2.6.0
-        version: 2.6.0(typescript@5.9.3)
+        specifier: ^2.13.2
+        version: 2.13.2(typescript@5.9.3)
       '@mysten/sui-groups':
         specifier: workspace:*
         version: link:../sui-groups
@@ -122,14 +126,14 @@ importers:
         specifier: ^25.0.3
         version: 25.0.9
       testcontainers:
-        specifier: ^11.12.0
-        version: 11.12.0
+        specifier: ^11.13.0
+        version: 11.13.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
         specifier: ^4.0.18
-        version: 4.0.18(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.2)
+        version: 4.0.18(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.3)
 
 packages:
 
@@ -548,20 +552,20 @@ packages:
     resolution: {integrity: sha512-0FOIepYR4ugPYaHwK7hDeHDkfPOBVvayt9QpvRbi2LT/h2b0GaE/gM9Gag7fsnyYyNaTZ2IGyOuVg07IYepvYQ==}
     engines: {node: '>=20.0.0'}
 
-  '@mysten/bcs@2.0.2':
-    resolution: {integrity: sha512-c/nVRPJEV1fRZdKXhysVsy/yCPdiFt7jn6A4/7W2LH1ZPSVPzRkxtLY362D0zaLuBnyT5Y9d9nFLm3ixI8Goug==}
+  '@mysten/bcs@2.0.3':
+    resolution: {integrity: sha512-dwcaL4HNAsEGpU3hKUAsXgCZp9l6++e2A3THpzoYZ8e7bsy4XH1V0dXD5dIzgNcVZiZfb6ZnDMG+gdF6+1WOQA==}
 
-  '@mysten/codegen@0.8.2':
-    resolution: {integrity: sha512-x/m7ony8Cuzph33LUv3Rce86ev+HUDuyjEW7QMyrenoE6oHIvMHtkjxBtVR8ia1gPCYxTCkwRzelHqC6shMr4g==}
+  '@mysten/codegen@0.8.3':
+    resolution: {integrity: sha512-GckdrDC/HMjd49eBs5DH/CXKALT+9AWplGCFkb4DbqM45qDp/RPmZO10hPiff+RBgA+7wiTT/xMC/1Whx8guxw==}
     hasBin: true
 
-  '@mysten/seal@1.1.0':
-    resolution: {integrity: sha512-EXNBRCApmfhI2KPnYIUI8AxYzg/RAv49yzZZ1BX0CzAIKeXUfqd1Bj1sK7/VNem2/gPaYJYRFsUfVvEZXIp1lw==}
+  '@mysten/seal@1.1.1':
+    resolution: {integrity: sha512-OGxEDmEuXQAzxJKz3ap1dkRSf5fD/iKpz/J8+wZlPbeSok2fVt3KPaCZngjrvqqVRn5lmQomNpzXQCKo929A3w==}
     peerDependencies:
-      '@mysten/sui': ^2.5.0
+      '@mysten/sui': ^2.8.0
 
-  '@mysten/sui@2.6.0':
-    resolution: {integrity: sha512-Dp3z7mDuUCXGgldQ3/AtC1iDiK48XTuAi//fPrHdxEaMl+f5VLjbYtB+mlKNC1SVYLKOUjTeF/RA9qfEBY++pA==}
+  '@mysten/sui@2.13.2':
+    resolution: {integrity: sha512-M/H2CZJQyLyi0vvCJZ6rRzItJCsnh66v1OTI2VoBad2lau/BTuUKOEPjRpfU4YlVJcGR4h+RLCjDXV4ACuRKSA==}
     engines: {node: '>=22'}
 
   '@mysten/utils@0.3.1':
@@ -966,8 +970,8 @@ packages:
   '@stricli/core@1.2.5':
     resolution: {integrity: sha512-+afyztQW7fwWkqmU2WQZbdc3LjnZThWYdtE0l+hykZ1Rvy7YGxZSvsVCS/wZ/2BNv117pQ9TU1GZZRIcPnB4tw==}
 
-  '@testcontainers/postgresql@11.12.0':
-    resolution: {integrity: sha512-w4ZK0H+WIYBUBk57H9wCSxPMSMZUNsFpx2MZAX4iru0Aevz9HFWDfAhFLAu+/SwsHtEJUD7XfWUDlqBGC3OF0Q==}
+  '@testcontainers/postgresql@11.13.0':
+    resolution: {integrity: sha512-Y+HLf+IEu9+h3MgxRhnFunw9ldk3jxN2PO6zyejN5AiDd1aSeBQ7hfpc/4MlMm65St2DdLGf39oE/vdW1+hc/Q==}
 
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
@@ -1165,8 +1169,8 @@ packages:
   bl@4.1.0:
     resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==}
 
-  brace-expansion@2.0.2:
-    resolution: {integrity: sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ==}
+  brace-expansion@2.0.3:
+    resolution: {integrity: sha512-MCV/fYJEbqx68aE58kv2cA/kiky1G8vux3OR6/jbS+jIMe/6fJWa0DTzJU7dqijOWYwHi1t29FlfYI9uytqlpA==}
 
   braces@3.0.3:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
@@ -1300,8 +1304,8 @@ packages:
     resolution: {integrity: sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==}
     engines: {node: '>=8'}
 
-  docker-compose@1.3.1:
-    resolution: {integrity: sha512-rF0wH69G3CCcmkN9J1RVMQBaKe8o77LT/3XmqcLIltWWVxcWAzp2TnO7wS3n/umZHN3/EVrlT3exSBMal+Ou1w==}
+  docker-compose@1.3.3:
+    resolution: {integrity: sha512-LzcZ6Dk+Ps5SbLZ4iqAcagzYFZ+bBWQ52uzUNfORNkXyash2EjHZI4REf1ccG19emroS0iWElfQN8RQJ8HOIIg==}
     engines: {node: '>= 6.0.0'}
 
   docker-modem@5.0.6:
@@ -1405,7 +1409,7 @@ packages:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
     peerDependencies:
-      picomatch: ^3 || ^4
+      picomatch: ^4.0.4
     peerDependenciesMeta:
       picomatch:
         optional: true
@@ -1754,12 +1758,12 @@ packages:
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
-  picomatch@2.3.1:
-    resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
+  picomatch@2.3.2:
+    resolution: {integrity: sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA==}
     engines: {node: '>=8.6'}
 
-  picomatch@4.0.3:
-    resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
+  picomatch@4.0.4:
+    resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
     engines: {node: '>=12'}
 
   pify@4.0.1:
@@ -2072,8 +2076,8 @@ packages:
   tar-fs@2.1.4:
     resolution: {integrity: sha512-mDAjwmZdh7LTT6pNleZ05Yt65HC3E+NiQzl672vQG38jIrehtJk/J3mNwIg+vShQPcLF/LV7CMnDW6vjj6sfYQ==}
 
-  tar-fs@3.1.1:
-    resolution: {integrity: sha512-LZA0oaPOc2fVo82Txf3gw+AkEd38szODlptMYejQUhndHMLQ9M059uXR+AfS7DNo0NpINvSqDsvyaCrBVkptWg==}
+  tar-fs@3.1.2:
+    resolution: {integrity: sha512-QGxxTxxyleAdyM3kpFs14ymbYmNFrfY+pHj7Z8FgtbZ7w2//VAgLMac7sT6nRpIHjppXO2AwwEOg0bPFVRcmXw==}
 
   tar-stream@2.2.0:
     resolution: {integrity: sha512-ujeqbceABgwMZxEJnk2HDY2DlnUZ+9oEcb1KzTVfYHio0UE6dG71n60d8D2I4qNvleWrrXpmjpt7vZeF1LnMZQ==}
@@ -2086,8 +2090,8 @@ packages:
     resolution: {integrity: sha512-wK0Ri4fOGjv/XPy8SBHZChl8CM7uMc5VML7SqiQ0zG7+J5Vr+RMQDoHa2CNT6KHUnTGIXH34UDMkPzAUyapBZg==}
     engines: {node: '>=8'}
 
-  testcontainers@11.12.0:
-    resolution: {integrity: sha512-VWtH+UQejVYYvb53ohEZRbx2naxyDvwO9lQ6A0VgmVE2Oh8r9EF09I+BfmrXpd9N9ntpzhao9di2yNwibSz5KA==}
+  testcontainers@11.13.0:
+    resolution: {integrity: sha512-fzTvgOtd6U/esOzgmDatJh79OSK0tU6vjDOJ3B6ICrrJf0dqCWtFdpOr6f/g/KixMxKDTDbszmZYjSORJXsVCQ==}
 
   text-decoder@1.2.3:
     resolution: {integrity: sha512-3/o9z3X0X0fTupwsYvR03pJ/DjWuqqrfwBgTQzdWDiQSm9KitAyz/9WqsT2JQW7KV2m+bC2ol/zqpW37NHxLaA==}
@@ -2206,8 +2210,8 @@ packages:
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
-  undici@7.24.2:
-    resolution: {integrity: sha512-P9J1HWYV/ajFr8uCqk5QixwiRKmB1wOamgS0e+o2Z4A44Ej2+thFVRLG/eA7qprx88XXhnV5Bl8LHXTURpzB3Q==}
+  undici@7.24.6:
+    resolution: {integrity: sha512-Xi4agocCbRzt0yYMZGMA6ApD7gvtUFaxm4ZmeacWI4cZxaF6C+8I8QfofC20NAePiB/IcvZmzkJ7XPa471AEtA==}
     engines: {node: '>=20.18.1'}
 
   universalify@0.1.2:
@@ -2258,7 +2262,7 @@ packages:
       sugarss: ^5.0.0
       terser: ^5.16.0
       tsx: ^4.8.1
-      yaml: ^2.4.2
+      yaml: ^2.8.3
     peerDependenciesMeta:
       '@types/node':
         optional: true
@@ -2342,8 +2346,8 @@ packages:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
     engines: {node: '>=10'}
 
-  yaml@2.8.2:
-    resolution: {integrity: sha512-mplynKqc1C2hTVYxd0PU2xQAc22TI1vShAYGksCCfxbn/dFwnHTNi1bvYsBTkhdUNtGIf5xNOg938rrSSYvS9A==}
+  yaml@2.8.3:
+    resolution: {integrity: sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg==}
     engines: {node: '>= 14.6'}
     hasBin: true
 
@@ -2823,15 +2827,15 @@ snapshots:
       js-yaml: 4.1.1
       tinyglobby: 0.2.15
 
-  '@mysten/bcs@2.0.2':
+  '@mysten/bcs@2.0.3':
     dependencies:
       '@mysten/utils': 0.3.1
       '@scure/base': 2.0.0
 
-  '@mysten/codegen@0.8.2':
+  '@mysten/codegen@0.8.3':
     dependencies:
-      '@mysten/bcs': 2.0.2
-      '@mysten/sui': 2.6.0(typescript@5.9.3)
+      '@mysten/bcs': 2.0.3
+      '@mysten/sui': 2.13.2(typescript@5.9.3)
       '@stricli/auto-complete': 1.2.5
       '@stricli/core': 1.2.5
       '@types/node': 25.0.9
@@ -2844,17 +2848,17 @@ snapshots:
       - '@gql.tada/svelte-support'
       - '@gql.tada/vue-support'
 
-  '@mysten/seal@1.1.0(@mysten/sui@2.6.0(typescript@5.9.3))':
+  '@mysten/seal@1.1.1(@mysten/sui@2.13.2(typescript@5.9.3))':
     dependencies:
-      '@mysten/bcs': 2.0.2
-      '@mysten/sui': 2.6.0(typescript@5.9.3)
+      '@mysten/bcs': 2.0.3
+      '@mysten/sui': 2.13.2(typescript@5.9.3)
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
 
-  '@mysten/sui@2.6.0(typescript@5.9.3)':
+  '@mysten/sui@2.13.2(typescript@5.9.3)':
     dependencies:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.12.0)
-      '@mysten/bcs': 2.0.2
+      '@mysten/bcs': 2.0.3
       '@mysten/utils': 0.3.1
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
@@ -3138,9 +3142,9 @@ snapshots:
 
   '@stricli/core@1.2.5': {}
 
-  '@testcontainers/postgresql@11.12.0':
+  '@testcontainers/postgresql@11.13.0':
     dependencies:
-      testcontainers: 11.12.0
+      testcontainers: 11.13.0
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
@@ -3206,13 +3210,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.18(vite@7.3.1(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.2))':
+  '@vitest/mocker@4.0.18(vite@7.3.1(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.3))':
     dependencies:
       '@vitest/spy': 4.0.18
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.3.1(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.2)
+      vite: 7.3.1(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.3)
 
   '@vitest/pretty-format@4.0.18':
     dependencies:
@@ -3360,7 +3364,7 @@ snapshots:
       inherits: 2.0.4
       readable-stream: 3.6.2
 
-  brace-expansion@2.0.2:
+  brace-expansion@2.0.3:
     dependencies:
       balanced-match: 1.0.2
 
@@ -3484,9 +3488,9 @@ snapshots:
     dependencies:
       path-type: 4.0.0
 
-  docker-compose@1.3.1:
+  docker-compose@1.3.3:
     dependencies:
-      yaml: 2.8.2
+      yaml: 2.8.3
 
   docker-modem@5.0.6:
     dependencies:
@@ -3607,9 +3611,9 @@ snapshots:
     dependencies:
       reusify: 1.1.0
 
-  fdir@6.5.0(picomatch@4.0.3):
+  fdir@6.5.0(picomatch@4.0.4):
     optionalDependencies:
-      picomatch: 4.0.3
+      picomatch: 4.0.4
 
   fill-range@7.1.1:
     dependencies:
@@ -3797,15 +3801,15 @@ snapshots:
   micromatch@4.0.8:
     dependencies:
       braces: 3.0.3
-      picomatch: 2.3.1
+      picomatch: 2.3.2
 
   minimatch@5.1.9:
     dependencies:
-      brace-expansion: 2.0.2
+      brace-expansion: 2.0.3
 
   minimatch@9.0.9:
     dependencies:
-      brace-expansion: 2.0.2
+      brace-expansion: 2.0.3
 
   minimist@1.2.8: {}
 
@@ -3916,9 +3920,9 @@ snapshots:
 
   picocolors@1.1.1: {}
 
-  picomatch@2.3.1: {}
+  picomatch@2.3.2: {}
 
-  picomatch@4.0.3: {}
+  picomatch@4.0.4: {}
 
   pify@4.0.1: {}
 
@@ -4233,7 +4237,7 @@ snapshots:
       pump: 3.0.3
       tar-stream: 2.2.0
 
-  tar-fs@3.1.1:
+  tar-fs@3.1.2:
     dependencies:
       pump: 3.0.3
       tar-stream: 3.1.7
@@ -4264,7 +4268,7 @@ snapshots:
 
   term-size@2.2.1: {}
 
-  testcontainers@11.12.0:
+  testcontainers@11.13.0:
     dependencies:
       '@balena/dockerignore': 1.0.2
       '@types/dockerode': 4.0.1
@@ -4272,15 +4276,15 @@ snapshots:
       async-lock: 1.4.1
       byline: 5.0.0
       debug: 4.4.3
-      docker-compose: 1.3.1
+      docker-compose: 1.3.3
       dockerode: 4.0.9
       get-port: 7.1.0
       proper-lockfile: 4.1.2
       properties-reader: 3.0.1
       ssh-remote-port-forward: 1.0.4
-      tar-fs: 3.1.1
+      tar-fs: 3.1.2
       tmp: 0.2.5
-      undici: 7.24.2
+      undici: 7.24.6
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
@@ -4299,8 +4303,8 @@ snapshots:
 
   tinyglobby@0.2.15:
     dependencies:
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
+      fdir: 6.5.0(picomatch@4.0.4)
+      picomatch: 4.0.4
 
   tinyrainbow@3.0.3: {}
 
@@ -4323,7 +4327,7 @@ snapshots:
       hookable: 6.0.1
       import-without-cache: 0.2.5
       obug: 2.1.1
-      picomatch: 4.0.3
+      picomatch: 4.0.4
       rolldown: 1.0.0-rc.1
       rolldown-plugin-dts: 0.21.8(rolldown@1.0.0-rc.1)(typescript@5.9.3)
       semver: 7.7.3
@@ -4390,7 +4394,7 @@ snapshots:
 
   undici-types@7.16.0: {}
 
-  undici@7.24.2: {}
+  undici@7.24.6: {}
 
   universalify@0.1.2: {}
 
@@ -4408,11 +4412,11 @@ snapshots:
 
   validate-npm-package-name@6.0.2: {}
 
-  vite@7.3.1(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.2):
+  vite@7.3.1(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.3):
     dependencies:
       esbuild: 0.27.2
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
+      fdir: 6.5.0(picomatch@4.0.4)
+      picomatch: 4.0.4
       postcss: 8.5.6
       rollup: 4.59.0
       tinyglobby: 0.2.15
@@ -4420,12 +4424,12 @@ snapshots:
       '@types/node': 25.0.9
       fsevents: 2.3.3
       tsx: 4.21.0
-      yaml: 2.8.2
+      yaml: 2.8.3
 
-  vitest@4.0.18(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.2):
+  vitest@4.0.18(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.3):
     dependencies:
       '@vitest/expect': 4.0.18
-      '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.2))
+      '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.3))
       '@vitest/pretty-format': 4.0.18
       '@vitest/runner': 4.0.18
       '@vitest/snapshot': 4.0.18
@@ -4436,13 +4440,13 @@ snapshots:
       magic-string: 0.30.21
       obug: 2.1.1
       pathe: 2.0.3
-      picomatch: 4.0.3
+      picomatch: 4.0.4
       std-env: 3.10.0
       tinybench: 2.9.0
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.3.1(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.2)
+      vite: 7.3.1(@types/node@25.0.9)(tsx@4.21.0)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.0.9
@@ -4484,7 +4488,7 @@ snapshots:
 
   y18n@5.0.8: {}
 
-  yaml@2.8.2: {}
+  yaml@2.8.3: {}
 
   yargs-parser@21.1.1: {}
 
