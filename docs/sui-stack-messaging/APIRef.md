@@ -474,16 +474,16 @@ Return the current (latest) key version number.
 
 **Returns:** `bigint`
 
-### `groupMetadata(options)`
+### `groupsMetadata(options)`
 
-Return the group's on-chain metadata (name, uuid, creator, data map). Results are cached; pass `refresh: true` to bypass.
+Return multiple groups' on-chain metadata (name, uuid, creator, data map). Results are cached; pass `refresh: true` to bypass.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `groupId` | `string` | PermissionedGroup object ID |
+| `groupIds` | `string[]` | PermissionedGroup object IDs |
 | `refresh` | `boolean` | Bypass cache (optional) |
 
-**Returns:** `ParsedMetadata`: `{ name: string; uuid: string; creator: string; data: Map<string, string> }`
+**Returns:** `Record<string, ParsedMetadata>` where each key is a group ID and value is `{ name: string; uuid: string; creator: string; data: Map<string, string> }`
 
 ---
 

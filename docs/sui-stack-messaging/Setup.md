@@ -243,7 +243,7 @@ The `client.messaging` object exposes several sub-modules:
 | ------------ | ------------------------------------------ | --------------------------------------------------------- |
 | `call`       | PTB thunks: composable transaction steps   | `tx.add(client.messaging.call.createAndShareGroup(opts))` |
 | `tx`         | Full transactions: ready to sign           | `client.messaging.tx.createAndShareGroup(opts)`           |
-| `view`       | Read-only queries (no gas)                 | `client.messaging.view.groupMetadata(opts)`               |
+| `view`       | Read-only queries (no gas)                 | `client.messaging.view.groupsMetadata(opts)`              |
 | `bcs`        | BCS type definitions for parsing           | `client.messaging.bcs.EncryptionHistory`                  |
 | `derive`     | Deterministic address derivation           | `client.messaging.derive.groupId({ uuid })`               |
 | `encryption` | Low-level encrypt/decrypt                  | `client.messaging.encryption.encrypt(opts)`               |

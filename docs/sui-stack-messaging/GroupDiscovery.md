@@ -68,7 +68,7 @@ The reference chat-app implements this pattern in [useGroupDiscovery.ts](../../c
 
 **Limitations:**
 - Client-side filtering: GraphQL returns all events of the given type, and the client filters by address. For applications with many groups, this requires paginating through a large volume of events.
-- No UUID in membership events: `MemberAdded` and `MemberRemoved` contain `group_id` and `member`, but not the UUID. To recover the UUID for a discovered group, make a follow-up call to `client.messaging.view.groupMetadata({ groupId })`.
+- No UUID in membership events: `MemberAdded` and `MemberRemoved` contain `group_id` and `member`, but not the UUID. To recover the UUID for discovered groups, make a follow-up call to `client.messaging.view.groupsMetadata({ groupIds })`.
 - Eventual consistency: there can be a short delay between a membership change and the event appearing in GraphQL.
 
 ### Custom Indexer (recommended for production)
@@ -124,7 +124,7 @@ Using UUIDs is simpler because the SDK derives both IDs from the UUID without RP
 
 The UUID is stored on-chain in two places:
 - `EncryptionHistory.uuid` field
-- `Metadata.uuid` field (readable via `client.messaging.view.groupMetadata()`)
+- `Metadata.uuid` field (readable via `client.messaging.view.groupsMetadata()`)
 
 It is also emitted in the `EncryptionHistoryCreated` event at group creation time.
 
@@ -136,12 +136,13 @@ However, you need to track UUIDs on the client side to avoid extra RPC calls on 
 
 **Extend the relayer:** Store `{ uuid, groupId, name }` tuples. Clients POST on group creation and GET on new device setup.
 
-> **Note:** If you discover a group via events but don't have the UUID, you can always recover it from on-chain state:
+> **Note:** If you discover groups via events but don't have their UUIDs, you can always recover them from on-chain state:
 > ```typescript
-> const metadata = await client.messaging.view.groupMetadata({ groupId });
+> const metadataMap = await client.messaging.view.groupsMetadata({ groupIds: [groupId] });
+> const metadata = metadataMap[groupId];
 > // metadata.uuid, metadata.name, metadata.creator, metadata.data
 > ```
-> This requires one RPC call per group and does not need any external infrastructure.
+> This batches into a single RPC call for multiple groups.
 
 ## SDK View Helpers
 
@@ -165,7 +166,8 @@ const { members, hasNextPage, cursor } = await client.groups.view.getMembers({
 });
 
 // Get group metadata (name, UUID, creator, custom data)
-const metadata = await client.messaging.view.groupMetadata({ groupId });
+const metadataMap = await client.messaging.view.groupsMetadata({ groupIds: [groupId] });
+const metadata = metadataMap[groupId];
 ```
 
 See [API Reference](./APIRef.md) for the full list of view methods.
