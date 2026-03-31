@@ -40,8 +40,8 @@ pnpm add @mysten/sui-stack-messaging @mysten/sui-groups
 ## Build from Source
 
 ```bash
-git clone https://github.com/MystenLabs/groups-sdk.git
-cd groups-sdk/ts-sdks
+git clone https://github.com/MystenLabs/sui-stack-messaging.git
+cd sui-stack-messaging/ts-sdks
 pnpm install
 pnpm build
 ```
