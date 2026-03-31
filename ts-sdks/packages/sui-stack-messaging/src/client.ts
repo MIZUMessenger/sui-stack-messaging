@@ -743,23 +743,6 @@ export class SuiStackMessagingClient<TApproveContext = void> {
 	// === Top-Level Imperative Methods ===
 
 	/**
-	 * Creates a new messaging group.
-	 * Returns a tuple of (PermissionedGroup<Messaging>, EncryptionHistory).
-	 * The objects are NOT shared - use createAndShareGroup for shared groups.
-	 */
-	async createGroup({
-		signer,
-		transaction,
-		...callOptions
-	}: CreateGroupOptions & { transaction?: Transaction }) {
-		return this.#executeTransaction(
-			this.tx.createGroup({ transaction, ...callOptions }),
-			signer,
-			'create group',
-		);
-	}
-
-	/**
 	 * Creates a new messaging group and shares both objects.
 	 * The transaction sender automatically becomes the creator with all permissions.
 	 */
