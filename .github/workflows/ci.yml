@@ -25,7 +25,7 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/MystenLabs/suiup/main/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           export PATH="$HOME/.local/bin:$PATH"
-          suiup install sui -y
+          suiup install sui@testnet-v1.68.1 -y
 
       - name: Build
         run: sui move build
