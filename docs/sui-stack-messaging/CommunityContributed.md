@@ -10,7 +10,7 @@ Community-built tools, integrations, and examples for Sui Stack Messaging.
 
 ## Relayers
 
-- [**Nautilus Messaging Relayer**](https://github.com/Ashwin-3cS/nautilus-messaging-relayer) — Nitro-enclave-ready template for running the Sui Stack Messaging relayer under [Nautilus](https://docs.sui.io/guides/developer/nautilus/).
+- [**Nautilus Messaging Relayer**](https://github.com/Ashwin-3cS/nautilus-messaging-relayer) — Nitro-enclave-ready template for running the Sui Stack Messaging relayer using [Nautilus](https://docs.sui.io/guides/developer/nautilus/).
 
 ---
 

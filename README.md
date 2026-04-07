@@ -31,7 +31,7 @@
 - [Group Discovery](docs/sui-stack-messaging/GroupDiscovery.md)
 - [Extending](docs/sui-stack-messaging/Extending.md)
 - [Testing](docs/sui-stack-messaging/Testing.md)
-- [Community Contributed](docs/sui-stack-messaging/CommunityContributed.md)
+- [Community Contributed Tools](docs/sui-stack-messaging/CommunityContributed.md)
 
 ---
 

@@ -9,7 +9,7 @@
 - [Smart Contracts](#smart-contracts)
 - [Relayer](#relayer)
 
-**Documentation:** [Home](../../README.md) | [Setup](./Setup.md) | [Examples](./Examples.md) | [API Reference](./APIRef.md) | [Encryption](./Encryption.md) | [Security](./Security.md) | [Relayer](./Relayer.md) | [Attachments](./Attachments.md) | [Archive & Recovery](./ArchiveRecovery.md) | [Group Discovery](./GroupDiscovery.md) | [Extending](./Extending.md) | [Testing](./Testing.md) | [Community Contributed](./CommunityContributed.md)
+**Documentation:** [Home](../../README.md) | [Setup](./Setup.md) | [Examples](./Examples.md) | [API Reference](./APIRef.md) | [Encryption](./Encryption.md) | [Security](./Security.md) | [Relayer](./Relayer.md) | [Attachments](./Attachments.md) | [Archive & Recovery](./ArchiveRecovery.md) | [Group Discovery](./GroupDiscovery.md) | [Extending](./Extending.md) | [Testing](./Testing.md) | [Community Contributed Tools](./CommunityContributed.md)
 
 ---
 
