@@ -6,7 +6,7 @@
 
 Community-built tools, integrations, and examples for Sui Stack Messaging.
 
-> These projects are maintained by their respective authors. Mysten Labs does not review or guarantee their correctness.
+> These tools are developed and maintained by Sui community members. Do your own due diligence for security, performance, and other guarantees if you decide to use these in a production environment.
 
 ## Relayers
 
