@@ -13,6 +13,7 @@
     "@mysten/bcs": "^2.0.3",
     "@mysten/dapp-kit": "^1.0.4",
     "@mysten/sui-stack-messaging": "link:../ts-sdks/packages/sui-stack-messaging",
+    "@mysten/enoki": "^1.0.4",
     "@mysten/sui-groups": "^0.0.1",
     "@mysten/seal": "^1.1.1",
     "@mysten/sui": "^2.13.2",

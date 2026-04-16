@@ -5,6 +5,7 @@ import { SuiClientProvider, WalletProvider } from '@mysten/dapp-kit';
 import { networkConfig } from './lib/network-config';
 import { MessagingClientProvider } from './contexts/MessagingClientContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { RegisterEnokiWallets } from './components/enoki/RegisterEnokiWallets';
 import App from './App';
 import '@mysten/dapp-kit/dist/index.css';
 import './index.css';
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
         <WalletProvider autoConnect>
+          <RegisterEnokiWallets />
           <MessagingClientProvider>
             <ErrorBoundary>
               <App />
