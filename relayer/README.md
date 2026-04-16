@@ -51,7 +51,7 @@ All authenticated requests must include:
 
 | Header | Description |
 |--------|-------------|
-| `X-Signature` | Hex-encoded 64-byte raw signature |
+| `X-Signature` | Hex-encoded signature bytes. Keypair schemes use raw 64-byte signatures; zkLogin uses the serialized authenticator bytes |
 | `X-Public-Key` | Hex-encoded bytes: `flag_byte \|\| public_key_bytes` (first byte identifies the scheme) |
 
 Bodyless requests (GET, DELETE) also require:
@@ -68,11 +68,11 @@ When a request arrives, the auth middleware runs the following steps in order. I
 
 1. **Validate timestamp** — The timestamp (from body or header) must be within the configured TTL window (default 5 minutes). This prevents replay attacks where an attacker resubmits a previously captured request.
 
-2. **Decode public key** — The `X-Public-Key` header is hex-decoded. The first byte is the scheme flag (`0x00` = Ed25519, `0x01` = Secp256k1, `0x02` = Secp256r1). The remaining bytes are the raw public key. If the flag is unrecognized or the key length doesn't match the scheme, the request is rejected.
+2. **Decode public key** — The `X-Public-Key` header is hex-decoded. The first byte is the scheme flag (`0x00` = Ed25519, `0x01` = Secp256k1, `0x02` = Secp256r1, `0x05` = zkLogin). The remaining bytes are the raw public key or public identifier. If the flag is unrecognized or the bytes do not match the scheme format, the request is rejected.
 
-3. **Decode signature** — The `X-Signature` header is hex-decoded into 64 raw signature bytes.
+3. **Decode signature** — The `X-Signature` header is hex-decoded into scheme-specific signature bytes.
 
-4. **Verify signature** — The signature is verified against the signed message using the public key and the detected scheme. This uses `sui_crypto`'s `UserSignatureVerifier` with `PersonalMessage` wrapping (the same format Sui wallets use). If the signature doesn't match, the request is rejected.
+4. **Verify signature** — The signature is verified against the signed message using the public key and the detected scheme. Keypair schemes use `sui_crypto`'s `UserSignatureVerifier` with `PersonalMessage` wrapping. zkLogin signatures are verified against the Sui GraphQL API. If the signature doesn't match, the request is rejected.
 
 5. **Derive Sui address** — The sender's Sui address is derived from the public key by computing `Blake2b-256(flag_byte || public_key_bytes)`. This is how Sui maps public keys to addresses.
 
@@ -468,6 +468,7 @@ All configuration is loaded from environment variables. The relayer also support
 | `MEMBERSHIP_STORE_TYPE` | `memory` | No | Membership cache backend — currently only `memory` is implemented |
 | `SUI_RPC_URL` | — | **Yes** | Sui fullnode gRPC URL for checkpoint subscription (e.g., `https://fullnode.testnet.sui.io:443`) |
 | `GROUPS_PACKAGE_ID` | — | **Yes** | Groups SDK package ID deployed on Sui (e.g., `0xabc123...`) |
+| `SUI_GRAPHQL_URL` | — | No | Sui GraphQL endpoint used for zkLogin signature verification (required only for zkLogin auth, e.g., `https://graphql.testnet.sui.io/graphql`) |
 | `WALRUS_PUBLISHER_URL` | `https://publisher.walrus-testnet.walrus.space` | No | Walrus publisher endpoint for storing blobs/quilts |
 | `WALRUS_AGGREGATOR_URL` | `https://aggregator.walrus-testnet.walrus.space` | No | Walrus aggregator endpoint for reading blobs |
 | `WALRUS_STORAGE_EPOCHS` | `5` | No | Number of Walrus epochs to persist stored data |
@@ -523,6 +524,7 @@ src/
 # Create a .env file with required variables
 cat > .env << 'EOF'
 SUI_RPC_URL=https://fullnode.testnet.sui.io:443
+SUI_GRAPHQL_URL=https://graphql.testnet.sui.io/graphql
 GROUPS_PACKAGE_ID=0x...your_package_id...
 EOF
 
@@ -589,6 +591,7 @@ docker run -p 3000:3000 --env-file .env messaging-relayer
 # Or pass env vars directly
 docker run -p 3000:3000 \
   -e SUI_RPC_URL=https://fullnode.testnet.sui.io:443 \
+  -e SUI_GRAPHQL_URL=https://graphql.testnet.sui.io/graphql \
   -e GROUPS_PACKAGE_ID=0x... \
   messaging-relayer
 ```

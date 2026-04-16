@@ -54,7 +54,9 @@ pub async fn create_message(
         &req.nonce,
         req.key_version,
         &auth,
-    )?;
+        &state.config,
+    )
+    .await?;
 
     let attachments = decode_attachments(req.attachments)?;
 
@@ -187,7 +189,9 @@ pub async fn update_message(
         &req.nonce,
         req.key_version,
         &auth,
-    )?;
+        &state.config,
+    )
+    .await?;
 
     let attachments = decode_attachments(req.attachments)?;
 
@@ -241,22 +245,17 @@ pub async fn delete_message(
 
 /// Verifies the per-message signature over canonical content:
 /// "{group_id}:{encrypted_text}:{nonce}:{key_version}"
-fn verify_message_signature(
+async fn verify_message_signature(
     signature_hex: &str,
     group_id: &str,
     encrypted_text: &str,
     nonce: &str,
     key_version: i64,
     auth: &AuthContext,
+    config: &crate::config::Config,
 ) -> Result<Vec<u8>, ApiError> {
     let signature_bytes = hex::decode(signature_hex)
         .map_err(|e| ApiError::BadRequest(format!("Invalid hex in message_signature: {}", e)))?;
-    if signature_bytes.len() != 64 {
-        return Err(ApiError::BadRequest(format!(
-            "message_signature must be exactly 64 bytes, got {}",
-            signature_bytes.len()
-        )));
-    }
 
     // Canonical message: "group_id:encrypted_text:nonce:key_version"
     let canonical = format!("{}:{}:{}:{}", group_id, encrypted_text, nonce, key_version);
@@ -266,7 +265,10 @@ fn verify_message_signature(
         &signature_bytes,
         &auth.public_key,
         auth.scheme,
+        &auth.sender_address,
+        config,
     )
+    .await
     .map_err(|e| ApiError::BadRequest(format!("Message signature verification failed: {}", e)))?;
 
     Ok(signature_bytes)

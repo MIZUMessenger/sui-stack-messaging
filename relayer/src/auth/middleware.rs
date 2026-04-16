@@ -7,13 +7,13 @@
 //!
 //! ## Auth Headers (all authenticated requests)
 //!
-//! - `X-Signature`: hex-encoded 64-byte raw signature
+//! - `X-Signature`: hex-encoded signature bytes
 //! - `X-Public-Key`: hex-encoded (flag_byte || public_key_bytes)
 //!
 //! ## Requests with a body (POST, PUT)
 //!
 //! Auth fields (`group_id`, `sender_address`, `timestamp`) are in the JSON body.
-//! The signed message is the raw request body bytes.
+//! The signed message is the raw request body bytes as a Sui personal message.
 //!
 //! ## Bodyless requests (GET, DELETE)
 //!
@@ -129,7 +129,7 @@ pub async fn auth_middleware(
         );
     }
 
-    // Extract scheme flag and determine signature scheme (Ed25519, Secp256k1, Secp256r1)
+    // Extract scheme flag and determine signature scheme.
     let scheme_flag = public_key_with_flag[0];
     let scheme = match SignatureScheme::from_flag(scheme_flag) {
         Some(s) => s,
@@ -147,16 +147,11 @@ pub async fn auth_middleware(
     // Public key bytes without the flag prefix
     let public_key_bytes = &public_key_with_flag[1..];
 
-    // Validate public key length matches the scheme
-    if public_key_bytes.len() != scheme.public_key_length() {
+    // Validate public key bytes or public identifier format for the scheme.
+    if let Err(e) = scheme.validate_public_key(public_key_bytes) {
         return auth_error_response(
             StatusCode::UNAUTHORIZED,
-            AuthError::InvalidPublicKeyFormat(format!(
-                "Expected {} bytes for {}, got {}",
-                scheme.public_key_length(),
-                scheme,
-                public_key_bytes.len()
-            )),
+            AuthError::InvalidPublicKeyFormat(e),
         );
     }
 
@@ -262,7 +257,16 @@ pub async fn auth_middleware(
     }
 
     // 8. Verify the signature against the signed message
-    if let Err(e) = verify_signature(&message_bytes, &signature_bytes, public_key_bytes, scheme) {
+    if let Err(e) = verify_signature(
+        &message_bytes,
+        &signature_bytes,
+        public_key_bytes,
+        scheme,
+        &sender_address,
+        &state.config,
+    )
+    .await
+    {
         tracing::warn!("Signature verification failed: {}", e);
         return auth_error_response(StatusCode::UNAUTHORIZED, e);
     }

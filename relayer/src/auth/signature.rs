@@ -1,16 +1,64 @@
-//! Signature verification and Sui address derivation
-//! Supports all three Sui signature schemes:
+//! Signature verification and Sui address derivation.
+//! The relayer verifies raw header signatures for keypair schemes and can
+//! derive addresses for additional schemes such as zkLogin.
 //! - Ed25519 (flag 0x00): 32-byte public key
 //! - Secp256k1 (flag 0x01): 33-byte compressed public key
 //! - Secp256r1 (flag 0x02): 33-byte compressed public key
+//! - ZkLogin (flag 0x05): variable-length public identifier
 
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use blake2::{digest::consts::U32, Blake2b, Digest};
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use sui_crypto::{SuiVerifier, UserSignatureVerifier};
 use sui_sdk_types::{PersonalMessage, UserSignature};
 
 use super::schemes::SignatureScheme;
 use super::types::AuthError;
+use crate::config::Config;
+
+const VERIFY_ZKLOGIN_SIGNATURE_QUERY: &str = r#"query verifyZkLoginSignature($bytes: Base64!, $signature: Base64!, $intentScope: ZkLoginIntentScope!, $author: SuiAddress!) {
+  verifyZkLoginSignature(bytes: $bytes, signature: $signature, intentScope: $intentScope, author: $author) {
+    success
+  }
+}"#;
+
+#[derive(Serialize)]
+struct VerifyZkLoginSignatureRequest<'a> {
+    query: &'static str,
+    variables: VerifyZkLoginSignatureVariables<'a>,
+}
+
+#[derive(Serialize)]
+struct VerifyZkLoginSignatureVariables<'a> {
+    bytes: String,
+    signature: String,
+    #[serde(rename = "intentScope")]
+    intent_scope: &'static str,
+    author: &'a str,
+}
+
+#[derive(Deserialize)]
+struct VerifyZkLoginSignatureResponse {
+    data: Option<VerifyZkLoginSignatureData>,
+    errors: Option<Vec<GraphqlError>>,
+}
+
+#[derive(Deserialize)]
+struct VerifyZkLoginSignatureData {
+    #[serde(rename = "verifyZkLoginSignature")]
+    verify_zklogin_signature: Option<ZkLoginVerifyResult>,
+}
+
+#[derive(Deserialize)]
+struct ZkLoginVerifyResult {
+    success: Option<bool>,
+}
+
+#[derive(Deserialize)]
+struct GraphqlError {
+    message: String,
+}
 
 /// Default TTL for request timestamps (5 minutes).
 #[allow(dead_code)]
@@ -33,31 +81,42 @@ pub fn validate_timestamp(timestamp: i64, ttl_seconds: i64) -> Result<(), AuthEr
     Ok(())
 }
 
-/// Verifies a signature against a message
-pub fn verify_signature(
+/// Verifies a signature against a message.
+pub async fn verify_signature(
     message: &[u8],
     signature_bytes: &[u8],
     public_key_bytes: &[u8],
     scheme: SignatureScheme,
+    author: &str,
+    config: &Config,
 ) -> Result<(), AuthError> {
-    if signature_bytes.len() != 64 {
+    if let Err(e) = scheme.validate_public_key(public_key_bytes) {
+        return Err(AuthError::InvalidPublicKeyFormat(e));
+    }
+
+    if scheme == SignatureScheme::ZkLogin {
+        return verify_zklogin_signature_via_graphql(message, signature_bytes, author, config)
+            .await;
+    }
+
+    if !scheme.supports_raw_signature_auth() {
+        return Err(AuthError::SignatureVerificationFailed(format!(
+            "{} is not supported by relayer raw header auth",
+            scheme
+        )));
+    }
+
+    let expected_sig_len = scheme.signature_length().expect("checked above");
+    if signature_bytes.len() != expected_sig_len {
         return Err(AuthError::InvalidSignatureFormat(format!(
-            "Expected 64 bytes, got {}",
+            "Expected {} bytes for {}, got {}",
+            expected_sig_len,
+            scheme,
             signature_bytes.len()
         )));
     }
 
-    let expected_len = scheme.public_key_length();
-    if public_key_bytes.len() != expected_len {
-        return Err(AuthError::InvalidPublicKeyFormat(format!(
-            "Expected {} bytes for {}, got {}",
-            expected_len,
-            scheme,
-            public_key_bytes.len()
-        )));
-    }
-
-    let mut serialized_sig = Vec::with_capacity(1 + 64 + expected_len);
+    let mut serialized_sig = Vec::with_capacity(1 + expected_sig_len + public_key_bytes.len());
     serialized_sig.push(scheme.flag());
     serialized_sig.extend_from_slice(signature_bytes);
     serialized_sig.extend_from_slice(public_key_bytes);
@@ -77,21 +136,102 @@ pub fn verify_signature(
     Ok(())
 }
 
+async fn verify_zklogin_signature_via_graphql(
+    message: &[u8],
+    signature_bytes: &[u8],
+    author: &str,
+    config: &Config,
+) -> Result<(), AuthError> {
+    let graphql_url = config.sui_graphql_url.as_deref().ok_or_else(|| {
+        AuthError::SignatureVerificationFailed(
+            "zkLogin verification requires SUI_GRAPHQL_URL to be configured".to_string(),
+        )
+    })?;
+
+    if signature_bytes.first() != Some(&SignatureScheme::ZkLogin.flag()) {
+        return Err(AuthError::InvalidSignatureFormat(
+            "Expected serialized zkLogin signature prefixed with 0x05".to_string(),
+        ));
+    }
+
+    let request = VerifyZkLoginSignatureRequest {
+        query: VERIFY_ZKLOGIN_SIGNATURE_QUERY,
+        variables: VerifyZkLoginSignatureVariables {
+            // GraphQL expects the ZkLoginIntentScope enum variant name.
+            bytes: STANDARD.encode(message),
+            signature: STANDARD.encode(signature_bytes),
+            intent_scope: "PERSONAL_MESSAGE",
+            author,
+        },
+    };
+
+    let response = reqwest::Client::new()
+        .post(graphql_url)
+        .json(&request)
+        .send()
+        .await
+        .map_err(|e| {
+            AuthError::SignatureVerificationFailed(format!("zkLogin GraphQL request failed: {}", e))
+        })?;
+
+    let status = response.status();
+    let response_body = response.text().await.map_err(|e| {
+        AuthError::SignatureVerificationFailed(format!(
+            "Failed to read zkLogin GraphQL response: {}",
+            e
+        ))
+    })?;
+
+    if !status.is_success() {
+        return Err(AuthError::SignatureVerificationFailed(format!(
+            "zkLogin GraphQL request failed: HTTP {} {}",
+            status.as_u16(),
+            response_body
+        )));
+    }
+
+    let response: VerifyZkLoginSignatureResponse =
+        serde_json::from_str(&response_body).map_err(|e| {
+            AuthError::SignatureVerificationFailed(format!(
+                "Failed to decode zkLogin GraphQL response: {}",
+                e
+            ))
+        })?;
+
+    if let Some(errors) = response.errors {
+        if !errors.is_empty() {
+            return Err(AuthError::SignatureVerificationFailed(
+                errors
+                    .into_iter()
+                    .map(|error| error.message)
+                    .collect::<Vec<_>>()
+                    .join("; "),
+            ));
+        }
+    }
+
+    if response
+        .data
+        .and_then(|data| data.verify_zklogin_signature)
+        .and_then(|result| result.success)
+        == Some(true)
+    {
+        return Ok(());
+    }
+
+    Err(AuthError::SignatureVerificationFailed(
+        "zkLogin GraphQL verification returned success=false".to_string(),
+    ))
+}
+
 /// Derives a Sui address from a public key and scheme.
 /// Uses Blake2b-256 hash of (flag || public_key).
 pub fn derive_sui_address(
     public_key_bytes: &[u8],
     scheme: SignatureScheme,
 ) -> Result<String, AuthError> {
-    // Validate public key length
-    let expected_len = scheme.public_key_length();
-    if public_key_bytes.len() != expected_len {
-        return Err(AuthError::InvalidPublicKeyFormat(format!(
-            "Expected {} bytes for {}, got {}",
-            expected_len,
-            scheme,
-            public_key_bytes.len()
-        )));
+    if let Err(e) = scheme.validate_public_key(public_key_bytes) {
+        return Err(AuthError::InvalidPublicKeyFormat(e));
     }
 
     // Build the hash input: flag || public_key
@@ -127,10 +267,14 @@ pub fn verify_address_matches_pubkey(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::Config;
+    use serde_json::json;
     use sui_crypto::{
         ed25519::Ed25519PrivateKey, secp256k1::Secp256k1PrivateKey, secp256r1::Secp256r1PrivateKey,
         SuiSigner,
     };
+    use wiremock::matchers::{body_string_contains, method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     /// Extract raw 64-byte signature from UserSignature bytes.
     /// Format: flag (1 byte) || signature (64 bytes) || public_key
@@ -139,8 +283,8 @@ mod tests {
     }
 
     /// Test Ed25519 signature verification with a real signature
-    #[test]
-    fn test_verify_signature_ed25519() {
+    #[tokio::test]
+    async fn test_verify_signature_ed25519() {
         let private_key_hex = "4ac9bd5399f7b41da4f00ec612c4e6521a1c756c41578ed5c15133f96ab9ea78";
         let public_key_hex = "dec9c24a98da1187e30a5824ca2ee1e91e956b7dd6970590651d7d46c5e2ed41";
 
@@ -164,13 +308,16 @@ mod tests {
             &signature_bytes,
             &public_key_bytes,
             SignatureScheme::Ed25519,
-        );
+            "0x0",
+            &Config::default(),
+        )
+        .await;
         assert!(result.is_ok(), "Ed25519 verification failed: {:?}", result);
     }
 
     /// Test Secp256k1 signature verification with a real signature
-    #[test]
-    fn test_verify_signature_secp256k1() {
+    #[tokio::test]
+    async fn test_verify_signature_secp256k1() {
         let private_key_hex = "6ae98ba75c281c5ea3fb80f06f5f1afd8a6b69ec2a02186c73c928d67c96cd4b";
 
         let private_key_bytes: [u8; 32] = hex::decode(private_key_hex).unwrap().try_into().unwrap();
@@ -193,7 +340,10 @@ mod tests {
             &signature_bytes,
             &public_key_bytes,
             SignatureScheme::Secp256k1,
-        );
+            "0x0",
+            &Config::default(),
+        )
+        .await;
         assert!(
             result.is_ok(),
             "Secp256k1 verification failed: {:?}",
@@ -202,8 +352,8 @@ mod tests {
     }
 
     /// Test Secp256r1 signature verification
-    #[test]
-    fn test_verify_signature_secp256r1() {
+    #[tokio::test]
+    async fn test_verify_signature_secp256r1() {
         let private_key_hex = "7e944e7562603f3a6a0d799ca760d9e113de997da5b6915f70716fb371efae90";
 
         let private_key_bytes: [u8; 32] = hex::decode(private_key_hex).unwrap().try_into().unwrap();
@@ -224,11 +374,77 @@ mod tests {
             &signature_bytes,
             &public_key_bytes,
             SignatureScheme::Secp256r1,
-        );
+            "0x0",
+            &Config::default(),
+        )
+        .await;
         assert!(
             result.is_ok(),
             "Secp256r1 verification failed: {:?}",
             result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_signature_zklogin_via_graphql() {
+        let mock_server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/"))
+            .and(body_string_contains("verifyZkLoginSignature"))
+            .and(body_string_contains("PERSONAL_MESSAGE"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "data": {
+                    "verifyZkLoginSignature": {
+                        "success": true
+                    }
+                }
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let mut config = Config::default();
+        config.sui_graphql_url = Some(mock_server.uri());
+
+        let mut public_key_bytes = vec![3];
+        public_key_bytes.extend_from_slice(b"iss");
+        public_key_bytes.extend_from_slice(&[0u8; 32]);
+
+        let signature_bytes = vec![SignatureScheme::ZkLogin.flag(), 0xAA, 0xBB, 0xCC];
+
+        let result = verify_signature(
+            b"test message",
+            &signature_bytes,
+            &public_key_bytes,
+            SignatureScheme::ZkLogin,
+            "0x123",
+            &config,
+        )
+        .await;
+
+        assert!(result.is_ok(), "zkLogin verification failed: {:?}", result);
+    }
+
+    #[tokio::test]
+    async fn test_verify_signature_zklogin_requires_graphql_url() {
+        let mut public_key_bytes = vec![3];
+        public_key_bytes.extend_from_slice(b"iss");
+        public_key_bytes.extend_from_slice(&[0u8; 32]);
+
+        let signature_bytes = vec![SignatureScheme::ZkLogin.flag(), 0xAA, 0xBB];
+
+        let result = verify_signature(
+            b"test message",
+            &signature_bytes,
+            &public_key_bytes,
+            SignatureScheme::ZkLogin,
+            "0x123",
+            &Config::default(),
+        )
+        .await;
+
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Signature verification failed: zkLogin verification requires SUI_GRAPHQL_URL to be configured"
         );
     }
 

@@ -122,7 +122,7 @@ Every authenticated request must include these headers:
 
 | Header | Description |
 |--------|-------------|
-| `X-Signature` | Hex-encoded 64-byte raw signature |
+| `X-Signature` | Hex-encoded signature bytes. Keypair schemes use raw 64-byte signatures; zkLogin uses the serialized authenticator bytes |
 | `X-Public-Key` | Hex-encoded (flag_byte \|\| public_key_bytes) |
 
 For POST/PUT (requests with a body), the body includes `group_id`, `sender_address`, and `timestamp`. The entire body is the signed message.

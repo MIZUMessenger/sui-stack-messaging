@@ -29,6 +29,10 @@ pub struct Config {
     /// Groups SDK package ID on Sui
     pub groups_package_id: String,
 
+    /// Sui GraphQL URL used for zkLogin signature verification.
+    /// Optional unless zkLogin authentication is enabled.
+    pub sui_graphql_url: Option<String>,
+
     /// Walrus Configuration
     /// Walrus publisher URL for storing blobs/quilts.
     /// Default: Walrus testnet public publisher
@@ -67,6 +71,7 @@ impl Config {
     /// - `MEMBERSHIP_STORE_TYPE`: Membership store type (default: "memory")
     /// - `SUI_RPC_URL`: Sui fullnode gRPC URL
     /// - `GROUPS_PACKAGE_ID`: Groups SDK package ID
+    /// - `SUI_GRAPHQL_URL`: Sui GraphQL URL for zkLogin verification (optional)
     /// - `WALRUS_PUBLISHER_URL`: Walrus publisher URL (default: testnet)
     /// - `WALRUS_AGGREGATOR_URL`: Walrus aggregator URL (default: testnet)
     /// - `WALRUS_STORAGE_EPOCHS`: How many epochs to store blobs (default: 5)
@@ -106,6 +111,7 @@ impl Config {
             env::var("SUI_RPC_URL").expect("SUI_RPC_URL environment variable is required");
         let groups_package_id = env::var("GROUPS_PACKAGE_ID")
             .expect("GROUPS_PACKAGE_ID environment variable is required");
+        let sui_graphql_url = env::var("SUI_GRAPHQL_URL").ok();
 
         // Publisher URL: where we send PUT requests to store blobs
         let walrus_publisher_url = env::var("WALRUS_PUBLISHER_URL")
@@ -146,6 +152,7 @@ impl Config {
             membership_store_type,
             sui_rpc_url,
             groups_package_id,
+            sui_graphql_url,
             walrus_publisher_url,
             walrus_aggregator_url,
             walrus_storage_epochs,
@@ -168,6 +175,7 @@ impl Default for Config {
             membership_store_type: MembershipStoreType::InMemory,
             sui_rpc_url: String::new(),
             groups_package_id: String::new(),
+            sui_graphql_url: None,
             walrus_publisher_url: DEFAULT_WALRUS_PUBLISHER_URL.to_string(),
             walrus_aggregator_url: DEFAULT_WALRUS_AGGREGATOR_URL.to_string(),
             walrus_storage_epochs: 5,

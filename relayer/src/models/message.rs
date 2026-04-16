@@ -37,8 +37,9 @@ pub struct Message {
     /// Each entry contains the storage ID and encryption metadata needed by
     /// clients to download and decrypt the attachment.
     pub attachments: Vec<Attachment>,
-    /// 64-byte cryptographic signature over the message content.
-    /// Allows receivers to independently verify the sender authored this message.
+    /// Cryptographic signature bytes over the message content.
+    /// For keypair schemes this is the raw 64-byte signature; for zkLogin this is
+    /// the serialized authenticator bytes.
     pub signature: Vec<u8>,
     /// Sender's public key (flag byte + key bytes) for signature verification.
     pub public_key: Vec<u8>,
