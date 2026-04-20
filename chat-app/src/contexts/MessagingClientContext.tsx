@@ -113,6 +113,7 @@ export function MessagingClientProvider({
         serverConfigs: sealServerConfigs,
       },
       encryption: {
+        sealThreshold: 1,
         sessionKey: {
           address: account.address,
           onSign: async (message: Uint8Array) => {

@@ -1,8 +1,11 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+import type { PublicKey, Signer } from '@mysten/sui/cryptography';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { parseSerializedSignature } from '@mysten/sui/cryptography';
 import { toHex } from '@mysten/sui/utils';
+import { getZkLoginSignature, toZkLoginPublicIdentifier } from '@mysten/sui/zklogin';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Attachment } from '../../src/attachments/types.js';
@@ -10,6 +13,11 @@ import { HTTPRelayerTransport } from '../../src/relayer/http-transport.js';
 import { RelayerTransportError } from '../../src/relayer/types.js';
 
 const MOCK_RELAYER_URL = 'https://relayer.example.com';
+const ZKLOGIN_ISS = 'https://accounts.google.com';
+const ZKLOGIN_ISS_DETAILS = {
+	value: 'CJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLC',
+	indexMod4: 1,
+};
 
 // Sample wire message from the relayer (snake_case, as returned by the HTTP API)
 const WIRE_MESSAGE = {
@@ -40,6 +48,59 @@ function createTransport() {
 		relayerUrl: MOCK_RELAYER_URL,
 		fetch: mockFetch,
 	});
+}
+
+function createZkLoginSigner(): {
+	signer: Signer;
+	publicKey: PublicKey;
+	signatureBytes: Uint8Array;
+} {
+	const publicKey = toZkLoginPublicIdentifier(1n, ZKLOGIN_ISS, {
+		legacyAddress: false,
+	});
+	const serializedSignature = getZkLoginSignature({
+		inputs: {
+			proofPoints: {
+				a: ['1', '2', '3'],
+				b: [
+					['4', '5'],
+					['6', '7'],
+				],
+				c: ['8', '9', '10'],
+			},
+			issBase64Details: ZKLOGIN_ISS_DETAILS,
+			headerBase64: 'eyJhbGciOiJSUzI1NiJ9',
+			addressSeed: '1',
+		},
+		maxEpoch: 10n,
+		userSignature: new Uint8Array(64).fill(7),
+	});
+
+	const signer = {
+		async signPersonalMessage(bytes: Uint8Array) {
+			return {
+				bytes: Buffer.from(bytes).toString('base64'),
+				signature: serializedSignature,
+			};
+		},
+		getPublicKey(): PublicKey {
+			return publicKey;
+		},
+		toSuiAddress() {
+			return publicKey.toSuiAddress();
+		},
+	} as unknown as Signer;
+	const parsedSignature = parseSerializedSignature(serializedSignature);
+
+	if (!parsedSignature.signature) {
+		throw new Error('Expected serialized zkLogin signature bytes');
+	}
+
+	return {
+		signer,
+		publicKey,
+		signatureBytes: parsedSignature.signature,
+	};
 }
 
 describe('HTTPRelayerTransport', () => {
@@ -503,6 +564,29 @@ describe('HTTPRelayerTransport', () => {
 			expect(publicKeyHex).toBe(expectedHex);
 
 			expect(headers['x-signature']).toHaveLength(128);
+		});
+
+		it('sends full serialized zkLogin signature bytes in X-Signature', async () => {
+			const transport = createTransport();
+			const { signer, publicKey, signatureBytes } = createZkLoginSigner();
+
+			mockFetch.mockResolvedValueOnce(
+				new Response(JSON.stringify({ message_id: 'test' }), { status: 201 }),
+			);
+
+			await transport.sendMessage({
+				signer,
+				groupId: '0x' + 'ab'.repeat(32),
+				encryptedText: new Uint8Array([1]),
+				nonce: new Uint8Array(12),
+				keyVersion: 0n,
+			});
+
+			const headers = mockFetch.mock.calls[0][1]?.headers as Record<string, string>;
+
+			expect(headers['x-public-key']).toBe(toHex(publicKey.toSuiBytes()));
+			expect(headers['x-signature']).toBe(toHex(signatureBytes));
+			expect(headers['x-signature'].length).toBeGreaterThan(128);
 		});
 	});
 

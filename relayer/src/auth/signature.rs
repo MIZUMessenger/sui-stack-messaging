@@ -234,6 +234,10 @@ pub fn derive_sui_address(
         return Err(AuthError::InvalidPublicKeyFormat(e));
     }
 
+    if scheme == SignatureScheme::ZkLogin {
+        return derive_zklogin_address(public_key_bytes, false);
+    }
+
     // Build the hash input: flag || public_key
     let mut hash_input = vec![scheme.flag()];
     hash_input.extend_from_slice(public_key_bytes);
@@ -252,6 +256,24 @@ pub fn verify_address_matches_pubkey(
     public_key_bytes: &[u8],
     scheme: SignatureScheme,
 ) -> Result<String, AuthError> {
+    if scheme == SignatureScheme::ZkLogin {
+        let current_address = derive_zklogin_address(public_key_bytes, false)?;
+        let legacy_address = derive_zklogin_address(public_key_bytes, true)?;
+
+        if claimed_address == current_address {
+            return Ok(current_address);
+        }
+
+        if claimed_address == legacy_address {
+            return Ok(legacy_address);
+        }
+
+        return Err(AuthError::AddressMismatch {
+            expected: format!("{} (legacy: {})", current_address, legacy_address),
+            got: claimed_address.to_string(),
+        });
+    }
+
     let derived_address = derive_sui_address(public_key_bytes, scheme)?;
 
     if claimed_address != derived_address {
@@ -262,6 +284,70 @@ pub fn verify_address_matches_pubkey(
     }
 
     Ok(derived_address)
+}
+
+fn derive_zklogin_address(public_key_bytes: &[u8], legacy: bool) -> Result<String, AuthError> {
+    let normalized_key = normalize_zklogin_public_identifier(public_key_bytes, legacy)?;
+    let mut hash_input = vec![SignatureScheme::ZkLogin.flag()];
+    hash_input.extend_from_slice(&normalized_key);
+
+    type Blake2b256 = Blake2b<U32>;
+    let hash = Blake2b256::digest(&hash_input);
+    Ok(format!("0x{}", hex::encode(hash)))
+}
+
+fn normalize_zklogin_public_identifier(
+    public_key_bytes: &[u8],
+    legacy: bool,
+) -> Result<Vec<u8>, AuthError> {
+    let issuer_len = *public_key_bytes
+        .first()
+        .ok_or_else(|| {
+            AuthError::InvalidPublicKeyFormat("Empty zkLogin public identifier".to_string())
+        })?
+        as usize;
+    let issuer_end = 1 + issuer_len;
+
+    if public_key_bytes.len() < issuer_end {
+        return Err(AuthError::InvalidPublicKeyFormat(format!(
+            "zkLogin issuer length {} exceeds available bytes {}",
+            issuer_len,
+            public_key_bytes.len().saturating_sub(1)
+        )));
+    }
+
+    let mut normalized = public_key_bytes[..issuer_end].to_vec();
+    let address_seed_bytes = &public_key_bytes[issuer_end..];
+
+    let normalized_seed = if legacy {
+        trim_leading_zeros(address_seed_bytes)
+    } else {
+        left_pad_zeros(address_seed_bytes, 32)?
+    };
+
+    normalized.extend_from_slice(&normalized_seed);
+    Ok(normalized)
+}
+
+fn trim_leading_zeros(bytes: &[u8]) -> Vec<u8> {
+    match bytes.iter().position(|byte| *byte != 0) {
+        Some(index) => bytes[index..].to_vec(),
+        None => vec![0],
+    }
+}
+
+fn left_pad_zeros(bytes: &[u8], width: usize) -> Result<Vec<u8>, AuthError> {
+    if bytes.len() > width {
+        return Err(AuthError::InvalidPublicKeyFormat(format!(
+            "zkLogin address seed must be at most {} bytes, got {}",
+            width,
+            bytes.len()
+        )));
+    }
+
+    let mut padded = vec![0; width - bytes.len()];
+    padded.extend_from_slice(bytes);
+    Ok(padded)
 }
 
 #[cfg(test)]
@@ -527,6 +613,35 @@ mod tests {
             SignatureScheme::Secp256r1,
         );
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_address_matches_zklogin_accepts_current_and_legacy_addresses() {
+        let mut public_key_bytes = vec![27];
+        public_key_bytes.extend_from_slice(b"https://accounts.google.com");
+        public_key_bytes.extend_from_slice(&[0u8; 31]);
+        public_key_bytes.push(1);
+
+        let current_address = derive_zklogin_address(&public_key_bytes, false).unwrap();
+        let legacy_address = derive_zklogin_address(&public_key_bytes, true).unwrap();
+
+        assert_ne!(current_address, legacy_address);
+        assert!(
+            verify_address_matches_pubkey(
+                &current_address,
+                &public_key_bytes,
+                SignatureScheme::ZkLogin,
+            )
+            .is_ok()
+        );
+        assert!(
+            verify_address_matches_pubkey(
+                &legacy_address,
+                &public_key_bytes,
+                SignatureScheme::ZkLogin,
+            )
+            .is_ok()
+        );
     }
 
     // ==================== Address Mismatch Test ====================

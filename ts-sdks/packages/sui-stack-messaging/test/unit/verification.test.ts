@@ -1,9 +1,13 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+import type { ClientWithCoreApi } from '@mysten/sui/client';
+import { parseSerializedSignature } from '@mysten/sui/cryptography';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { toHex } from '@mysten/sui/utils';
-import { describe, expect, it } from 'vitest';
+import type { PublicKey, Signer } from '@mysten/sui/cryptography';
+import { getZkLoginSignature, toZkLoginPublicIdentifier } from '@mysten/sui/zklogin';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
 	buildCanonicalMessage,
@@ -12,6 +16,12 @@ import {
 } from '../../src/verification.js';
 
 const MOCK_GROUP_ID = '0x' + 'ab'.repeat(32);
+const ZKLOGIN_ISS = 'https://accounts.google.com';
+const ZKLOGIN_ADDRESS_SEED = 1n;
+const ZKLOGIN_ISS_DETAILS = {
+	value: 'CJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLC',
+	indexMod4: 1,
+};
 
 function makeMessageParams() {
 	return {
@@ -19,6 +29,73 @@ function makeMessageParams() {
 		encryptedText: new Uint8Array([0xca, 0xfe, 0xba, 0xbe]),
 		nonce: new Uint8Array(12).fill(0x42),
 		keyVersion: 3n,
+	};
+}
+
+function createMockClient(verifyResult = true) {
+	const verifyZkLoginSignature = vi.fn().mockResolvedValue({
+		success: verifyResult,
+		errors: [],
+	});
+
+	return {
+		client: {
+			core: {
+				verifyZkLoginSignature,
+			},
+		} as unknown as ClientWithCoreApi,
+		verifyZkLoginSignature,
+	};
+}
+
+function createZkLoginFixture() {
+	const publicKey = toZkLoginPublicIdentifier(ZKLOGIN_ADDRESS_SEED, ZKLOGIN_ISS, {
+		legacyAddress: false,
+	});
+	const serializedSignature = getZkLoginSignature({
+		inputs: {
+			proofPoints: {
+				a: ['1', '2', '3'],
+				b: [
+					['4', '5'],
+					['6', '7'],
+				],
+				c: ['8', '9', '10'],
+			},
+			issBase64Details: ZKLOGIN_ISS_DETAILS,
+			headerBase64: 'eyJhbGciOiJSUzI1NiJ9',
+			addressSeed: ZKLOGIN_ADDRESS_SEED.toString(),
+		},
+		maxEpoch: 10n,
+		userSignature: new Uint8Array(64).fill(7),
+	});
+
+	const signer = {
+		async signPersonalMessage(bytes: Uint8Array) {
+			return {
+				bytes: Buffer.from(bytes).toString('base64'),
+				signature: serializedSignature,
+			};
+		},
+		getPublicKey(): PublicKey {
+			return publicKey;
+		},
+		toSuiAddress() {
+			return publicKey.toSuiAddress();
+		},
+	} as unknown as Signer;
+	const parsedSignature = parseSerializedSignature(serializedSignature);
+
+	if (!parsedSignature.signature) {
+		throw new Error('Expected serialized zkLogin signature bytes');
+	}
+
+	return {
+		signer,
+		publicKey,
+		serializedSignature,
+		signatureBytes: parsedSignature.signature,
+		senderAddress: publicKey.toSuiAddress(),
 	};
 }
 
@@ -72,7 +149,7 @@ describe('buildCanonicalMessage', () => {
 });
 
 describe('signMessageContent', () => {
-	it('returns a 64-byte hex-encoded signature', async () => {
+	it('returns a 64-byte hex-encoded signature for Ed25519 signers', async () => {
 		const keypair = Ed25519Keypair.generate();
 		const sig = await signMessageContent(keypair, makeMessageParams());
 
@@ -91,6 +168,15 @@ describe('signMessageContent', () => {
 		});
 
 		expect(sig1).not.toBe(sig2);
+	});
+
+	it('returns the full serialized zkLogin signature bytes as hex', async () => {
+		const { signer, signatureBytes } = createZkLoginFixture();
+
+		const sig = await signMessageContent(signer, makeMessageParams());
+
+		expect(sig).toBe(toHex(signatureBytes));
+		expect(sig.length).toBeGreaterThan(128);
 	});
 });
 
@@ -228,6 +314,48 @@ describe('verifyMessageSender', () => {
 			senderAddress: keypair.toSuiAddress(),
 			signature,
 			publicKey: 'not-valid-hex',
+		});
+
+		expect(result).toBe(false);
+	});
+
+	it('verifies zkLogin signatures when a client is available', async () => {
+		const params = makeMessageParams();
+		const { signer, publicKey, senderAddress, signatureBytes, serializedSignature } =
+			createZkLoginFixture();
+		const { client, verifyZkLoginSignature } = createMockClient(true);
+
+		const signature = await signMessageContent(signer, params);
+		expect(signature).toBe(toHex(signatureBytes));
+
+		const result = await verifyMessageSender({
+			...params,
+			senderAddress,
+			signature,
+			publicKey: toHex(publicKey.toSuiBytes()),
+			client,
+		});
+
+		expect(result).toBe(true);
+		expect(verifyZkLoginSignature).toHaveBeenCalledOnce();
+		expect(verifyZkLoginSignature).toHaveBeenCalledWith({
+			address: senderAddress,
+			bytes: Buffer.from(buildCanonicalMessage(params)).toString('base64'),
+			signature: serializedSignature,
+			intentScope: 'PersonalMessage',
+		});
+	});
+
+	it('returns false for zkLogin signatures when no client is available', async () => {
+		const params = makeMessageParams();
+		const { signer, publicKey, senderAddress } = createZkLoginFixture();
+		const signature = await signMessageContent(signer, params);
+
+		const result = await verifyMessageSender({
+			...params,
+			senderAddress,
+			signature,
+			publicKey: toHex(publicKey.toSuiBytes()),
 		});
 
 		expect(result).toBe(false);

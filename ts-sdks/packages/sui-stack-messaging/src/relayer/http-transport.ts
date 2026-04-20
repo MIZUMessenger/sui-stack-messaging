@@ -121,12 +121,10 @@ function fromWireMessage(wire: WireMessageResponse): RelayerMessage {
 	};
 }
 
-function extractRawSignature(serializedSignature: string): Uint8Array {
+function extractSignatureBytes(serializedSignature: string): Uint8Array {
 	const parsed = parseSerializedSignature(serializedSignature);
 	if (!parsed.signature) {
-		throw new Error(
-			'Unsupported signature scheme: only keypair signatures (Ed25519, Secp256k1, Secp256r1) are supported',
-		);
+		throw new Error('Unsupported signature scheme: relayer auth requires extractable signature bytes');
 	}
 	return parsed.signature;
 }
@@ -140,12 +138,12 @@ async function signAndCreateAuthHeaders(
 	messageBytes: Uint8Array,
 ): Promise<Record<string, string>> {
 	const { signature } = await signer.signPersonalMessage(messageBytes);
-	const rawSig = extractRawSignature(signature);
+	const signatureBytes = extractSignatureBytes(signature);
 	// getPublicKey() is called after signPersonalMessage() so that signers which
 	// lazily resolve their key from the first signature (e.g. wallets that don't
 	// expose publicKey upfront) have it available by this point.
 	return {
-		'x-signature': toHex(rawSig),
+		'x-signature': toHex(signatureBytes),
 		'x-public-key': getPublicKeyHex(signer),
 	};
 }

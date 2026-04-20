@@ -2,11 +2,11 @@
  * Adapter that wraps dapp-kit's signPersonalMessage into a Signer-compatible object
  * for use with the messaging SDK's relayer transport.
  *
- * Supports all Sui wallet types (Ed25519, Secp256k1, Secp256r1, zkLogin, multisig)
- * by lazily extracting the public key from the first signature when the wallet
- * doesn't expose publicKey upfront.
+ * Lazily extracts the public key from the first signature when the wallet
+ * doesn't expose publicKey upfront, which is useful for wallet adapters that
+ * derive the signing identity dynamically, including zkLogin-backed wallets.
  */
-import { Signer, parseSerializedSignature } from '@mysten/sui/cryptography';
+import { Signer, parseSerializedSignature, SIGNATURE_FLAG_TO_SCHEME } from '@mysten/sui/cryptography';
 import type { PublicKey, SignatureScheme } from '@mysten/sui/cryptography';
 import { publicKeyFromRawBytes, publicKeyFromSuiBytes } from '@mysten/sui/verify';
 import { toBase64 } from '@mysten/sui/utils';
@@ -65,10 +65,9 @@ export class DappKitSigner extends Signer {
     if (!this.#publicKey) {
       return 'ED25519'; // default until first signature resolves it
     }
-    const flag = this.#publicKey.flag();
-    if (flag === 0x00) return 'ED25519';
-    if (flag === 0x01) return 'Secp256k1';
-    return 'Secp256r1';
+    return SIGNATURE_FLAG_TO_SCHEME[
+      this.#publicKey.flag() as keyof typeof SIGNATURE_FLAG_TO_SCHEME
+    ] ?? 'ED25519';
   }
 
   getPublicKey(): PublicKey {

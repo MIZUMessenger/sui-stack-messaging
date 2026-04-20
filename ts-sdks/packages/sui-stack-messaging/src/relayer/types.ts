@@ -33,7 +33,7 @@ export interface RelayerMessage {
 	syncStatus?: SyncStatus;
 	/** Only present when the backend persists messages to Walrus. */
 	quiltPatchId?: string | null;
-	/** Hex-encoded per-message signature (64 bytes). */
+	/** Hex-encoded per-message signature bytes. Keypair schemes use raw 64-byte signatures; zkLogin uses serialized authenticator bytes. */
 	signature: string;
 	/** Hex-encoded public key with scheme flag prefix. */
 	publicKey: string;
@@ -46,7 +46,7 @@ export interface SendMessageParams {
 	nonce: Uint8Array;
 	keyVersion: bigint;
 	attachments?: Attachment[];
-	/** Hex-encoded per-message signature for sender verification. */
+	/** Hex-encoded per-message signature bytes for sender verification. */
 	messageSignature?: string;
 }
 
@@ -73,7 +73,7 @@ export interface UpdateMessageParams {
 	nonce: Uint8Array;
 	keyVersion: bigint;
 	attachments?: Attachment[];
-	/** Hex-encoded per-message signature for sender verification. */
+	/** Hex-encoded per-message signature bytes for sender verification. */
 	messageSignature?: string;
 }
 

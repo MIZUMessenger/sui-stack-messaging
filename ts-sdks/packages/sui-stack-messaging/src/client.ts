@@ -646,6 +646,7 @@ export class SuiStackMessagingClient<TApproveContext = void> {
 						senderAddress: raw.senderAddress,
 						signature: raw.signature,
 						publicKey: raw.publicKey,
+						client: this.#client,
 					})
 				: false;
 
@@ -737,7 +738,10 @@ export class SuiStackMessagingClient<TApproveContext = void> {
 	 * @returns `true` if the signature is valid and the derived address matches `senderAddress`.
 	 */
 	verifyMessageSender(params: VerifyMessageSenderParams): Promise<boolean> {
-		return verifyMessageSender(params);
+		return verifyMessageSender({
+			...params,
+			client: this.#client,
+		});
 	}
 
 	// === Top-Level Imperative Methods ===
