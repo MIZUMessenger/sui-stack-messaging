@@ -52,12 +52,15 @@ function parsePackageConfig() {
 }
 
 // Seal key server object IDs (comma-separated in env)
-function parseSealServerConfigs(): { objectId: string; weight: number }[] {
+function parseSealServerConfigs(): { objectId: string; weight: number; aggregatorUrl?: string }[] {
   const ids = import.meta.env.VITE_SEAL_KEY_SERVER_OBJECT_IDS;
   if (!ids) return [];
+  const aggregatorUrl =
+    import.meta.env.VITE_SEAL_AGGREGATOR_URL;
   return ids.split(',').map((id: string) => ({
     objectId: id.trim(),
     weight: 1,
+    aggregatorUrl,
   }));
 }
 
