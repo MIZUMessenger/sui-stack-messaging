@@ -21,6 +21,6 @@ COPY --from=builder /app/target/release/messaging-relayer ./messaging-relayer
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=5s \
-    CMD curl -f http://localhost:3000/health_check || exit 1
+    CMD curl -f http://localhost:3000/relayer/health_check || exit 1
 
 CMD ["./messaging-relayer"]

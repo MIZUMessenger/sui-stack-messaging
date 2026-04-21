@@ -97,10 +97,9 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    // Combine all routes
+    // Combine all routes under /relayer prefix
     let app = Router::new()
-        .merge(public_routes)
-        .merge(authenticated_routes)
+        .nest("/relayer", public_routes.merge(authenticated_routes))
         .layer(cors);
 
     let addr = format!("0.0.0.0:{}", config.port);
