@@ -36,6 +36,42 @@ const WALRUS_PUBLISHER_URL =
 const WALRUS_AGGREGATOR_URL =
   import.meta.env.VITE_WALRUS_AGGREGATOR_URL || '';
 const WALRUS_EPOCHS = Number(import.meta.env.VITE_WALRUS_EPOCHS) || 1;
+const SEAL_URL_OVERRIDE_FROM =
+  import.meta.env.VITE_SEAL_URL_OVERRIDE_FROM || 'http://localhost:2024';
+const SEAL_URL_OVERRIDE_TO =
+  import.meta.env.VITE_SEAL_URL_OVERRIDE_TO || '';
+
+function installSealFetchUrlOverride() {
+  if (!SEAL_URL_OVERRIDE_TO) return;
+
+  const g = globalThis as typeof globalThis & {
+    __sealFetchRewriteInstalled?: boolean;
+  };
+  if (g.__sealFetchRewriteInstalled) return;
+
+  const originalFetch = globalThis.fetch.bind(globalThis);
+  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    const requestUrl =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+
+    if (requestUrl.startsWith(SEAL_URL_OVERRIDE_FROM)) {
+      const rewrittenUrl = `${SEAL_URL_OVERRIDE_TO}${requestUrl.slice(SEAL_URL_OVERRIDE_FROM.length)}`;
+      if (input instanceof Request) {
+        return originalFetch(new Request(rewrittenUrl, input), init);
+      }
+      return originalFetch(rewrittenUrl, init);
+    }
+
+    return originalFetch(input, init);
+  }) as typeof fetch;
+  g.__sealFetchRewriteInstalled = true;
+}
+
+installSealFetchUrlOverride();
 
 // Package config overrides (optional — auto-detected from network if not set)
 function parsePackageConfig() {
@@ -55,13 +91,24 @@ function parsePackageConfig() {
 function parseSealServerConfigs(): { objectId: string; weight: number; aggregatorUrl?: string }[] {
   const ids = import.meta.env.VITE_SEAL_KEY_SERVER_OBJECT_IDS;
   if (!ids) return [];
-  const aggregatorUrl =
-    import.meta.env.VITE_SEAL_AGGREGATOR_URL;
-  return ids.split(',').map((id: string) => ({
-    objectId: id.trim(),
-    weight: 1,
-    aggregatorUrl,
-  }));
+  const aggregatorUrl = import.meta.env.VITE_SEAL_AGGREGATOR_URL?.trim();
+  const committeeServerIds = new Set(
+    (import.meta.env.VITE_SEAL_COMMITTEE_SERVER_OBJECT_IDS || '')
+      .split(',')
+      .map((id: string) => id.trim())
+      .filter(Boolean),
+  );
+  return ids
+    .split(',')
+    .map((id: string) => id.trim())
+    .filter(Boolean)
+    .map((objectId) => ({
+      objectId,
+      weight: 1,
+      ...(aggregatorUrl && committeeServerIds.has(objectId)
+        ? { aggregatorUrl }
+        : {}),
+    }));
 }
 
 // Singleton GraphQL client (does not depend on wallet)
