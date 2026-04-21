@@ -102,7 +102,7 @@ function parseSealServerConfigs(): { objectId: string; weight: number; aggregato
     .split(',')
     .map((id: string) => id.trim())
     .filter(Boolean)
-    .map((objectId) => ({
+    .map((objectId: string) => ({
       objectId,
       weight: 1,
       ...(aggregatorUrl && committeeServerIds.has(objectId)
