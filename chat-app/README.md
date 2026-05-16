@@ -1,4 +1,4 @@
-# Sui Messaging Chat — Reference Application
+# Mizu Messaging Chat Demo — Reference Application
 
 ## 1. Overview
 

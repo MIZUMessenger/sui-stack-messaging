@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /*
- * Custom theme for Sui Messaging Chat.
+ * Custom theme for Mizu Messaging Chat Demo.
  * Tailwind v4 uses CSS-native @theme instead of tailwind.config.js.
  * Dark mode: use `class` strategy via `@variant dark (&:where(.dark, .dark *))`.
  */
